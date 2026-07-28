@@ -1,0 +1,25 @@
+# Pedi wa Real Estate - Project TODO
+
+- [x] Database schema: properties, inquiries, favorites, testimonials, blog posts, categories
+- [x] Backend procedures: property CRUD, inquiries, favorites, admin moderation
+- [x] S3 file storage integration for property photo uploads
+- [x] Global layout: navbar, footer with branding "Pedi wa Real Estate"
+- [x] Home page: hero section, search bar, featured listings, CTAs
+- [x] Browse/Search properties page with filters (location, price, type, bedrooms, bathrooms, sale/rent)
+- [x] Property detail page: image gallery, description, amenities, map, seller info
+- [x] User authentication flows (Manus OAuth login/logout)
+- [x] Seller Dashboard: add/edit/delete listings, upload photos, view stats
+- [x] Admin Dashboard: approve/reject listings, manage users, content moderation
+- [x] Buyer features: favorites, inquiry form, WhatsApp/call buttons
+- [x] About page
+- [x] Contact page
+- [x] FAQ page
+- [x] Testimonials page
+- [x] Blog listing page with individual post pages
+- [x] Email notifications for inquiries and listing approvals
+- [x] Google Maps integration on property detail pages
+- [x] SEO optimization: meta tags, structured data, responsive design
+- [x] Mobile-first responsive design polish
+- [x] Vitest unit tests for backend procedures (25 tests passing)
+- [x] Fix admin deleteProperty mutation bug (was wired to deleteCategory)
+- [x] Fix admin rejectProperty to call db.rejectProperty
