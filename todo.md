@@ -23,3 +23,7 @@
 - [x] Vitest unit tests for backend procedures (25 tests passing)
 - [x] Fix admin deleteProperty mutation bug (was wired to deleteCategory)
 - [x] Fix admin rejectProperty to call db.rejectProperty
+- [x] Use uploaded cityscape image as hero background on Home page
+- [x] Update contact email to pediwarealestate@gmail.com across all pages
+- [x] Update contact phone number to 0716339552 across all pages
+- [x] Fix deployment build error (canonical href="/" causing EISDIR)

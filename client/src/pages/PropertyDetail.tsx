@@ -341,7 +341,7 @@ export default function PropertyDetail() {
               <h3 className="font-semibold text-foreground mb-4">Contact Seller</h3>
               <div className="space-y-3 mb-5">
                 <a
-                  href={`tel:+${seller?.phone || '1234567890'}`}
+                  href={`tel:+${seller?.phone || '0716339552'}`}
                   className="flex items-center gap-3 p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors"
                 >
                   <Phone className="w-5 h-5 text-green-600" />
@@ -351,7 +351,7 @@ export default function PropertyDetail() {
                   </div>
                 </a>
                 <a
-                  href={`https://wa.me/${(seller?.phone || '1234567890').replace(/[^0-9]/g, '')}?text=Hi, I'm interested in ${encodeURIComponent(property.title)}`}
+                  href={`https://wa.me/${(seller?.phone || '0716339552').replace(/[^0-9]/g, '')}?text=Hi, I'm interested in ${encodeURIComponent(property.title)}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 rounded-lg bg-green-500 hover:bg-green-600 transition-colors text-white"
@@ -363,7 +363,7 @@ export default function PropertyDetail() {
                   </div>
                 </a>
                 <a
-                  href={`mailto:${seller?.email || 'info@pediwarealestate.com'}?subject=Inquiry: ${encodeURIComponent(property.title)}`}
+                  href={`mailto:${seller?.email || 'pediwarealestate@gmail.com'}?subject=Inquiry: ${encodeURIComponent(property.title)}`}
                   className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
                 >
                   <Mail className="w-5 h-5 text-blue-600" />

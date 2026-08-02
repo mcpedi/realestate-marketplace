@@ -64,24 +64,28 @@ export default function Home() {
 
       {/* Hero Section */}
       <section className="relative overflow-hidden">
-        <div className="absolute inset-0 bg-gradient-to-br from-[oklch(0.45_0.18_260/0.05)] via-white to-[oklch(0.72_0.15_80/0.05)]" />
+        <div
+          className="absolute inset-0 bg-cover bg-center"
+          style={{ backgroundImage: "url('/manus-storage/159512_dacaa659.jpg')" }}
+        />
+        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
         <div className="absolute top-0 right-0 w-96 h-96 bg-[oklch(0.45_0.18_260/0.06)] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
         <div className="absolute bottom-0 left-0 w-72 h-72 bg-[oklch(0.72_0.15_80/0.06)] rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
         
         <div className="relative container py-16 md:py-24 lg:py-32">
           <div className="text-center max-w-3xl mx-auto mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-[oklch(0.45_0.18_260/0.08)] text-[oklch(0.45_0.18_260)] text-sm font-medium mb-6">
+            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-medium mb-6">
               <Sparkles className="w-4 h-4" />
               Your Trusted Real Estate Partner
             </div>
             <h1
-              className="text-4xl md:text-5xl lg:text-6xl font-bold text-foreground leading-tight mb-5"
+              className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-5"
               style={{ fontFamily: "'Playfair Display', serif" }}
             >
-              Find Your <span className="text-[oklch(0.45_0.18_260)]">Dream</span>{" "}
+              Find Your <span className="text-[oklch(0.72_0.15_80)]">Dream</span>{" "}
               <span className="text-[oklch(0.72_0.15_80)]">Property</span>
             </h1>
-            <p className="text-lg md:text-xl text-muted-foreground leading-relaxed max-w-2xl mx-auto">
+            <p className="text-lg md:text-xl text-white/80 leading-relaxed max-w-2xl mx-auto">
               Discover exceptional properties in prime locations. Whether you're buying, selling, or renting, Pedi wa Real Estate connects you with the perfect opportunity.
             </p>
           </div>

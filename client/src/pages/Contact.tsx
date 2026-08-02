@@ -15,8 +15,8 @@ import {
 } from "lucide-react";
 
 const contactInfo = [
-  { icon: Phone, label: "Phone", value: "+1 (555) 123-4567", link: "tel:+15551234567" },
-  { icon: Mail, label: "Email", value: "info@pediwarealestate.com", link: "mailto:info@pediwarealestate.com" },
+  { icon: Phone, label: "Phone", value: "0716339552", link: "tel:+254716339552" },
+  { icon: Mail, label: "Email", value: "pediwarealestate@gmail.com", link: "mailto:pediwarealestate@gmail.com" },
   { icon: MapPin, label: "Address", value: "123 Property Lane, Business District", link: "#" },
   { icon: Clock, label: "Hours", value: "Mon - Fri: 8AM - 6PM", link: "#" },
 ];
