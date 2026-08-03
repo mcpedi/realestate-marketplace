@@ -171,42 +171,58 @@ export async function getProperties(filters: PropertyFilters = {}) {
   const offset = (page - 1) * limit;
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const [totalResult] = await db.select({ count: count() }).from(properties).where(whereClause);
-  const items = await db
+  const rawItems = await db
     .select()
     .from(properties)
     .where(whereClause)
     .orderBy(desc(properties.createdAt))
     .limit(limit)
     .offset(offset);
+  const items = await Promise.all(rawItems.map(async (p) => {
+    const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
+    return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
+  }));
   return { items, total: totalResult?.count || 0 };
 }
 
 export async function getFeaturedProperties() {
   const db = await getDb();
   if (!db) return [];
-  return db
+  const rows = await db
     .select()
     .from(properties)
     .where(and(eq(properties.featured, true), eq(properties.status, "approved")))
     .orderBy(desc(properties.createdAt))
     .limit(8);
+  return Promise.all(rows.map(async (p) => {
+    const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
+    return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
+  }));
 }
 
 export async function getLatestProperties(limit = 8) {
   const db = await getDb();
   if (!db) return [];
-  return db
+  const rows = await db
     .select()
     .from(properties)
     .where(eq(properties.status, "approved"))
     .orderBy(desc(properties.createdAt))
     .limit(limit);
+  return Promise.all(rows.map(async (p) => {
+    const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
+    return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
+  }));
 }
 
 export async function getUserProperties(userId: number) {
   const db = await getDb();
   if (!db) return [];
-  return db.select().from(properties).where(eq(properties.userId, userId)).orderBy(desc(properties.createdAt));
+  const rows = await db.select().from(properties).where(eq(properties.userId, userId)).orderBy(desc(properties.createdAt));
+  return Promise.all(rows.map(async (p) => {
+    const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
+    return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
+  }));
 }
 
 export async function getPendingProperties() {
