@@ -28,3 +28,7 @@
 - [x] Update contact phone number to 0716339552 across all pages
 - [x] Fix deployment build error (canonical href="/" causing EISDIR)
 - [x] Fix property image previews on home page - updated getFeaturedProperties, getLatestProperties, getProperties, and getUserProperties to include photo URLs
+- [x] Add profile picture, phone, and location fields to users table in schema
+- [x] Add updateProfile backend procedure to save profile changes
+- [x] Build Profile page where users can update name, email, phone, location, and upload profile picture
+- [x] Add Profile page route and navigation link in Navbar

@@ -15,6 +15,13 @@
       "when": 1784830627879,
       "tag": "0001_sour_thor",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1785768097490,
+      "tag": "0002_oval_dorian_gray",
+      "breakpoints": true
     }
   ]
 }

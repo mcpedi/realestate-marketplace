@@ -90,6 +90,27 @@ export async function getUserById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+export async function updateUserProfile(userId: number, data: {
+  name?: string;
+  email?: string;
+  phone?: string;
+  location?: string;
+  bio?: string;
+  profilePicture?: string;
+}) {
+  const db = await getDb();
+  if (!db) throw new Error("Database not available");
+  const set: Record<string, unknown> = {};
+  if (data.name !== undefined) set.name = data.name;
+  if (data.email !== undefined) set.email = data.email;
+  if (data.phone !== undefined) set.phone = data.phone;
+  if (data.location !== undefined) set.location = data.location;
+  if (data.bio !== undefined) set.bio = data.bio;
+  if (data.profilePicture !== undefined) set.profilePicture = data.profilePicture;
+  if (Object.keys(set).length === 0) return;
+  await db.update(users).set(set as any).where(eq(users.id, userId));
+}
+
 export async function getAllUsers() {
   const db = await getDb();
   if (!db) return [];

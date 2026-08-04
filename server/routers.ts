@@ -25,6 +25,42 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Profile ────────────────────────────────────────────────────────────
+
+  profile: router({
+    get: protectedProcedure.query(async ({ ctx }) => {
+      return db.getUserById(ctx.user.id);
+    }),
+    update: protectedProcedure
+      .input(
+        z.object({
+          name: z.string().optional(),
+          email: z.string().email().optional(),
+          phone: z.string().optional(),
+          location: z.string().optional(),
+          bio: z.string().optional(),
+          profilePicture: z.string().optional(),
+        })
+      )
+      .mutation(async ({ ctx, input }) => {
+        await db.updateUserProfile(ctx.user.id, input);
+        // Return updated user
+        const updated = await db.getUserById(ctx.user.id);
+        return { success: true, user: updated };
+      }),
+    uploadPicture: protectedProcedure
+      .input(z.object({ fileName: z.string(), contentType: z.string(), data: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const bytes = Buffer.from(input.data, "base64");
+        const key = `profile-pictures/${ctx.user.id}/${Date.now()}-${input.fileName}`;
+        const result = await storagePut(key, bytes, input.contentType);
+        // Update user profile picture
+        await db.updateUserProfile(ctx.user.id, { profilePicture: result.url });
+        const updated = await db.getUserById(ctx.user.id);
+        return { url: result.url, user: updated };
+      }),
+  }),
+
   // ─── Properties ──────────────────────────────────────────────────────────
 
   property: router({

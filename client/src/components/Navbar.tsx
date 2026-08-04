@@ -114,6 +114,12 @@ export function Navbar() {
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end" className="w-56">
                   <DropdownMenuItem asChild>
+                    <Link href="/profile" className="flex items-center gap-2 w-full">
+                      <User className="w-4 h-4" />
+                      My Profile
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/seller" className="flex items-center gap-2 w-full">
                       <PlusCircle className="w-4 h-4" />
                       Seller Dashboard
@@ -186,6 +192,12 @@ export function Navbar() {
                 <div className="border-t mt-4 pt-4 flex flex-col gap-2">
                   {isAuthenticated ? (
                     <>
+                      <Link href="/profile">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <User className="w-4 h-4" />
+                          My Profile
+                        </span>
+                      </Link>
                       <Link href="/seller">
                         <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
                           <PlusCircle className="w-4 h-4" />
