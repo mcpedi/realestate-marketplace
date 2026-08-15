@@ -11,13 +11,20 @@ import { Separator } from "@/components/ui/separator";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
-import { Loader2, Camera, Save, User, Mail, Phone, MapPin, FileText } from "lucide-react";
+import { Loader2, Camera, Save, User, Mail, Phone, MapPin, FileText, Crown, BadgeCheck, ArrowRight } from "lucide-react";
 
 export default function Profile() {
   const { user, loading: authLoading } = useAuth();
   const { data: profile, isLoading: profileLoading } = trpc.profile.get.useQuery(undefined, {
     enabled: !!user,
   });
+  const { data: mySub, isLoading: subLoading } = trpc.subscription.mySubscription.useQuery(undefined, {
+    enabled: !!user,
+  });
+  const isPremium = !!mySub && !!mySub.plan;
+  const planExpires = mySub?.subscription?.endDate
+    ? new Date(mySub.subscription.endDate).toLocaleDateString()
+    : null;
 
   const [formData, setFormData] = useState({
     name: "",
@@ -150,12 +157,48 @@ export default function Profile() {
 
       <main className="flex-1 py-8 md:py-12">
         <div className="container max-w-3xl">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-foreground mb-1" style={{ fontFamily: "'Playfair Display', serif" }}>
-              My Profile
-            </h1>
-            <p className="text-muted-foreground">Manage your account details and preferences</p>
+          <div className="mb-8 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
+            <div>
+              <h1 className="text-3xl font-bold text-foreground mb-1 flex items-center gap-2" style={{ fontFamily: "'Playfair Display', serif" }}>
+                My Profile
+                {isPremium && (
+                  <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-xs font-semibold text-white bg-[oklch(0.72_0.15_80)]">
+                    <BadgeCheck className="w-3.5 h-3.5" />
+                    Premium Member
+                  </span>
+                )}
+              </h1>
+              <p className="text-muted-foreground">Manage your account details and preferences</p>
+            </div>
+            {!isPremium && !subLoading && (
+              <a href="/premium" className="inline-flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium text-white bg-[oklch(0.72_0.15_80)] hover:opacity-90 transition-opacity w-fit">
+                <Crown className="w-4 h-4" />
+                Upgrade to Premium
+                <ArrowRight className="w-4 h-4" />
+              </a>
+            )}
           </div>
+
+          {isPremium && (
+            <Card className="mb-6 bg-gradient-to-r from-[oklch(0.45_0.18_260)] to-[oklch(0.4_0.16_280)] text-white border-0">
+              <CardContent className="py-5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                <div className="flex items-center gap-3">
+                  <Crown className="w-8 h-8 text-[oklch(0.8_0.15_80)]" />
+                  <div>
+                    <p className="font-semibold">{mySub.plan?.name} Plan</p>
+                    <p className="text-sm text-blue-100">
+                      Active {planExpires ? `until ${planExpires}` : ""} — all premium benefits enabled
+                    </p>
+                  </div>
+                </div>
+                <a href="/premium" className="inline-flex">
+                  <Button variant="outline" size="sm" className="text-white border-white/40 hover:bg-white/10">
+                    Manage Subscription
+                  </Button>
+                </a>
+              </CardContent>
+            </Card>
+          )}
 
           {/* Profile Picture Section */}
           <Card className="mb-6">

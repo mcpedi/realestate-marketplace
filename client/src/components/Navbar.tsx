@@ -35,6 +35,7 @@ import {
   HelpCircle,
   MessageCircle,
   PenTool,
+  Crown,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
 
@@ -126,6 +127,12 @@ export function Navbar() {
                     </Link>
                   </DropdownMenuItem>
                   <DropdownMenuItem asChild>
+                    <Link href="/premium" className="flex items-center gap-2 w-full">
+                      <Crown className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
+                      Premium Plans
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
                     <Link href="/favorites" className="flex items-center gap-2 w-full">
                       <Heart className="w-4 h-4" />
                       My Favorites
@@ -202,6 +209,12 @@ export function Navbar() {
                         <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
                           <PlusCircle className="w-4 h-4" />
                           Seller Dashboard
+                        </span>
+                      </Link>
+                      <Link href="/premium">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <Crown className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
+                          Premium Plans
                         </span>
                       </Link>
                       <Link href="/favorites">

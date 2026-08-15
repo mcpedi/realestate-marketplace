@@ -1,12 +1,31 @@
 import { Link } from "wouter";
-import { Bed, Bath, Maximize, MapPin, Heart, Tag } from "lucide-react";
-import { useState } from "react";
+import { Bed, Bath, Maximize, MapPin, Heart, Tag, BadgeCheck } from "lucide-react";
+import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import type { Property } from "../../../drizzle/schema";
 
 interface PropertyCardProps {
   property: Property & { photos?: { url: string }[] };
+}
+
+function usePremiumSellerBadge(userId?: number | null) {
+  // Stabilize the userId reference so the query doesn't refetch on every render.
+  // A fresh userId only when it actually changes.
+  const stableUserId = useMemo(() => userId ?? -1, [userId ?? -1]);
+  const { data } = trpc.subscription.isPremium.useQuery(undefined, {
+    enabled: stableUserId !== -1,
+  });
+  return data?.isPremium || false;
+}
+
+function PremiumBadge() {
+  return (
+    <span className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-[oklch(0.72_0.15_80)] inline-flex items-center gap-1">
+      <BadgeCheck className="w-3 h-3" />
+      Verified
+    </span>
+  );
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
@@ -20,6 +39,9 @@ export function PropertyCard({ property }: PropertyCardProps) {
       toast.error("Please sign in to save favorites");
     },
   });
+
+  // Premium sellers get a "Verified" badge on their listings
+  const isVerifiedSeller = usePremiumSellerBadge(property.userId);
 
   const formatPrice = (price: number) => {
     if (price >= 1000000) return `Ksh ${Math.round(price / 1000000).toLocaleString()}M`;
@@ -39,7 +61,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
           className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
           loading="lazy"
         />
-        <div className="absolute top-3 left-3 flex gap-2">
+        <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           <span
             className={`px-2.5 py-1 rounded-md text-xs font-semibold text-white ${
               property.listingType === "sale"
@@ -50,10 +72,11 @@ export function PropertyCard({ property }: PropertyCardProps) {
             For {property.listingType === "sale" ? "Sale" : "Rent"}
           </span>
           {property.featured && (
-            <span className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-[oklch(0.72_0.15_80)]">
+            <span className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-[oklch(0.45_0.18_260)]">
               Featured
             </span>
           )}
+          {isVerifiedSeller && <PremiumBadge />}
         </div>
         <button
           onClick={(e) => {

@@ -23,6 +23,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { Loader2 } from "lucide-react";
 import {
   PlusCircle,
   Edit,
@@ -36,6 +37,11 @@ import {
   XCircle,
   Image as ImageIcon,
   Home as HomeIcon,
+  Crown,
+  TrendingUp,
+  BarChart3,
+  Heart,
+  Sparkles,
 } from "lucide-react";
 
 const PROPERTY_TYPES = ["house", "apartment", "villa", "land", "commercial", "townhouse", "studio", "penthouse"];
@@ -85,8 +91,35 @@ export default function SellerDashboard() {
 function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof useAuth>["user"]> }) {
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
+  const [showAiTools, setShowAiTools] = useState(false);
 
   const { data: myProperties, isLoading, refetch } = trpc.property.myProperties.useQuery();
+
+  // Premium membership state
+  const { data: premiumInfo } = trpc.subscription.isPremium.useQuery();
+  const { data: mySub } = trpc.subscription.mySubscription.useQuery();
+  const { data: stats, isLoading: statsLoading } = trpc.analytics.allStats.useQuery(undefined, {
+    enabled: !!premiumInfo?.isPremium,
+  });
+  const isPremium = premiumInfo?.isPremium || false;
+
+  // Server-enforced upload limit; UI mirrors it.
+  const maxPhotos = (mySub?.plan?.maxImages ?? 10) as number;
+  const maxVideos = (mySub?.plan?.maxVideos ?? 0) as number;
+
+  // Premium featured listings & video support
+  const { data: myFeatured } = trpc.subscription.featuredListings.useQuery(undefined, { enabled: isPremium });
+  const featureMutation = trpc.subscription.featureProperty.useMutation({
+    onSuccess: () => {
+      toast.success("Property is now featured!");
+      refetch();
+    },
+    onError: (err) => toast.error(err.message),
+  });
+  const videoUploadMutation = trpc.propertyVideo.upload.useMutation({
+    onSuccess: () => toast.success("Video uploaded!"),
+    onError: (err) => toast.error(err.message),
+  });
   const createMutation = trpc.property.create.useMutation({
     onSuccess: () => {
       toast.success("Property listing submitted for review!");
@@ -153,7 +186,14 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
 
   const handlePhotoUpload = useCallback(async (files: FileList | null) => {
     if (!files) return;
-    for (const file of Array.from(files)) {
+    const atLimit = formData.photos.length >= maxPhotos;
+    if (atLimit) {
+      toast.error(`Photo limit reached (${maxPhotos} photos). ${isPremium ? "" : "Upgrade to Premium for more."}`);
+      return;
+    }
+    const allowed = Array.from(files).slice(0, maxPhotos - formData.photos.length);
+    if (allowed.length === 0) return;
+    for (const file of allowed) {
       try {
         const reader = new FileReader();
         reader.onload = async () => {
@@ -173,7 +213,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
         toast.error(`Failed to upload ${file.name}`);
       }
     }
-  }, [uploadMutation]);
+  }, [uploadMutation, formData.photos.length, maxPhotos, isPremium]);
 
   const removePhoto = (index: number) => {
     setFormData((prev) => ({
@@ -380,6 +420,11 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   <div>
                     <label className="text-sm font-medium mb-2 block">Property Photos</label>
                     <div className="flex flex-wrap gap-3 mb-3">
+                      {formData.photos.length > 0 && (
+                        <div className="w-full text-xs text-muted-foreground mb-1">
+                          {formData.photos.length} / {maxPhotos} photos {isPremium && "(Premium limit)"}
+                        </div>
+                      )}
                       {formData.photos.map((photo, i) => (
                         <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border">
                           <img src={photo.preview} alt="" className="w-full h-full object-cover" />
@@ -392,11 +437,12 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                           </button>
                         </div>
                       ))}
-                      <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-[oklch(0.45_0.18_260)] transition-colors">
-                        <div className="text-center">
-                          <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                          <span className="text-xs text-muted-foreground">Upload</span>
-                        </div>
+                      {formData.photos.length < maxPhotos && (
+                        <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-[oklch(0.45_0.18_260)] transition-colors">
+                          <div className="text-center">
+                            <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                            <span className="text-xs text-muted-foreground">Upload</span>
+                          </div>
                         <input
                           type="file"
                           accept="image/*"
@@ -405,8 +451,51 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                           onChange={(e) => handlePhotoUpload(e.target.files)}
                         />
                       </label>
+                      )}
                     </div>
+                    {formData.photos.length >= maxPhotos && (
+                      <p className="text-xs text-muted-foreground">
+                        Photo limit reached ({maxPhotos} photos).
+                        {isPremium ? "" : " Upgrade to Premium for more photos."}
+                      </p>
+                    )}
                   </div>
+
+                  {/* AI Tools (Premium) */}
+                  <div className="rounded-lg border border-dashed border-[oklch(0.72_0.15_80)]/50 bg-[oklch(0.72_0.15_80)]/5 p-4">
+                    <div className="flex items-center justify-between gap-2 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Sparkles className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
+                        <span className="text-sm font-semibold text-foreground">AI Assistant</span>
+                        {!isPremium && (
+                          <span className="px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[oklch(0.72_0.15_80)] text-white">PREMIUM</span>
+                        )}
+                      </div>
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="gap-1"
+                        disabled={!isPremium}
+                        onClick={() => {
+                          if (!isPremium) {
+                            toast.error("AI tools are a Premium benefit — upgrade your plan to use them");
+                            return;
+                          }
+                          setShowAiTools((v) => !v);
+                        }}
+                      >
+                        {showAiTools ? "Hide Tools" : "Use AI Tools"}
+                      </Button>
+                    </div>
+                    {showAiTools && isPremium && (
+                      <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
+                        <AiGenerateDescriptionButton formData={formData} setFormData={setFormData} /> 
+                        <AiRecommendPriceButton formData={formData} setFormData={setFormData} /> 
+                      </div>
+                    )}
+                  </div>
+
                   <div className="flex gap-3 pt-2">
                     <Button type="submit" className="flex-1" disabled={createMutation.isPending || updateMutation.isPending}>
                       {createMutation.isPending || updateMutation.isPending ? "Saving..." : editingProperty ? "Update Property" : "Submit for Review"}
@@ -443,6 +532,39 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
               <div className="text-sm text-muted-foreground">Total Views</div>
             </div>
           </div>
+
+          {/* Premium Analytics */}
+          {isPremium && (
+            <div className="mb-8 rounded-xl border border-[oklch(0.72_0.15_80)]/40 bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.4_0.16_280)] text-white p-5">
+              <div className="flex items-center gap-2 mb-4">
+                <BarChart3 className="w-5 h-5 text-[oklch(0.8_0.15_80)]" />
+                <h3 className="font-semibold">Listing Analytics</h3>
+                <span className="ml-auto px-2 py-0.5 rounded-full text-[10px] font-semibold bg-[oklch(0.72_0.15_80)] text-white">PREMIUM</span>
+              </div>
+              {statsLoading || !stats ? (
+                <div className="animate-pulse flex gap-4">
+                  <div className="h-8 bg-white/20 rounded w-24" />
+                  <div className="h-8 bg-white/20 rounded w-24" />
+                  <div className="h-8 bg-white/20 rounded w-24" />
+                </div>
+              ) : (
+                <div className="grid grid-cols-3 gap-4">
+                  <div>
+                    <div className="text-2xl font-bold">{stats.reduce((s, p) => s + p.views, 0)}</div>
+                    <div className="text-sm text-blue-100 flex items-center gap-1"><Eye className="w-3.5 h-3.5" /> Views</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{stats.reduce((s, p) => s + p.saves, 0)}</div>
+                    <div className="text-sm text-blue-100 flex items-center gap-1"><Heart className="w-3.5 h-3.5" /> Saves</div>
+                  </div>
+                  <div>
+                    <div className="text-2xl font-bold">{stats.reduce((s, p) => s + p.inquiries, 0)}</div>
+                    <div className="text-sm text-blue-100 flex items-center gap-1"><MessageSquare className="w-3.5 h-3.5" /> Inquiries</div>
+                  </div>
+                </div>
+              )}
+            </div>
+          )}
 
           {/* Properties List */}
           {isLoading ? (
@@ -530,6 +652,27 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                         <Trash2 className="w-3.5 h-3.5" /> Delete
                       </Button>
                     </div>
+                    {/* Premium: feature this listing */}
+                    {isPremium && property.status === "approved" && (
+                      <div className="mt-3 pt-3 border-t border-border/50 flex flex-wrap items-center gap-2">
+                        <span className="text-xs text-muted-foreground flex items-center gap-1">
+                          <Crown className="w-3.5 h-3.5 text-[oklch(0.72_0.15_80)]" /> Boost this listing
+                        </span>
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          className="gap-1 h-8 text-[oklch(0.72_0.15_80)] border-[oklch(0.72_0.15_80)]/40"
+                          disabled={featureMutation.isPending}
+                          onClick={() => {
+                            if (!window.confirm("Feature this property for 30 days at Ksh 1,500? It will appear at the top of search results.")) return;
+                            featureMutation.mutate({ propertyId: property.id, duration: "30_days", paymentMethod: "mpesa" });
+                          }}
+                        >
+                          {featureMutation.isPending ? "Processing..." : "Feature Listing (30 days)"}
+                        </Button>
+                        <VideoUploadRow propertyId={property.id} maxVideos={maxVideos} uploadMutation={videoUploadMutation} /> 
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
@@ -545,3 +688,166 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
 
 // Helper import
 import { Link } from "wouter";
+
+// Video upload row for premium users (Premium)
+function VideoUploadRow({ propertyId, maxVideos, uploadMutation }: { propertyId: number; maxVideos: number; uploadMutation: any }) {
+  const [working, setWorking] = useState(false);
+  const { data: videos, refetch } = trpc.propertyVideo.list.useQuery(propertyId, { enabled: maxVideos > 0 });
+  const videoDeleteMutation = trpc.propertyVideo.delete.useMutation({
+    onSuccess: () => {
+      toast.success("Video deleted");
+      refetch();
+    },
+    onError: () => toast.error("Failed to delete video"),
+  });
+
+  const handleVideoUpload = async (files: FileList | null) => {
+    const file = files?.[0];
+    if (!file) return;
+    if (!file.type.startsWith("video/")) {
+      toast.error("Please select a video file");
+      return;
+    }
+    if (file.size > 100 * 1024 * 1024) {
+      toast.error("Video must be smaller than 100MB");
+      return;
+    }
+    if ((videos?.length ?? 0) >= maxVideos) {
+      toast.error(`Video limit reached (${maxVideos} videos per property). Upgrade to Premium for more.`);
+      return;
+    }
+    setWorking(true);
+    try {
+      const arrayBuffer = await file.arrayBuffer();
+      const base64 = btoa(new Uint8Array(arrayBuffer).reduce((d, b) => d + String.fromCharCode(b), ""));
+      await uploadMutation.mutateAsync({ propertyId, fileName: file.name, contentType: file.type, data: base64 });
+      refetch();
+    } catch {
+      toast.error("Failed to upload video");
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  if (maxVideos <= 0) return null;
+
+  return (
+    <div className="flex items-center gap-2 flex-wrap">
+      <span className="text-xs text-muted-foreground">{(videos?.length ?? 0)}/{maxVideos} videos</span>
+      {(videos?.length ?? 0) < maxVideos && (
+        <label className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-md text-xs font-medium border border-dashed border-[oklch(0.45_0.18_260)]/50 cursor-pointer hover:bg-secondary transition-colors">
+          <Upload className="w-3.5 h-3.5 text-[oklch(0.45_0.18_260)]" />
+          {working ? "Uploading..." : "Add Video"}
+          <input
+            type="file"
+            accept="video/*"
+            className="hidden"
+            onChange={(e) => handleVideoUpload(e.target.files)}
+          />
+        </label>
+      )}
+      {videos?.map((v: any) => (
+        <span key={v.id} className="inline-flex items-center gap-1 text-xs border rounded-md px-2 py-1">
+          Video
+          <button
+            type="button"
+            onClick={() => videoDeleteMutation.mutate(v.id)}
+            className="text-red-500 hover:text-red-700"
+          >
+            <X className="w-3 h-3" />
+          </button>
+        </span>
+      ))}
+    </div>
+  );
+}
+
+// AI description generator button (Premium)
+function AiGenerateDescriptionButton({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
+  const [working, setWorking] = useState(false);
+  const generateDescription = trpc.ai.generateDescription.useMutation();
+
+  const handleGenerate = async () => {
+    if (!formData.title || !formData.propertyType || !formData.location) {
+      toast.error("Please fill in at least the title, property type, and location first");
+      return;
+    }
+    setWorking(true);
+    try {
+      const result = await generateDescription.mutateAsync({
+        propertyType: formData.propertyType,
+        location: formData.location,
+        bedrooms: Number(formData.bedrooms || 0),
+        bathrooms: Number(formData.bathrooms || 0),
+        listingType: formData.listingType,
+        price: formData.price ? Number(formData.price) : undefined,
+        features: (formData.amenities || []).join(", "),
+      });
+      setFormData((prev: any) => ({ ...prev, description: result.description }));
+      toast.success("AI description generated!");
+    } catch {
+      toast.error("Failed to generate description");
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  return (
+    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={handleGenerate} disabled={working || generateDescription.isPending}>
+      {working || generateDescription.isPending ? (
+        <>
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Generating...
+        </>
+      ) : (
+        <>
+          <Sparkles className="w-3.5 h-3.5" /> Generate Description
+        </>
+      )}
+    </Button>
+  );
+}
+
+// AI price recommendation button (Premium)
+function AiRecommendPriceButton({ formData, setFormData }: { formData: any; setFormData: React.Dispatch<React.SetStateAction<any>> }) {
+  const [working, setWorking] = useState(false);
+  const recommendPrice = trpc.ai.recommendPrice.useMutation();
+
+  const handleRecommend = async () => {
+    if (!formData.propertyType || !formData.location || !formData.bedrooms || !formData.bathrooms) {
+      toast.error("Please fill in property type, location, bedrooms, and bathrooms first");
+      return;
+    }
+    setWorking(true);
+    try {
+      const result = await recommendPrice.mutateAsync({
+        propertyType: formData.propertyType,
+        location: formData.location,
+        bedrooms: Number(formData.bedrooms || 0),
+        bathrooms: Number(formData.bathrooms || 0),
+        landSize: formData.landSize ? Number(formData.landSize) : undefined,
+        floorArea: formData.floorArea ? Number(formData.floorArea) : undefined,
+        listingType: formData.listingType,
+      });
+      setFormData((prev: any) => ({ ...prev, price: String(Math.round(result.recommendedPrice)) }));
+      toast.success(`AI suggests Ksh ${Math.round(result.recommendedPrice).toLocaleString()} — ${result.reasoning}`);
+    } catch {
+      toast.error("Failed to generate price recommendation");
+    } finally {
+      setWorking(false);
+    }
+  };
+
+  return (
+    <Button type="button" variant="outline" size="sm" className="gap-1" onClick={handleRecommend} disabled={working || recommendPrice.isPending}>
+      {working || recommendPrice.isPending ? (
+        <>
+          <Loader2 className="w-3.5 h-3.5 animate-spin" /> Analyzing...
+        </>
+      ) : (
+        <>
+          <TrendingUp className="w-3.5 h-3.5" /> Suggest Price
+        </>
+      )}
+    </Button>
+  );
+}

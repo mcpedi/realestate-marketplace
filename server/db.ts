@@ -1,4 +1,4 @@
-import { eq, desc, asc, and, like, sql, count, inArray } from "drizzle-orm";
+import { eq, desc, asc, and, like, sql, count, inArray, gt } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -11,12 +11,22 @@ import {
   blogPosts,
   categories,
   postCategories,
+  subscriptionPlans,
+  subscriptions,
+  payments,
+  featuredListings,
+  propertyVideos,
+  agencyProfiles,
   type InsertProperty,
   type InsertPropertyPhoto,
   type InsertInquiry,
   type InsertFavorite,
   type InsertTestimonial,
   type InsertBlogPost,
+  type InsertPayment,
+  type InsertFeaturedListing,
+  type InsertPropertyVideo,
+  type InsertAgencyProfile,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -192,18 +202,35 @@ export async function getProperties(filters: PropertyFilters = {}) {
   const offset = (page - 1) * limit;
   const whereClause = conditions.length > 0 ? and(...conditions) : undefined;
   const [totalResult] = await db.select({ count: count() }).from(properties).where(whereClause);
+  // Collect premium featured placements (from featuredListings) so they rank first.
+  let featuredPropertyIds: Set<number>;
+  try {
+    const activeFeatured = await db
+      .select()
+      .from(featuredListings)
+      .where(and(eq(featuredListings.active, true), gt(featuredListings.featuredUntil, new Date())));
+    featuredPropertyIds = new Set(activeFeatured.map((f) => f.propertyId));
+  } catch {
+    featuredPropertyIds = new Set();
+  }
   const rawItems = await db
     .select()
     .from(properties)
     .where(whereClause)
-    .orderBy(desc(properties.createdAt))
+    .orderBy(desc(properties.featured), desc(properties.createdAt))
     .limit(limit)
     .offset(offset);
   const items = await Promise.all(rawItems.map(async (p) => {
     const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
-    return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
+    return {
+      ...p,
+      featured: featuredPropertyIds.has(p.id) || p.featured,
+      photos: photos.map((ph) => ({ url: ph.url })),
+    };
   }));
-  return { items, total: totalResult?.count || 0 };
+  const featuredItems = items.filter((i) => i.featured);
+  const regularItems = items.filter((i) => !i.featured);
+  return { items: [...featuredItems, ...regularItems], total: totalResult?.count || 0 };
 }
 
 export async function getFeaturedProperties() {
@@ -228,12 +255,15 @@ export async function getLatestProperties(limit = 8) {
     .select()
     .from(properties)
     .where(eq(properties.status, "approved"))
-    .orderBy(desc(properties.createdAt))
+    .orderBy(desc(properties.featured), desc(properties.createdAt))
     .limit(limit);
-  return Promise.all(rows.map(async (p) => {
+  const rowsWithPhotos = await Promise.all(rows.map(async (p) => {
     const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
     return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
   }));
+  const featuredItems = rowsWithPhotos.filter((i) => i.featured);
+  const regularItems = rowsWithPhotos.filter((i) => !i.featured);
+  return [...featuredItems, ...regularItems];
 }
 
 export async function getUserProperties(userId: number) {
@@ -490,4 +520,310 @@ export async function getDashboardStats() {
     totalInquiries: totalInq?.count || 0,
     totalTestimonials: totalTest?.count || 0,
   };
+}
+
+// ─── Premium: Subscription Plans ─────────────────────────────────────────────
+
+export async function getSubscriptionPlans() {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(subscriptionPlans).where(eq(subscriptionPlans.active, true));
+}
+
+export async function getSubscriptionPlanById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.id, id)).limit(1);
+  return result[0];
+}
+
+// ─── Premium: Subscriptions ──────────────────────────────────────────────────
+
+export async function getUserSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const subs = await db
+    .select()
+    .from(subscriptions)
+    .innerJoin(subscriptionPlans, eq(subscriptions.planId, subscriptionPlans.id))
+    .where(
+      and(
+        eq(subscriptions.userId, userId),
+        eq(subscriptions.status, "active")
+      )
+    )
+    .orderBy(desc(subscriptions.createdAt))
+    .limit(1);
+  if (subs.length === 0) return undefined;
+  return {
+    subscription: subs[0].subscriptions,
+    plan: subs[0].subscriptionPlans,
+  };
+}
+
+export async function isUserPremium(userId: number): Promise<boolean> {
+  const sub = await getUserSubscription(userId);
+  return !!sub && !!sub.plan;
+}
+
+export async function createSubscriptionRecord(data: {
+  userId: number;
+  planId: number;
+  endDate: Date;
+}) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const now = new Date();
+  const [result] = await db
+    .insert(subscriptions)
+    .values({
+      userId: data.userId,
+      planId: data.planId,
+      status: "active",
+      startDate: now,
+      endDate: data.endDate,
+      autoRenew: true,
+      lastPaymentDate: now,
+    })
+    .$returningId();
+  if (!result) return undefined;
+  return getUserSubscriptionById(result.id);
+}
+
+export async function getUserSubscriptionById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db
+    .select()
+    .from(subscriptions)
+    .innerJoin(subscriptionPlans, eq(subscriptions.planId, subscriptionPlans.id))
+    .where(eq(subscriptions.id, id))
+    .limit(1);
+  if (rows.length === 0) return undefined;
+  return { subscription: rows[0].subscriptions, plan: rows[0].subscriptionPlans };
+}
+
+export async function getSubscriptionById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(subscriptions).where(eq(subscriptions.id, id)).limit(1);
+  return result[0];
+}
+
+export async function cancelSubscriptionRecord(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(subscriptions).set({ status: "cancelled" }).where(eq(subscriptions.id, id));
+  return true;
+}
+
+export async function getUserMaxImages(userId: number): Promise<number> {
+  const sub = await getUserSubscription(userId);
+  if (sub?.plan) return sub.plan.maxImages ?? 10;
+  return 10; // Free tier default
+}
+
+export async function getUserMaxVideos(userId: number): Promise<number> {
+  const sub = await getUserSubscription(userId);
+  if (sub?.plan) return sub.plan.maxVideos ?? 0;
+  return 0; // Free tier: no videos
+}
+
+export async function getAllSubscriptions() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(subscriptions)
+    .innerJoin(subscriptionPlans, eq(subscriptions.planId, subscriptionPlans.id))
+    .innerJoin(users, eq(subscriptions.userId, users.id))
+    .orderBy(desc(subscriptions.createdAt))
+    .limit(100);
+}
+
+// ─── Premium: Payments ───────────────────────────────────────────────────────
+
+export async function createPaymentRecord(payment: Omit<InsertPayment, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [result] = await db.insert(payments).values(payment).$returningId();
+  if (!result) return undefined;
+  const rows = await db.select().from(payments).where(eq(payments.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function getUserPayments(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(payments).where(eq(payments.userId, userId)).orderBy(desc(payments.createdAt)).limit(50);
+}
+
+export async function updateSubscriptionPlan(id: number, data: { name?: string; price?: number; maxImages?: number; maxVideos?: number; active?: boolean }) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(subscriptionPlans).set(data).where(eq(subscriptionPlans.id, id));
+}
+
+export async function grantPremiumSubscription(userId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  // Find or create the Premium plan
+  let plan = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.name, "Premium")).limit(1);
+  if (!plan[0]) {
+    await db.insert(subscriptionPlans).values({
+      name: "Premium",
+      price: 1500,
+      currency: "KES",
+      period: "monthly",
+      maxImages: 20,
+      maxVideos: 2,
+      description: "Full premium benefits",
+    });
+    plan = await db.select().from(subscriptionPlans).where(eq(subscriptionPlans.name, "Premium")).limit(1);
+  }
+  if (!plan[0]) throw new Error("Premium plan unavailable");
+  const endDate = new Date();
+  endDate.setMonth(endDate.getMonth() + 12);
+  await db.insert(subscriptions).values({
+    userId,
+    planId: plan[0].id,
+    status: "active",
+    startDate: new Date(),
+    endDate,
+  });
+  return { success: true };
+}
+
+export async function getSubscriptionRevenue() {
+  const db = await getDb();
+  if (!db) return { total: 0, count: 0 };
+  const result = await db
+    .select({ sum: sql<number>`COALESCE(SUM(${payments.amount}), 0)`, count: count() })
+    .from(payments)
+    .where(and(eq(payments.status, "completed"), eq(payments.type, "subscription")));
+  return { total: result[0]?.sum || 0, count: result[0]?.count || 0 };
+}
+
+// ─── Premium: Featured Listings ──────────────────────────────────────────────
+
+export async function getUserFeaturedListings(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(featuredListings).where(eq(featuredListings.userId, userId)).orderBy(desc(featuredListings.createdAt));
+}
+
+export async function getActiveFeaturedListingForProperty(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(featuredListings)
+    .where(
+      and(
+        eq(featuredListings.propertyId, propertyId),
+        eq(featuredListings.active, true),
+        gt(featuredListings.featuredUntil, new Date())
+      )
+    )
+    .limit(1);
+  return result[0];
+}
+
+export async function createFeaturedListingRecord(data: Omit<InsertFeaturedListing, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [result] = await db.insert(featuredListings).values(data).$returningId();
+  if (!result) return undefined;
+  const rows = await db.select().from(featuredListings).where(eq(featuredListings.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function getAllFeaturedListings() {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(featuredListings)
+    .where(and(eq(featuredListings.active, true), gt(featuredListings.featuredUntil, new Date())))
+    .orderBy(desc(featuredListings.featuredUntil));
+}
+
+export async function deactivateFeaturedListingRecord(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(featuredListings).set({ active: false }).where(eq(featuredListings.id, id));
+  return true;
+}
+
+// ─── Premium: Property Videos ────────────────────────────────────────────────
+
+export async function getPropertyVideos(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(propertyVideos).where(eq(propertyVideos.propertyId, propertyId));
+}
+
+export async function addPropertyVideo(video: Omit<InsertPropertyVideo, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [result] = await db.insert(propertyVideos).values(video).$returningId();
+  if (!result) return undefined;
+  const rows = await db.select().from(propertyVideos).where(eq(propertyVideos.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function getPropertyVideoById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(propertyVideos).where(eq(propertyVideos.id, id)).limit(1);
+  return result[0];
+}
+
+export async function deletePropertyVideoRecord(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.delete(propertyVideos).where(eq(propertyVideos.id, id));
+  return true;
+}
+
+// ─── Premium: Agency Profiles ────────────────────────────────────────────────
+
+export async function getAgencyProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(agencyProfiles).where(eq(agencyProfiles.userId, userId)).limit(1);
+  return result[0];
+}
+
+export async function createAgencyProfileRecord(data: Omit<InsertAgencyProfile, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.insert(agencyProfiles).values(data);
+  return true;
+}
+
+export async function updateAgencyProfileRecord(
+  userId: number,
+  data: Partial<Omit<InsertAgencyProfile, "id" | "userId" | "createdAt" | "updatedAt">>
+) {
+  const db = await getDb();
+  if (!db) return false;
+  const set: Record<string, unknown> = {};
+  if (data.agencyName !== undefined) set.agencyName = data.agencyName;
+  if (data.logoUrl !== undefined) set.logoUrl = data.logoUrl;
+  if (data.bannerUrl !== undefined) set.bannerUrl = data.bannerUrl;
+  if (data.description !== undefined) set.description = data.description;
+  if (data.website !== undefined) set.website = data.website;
+  if (data.socialMedia !== undefined) set.socialMedia = data.socialMedia;
+  if (data.verified !== undefined) set.verified = data.verified;
+  if (Object.keys(set).length === 0) return false;
+  await db.update(agencyProfiles).set(set).where(eq(agencyProfiles.userId, userId));
+  return true;
+}
+
+export async function countPropertySaves(propertyId: number): Promise<number> {
+  const db = await getDb();
+  if (!db) return 0;
+  const result = await db.select({ count: count() }).from(favorites).where(eq(favorites.propertyId, propertyId));
+  return result[0]?.count || 0;
 }

@@ -18,6 +18,7 @@ import Testimonials from "./pages/Testimonials";
 import Blog from "./pages/Blog";
 import BlogPost from "./pages/BlogPost";
 import Profile from "./pages/Profile";
+import Premium from "./pages/Premium";
 
 function Router() {
   return (
@@ -36,6 +37,7 @@ function Router() {
       <Route path="/blog" component={Blog} />
       <Route path="/blog/:slug" component={BlogPost} />
       <Route path="/profile" component={Profile} />
+      <Route path="/premium" component={Premium} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
