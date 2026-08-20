@@ -48,6 +48,12 @@
 - [x] Tests for premium procedures (35 tests passing incl. premium.test.ts)
 - [x] Checkpoint and deliver
 
+## Production build fix (index.html resolution)
+- [x] Diagnose production build failure: Vite cannot resolve entry module index.html in Docker build
+- [x] Fix vite config: added build.rollupOptions.input pointing to client/index.html (root is project root)
+- [x] Fix serveStatic in server/_core/vite.ts to serve dist/public/client (where SPA build lands) with dist fallback
+- [x] Verify pnpm build locally succeeds, tests pass (40), dev server serves site correctly, checkpoint and confirm deployment
+
 ## Leads Dashboard (agent inquiry management)
 - [x] Backend: seller leads procedure (aggregates inquiries per listing, statuses: new/contacted/viewing/negotiating/closed/lost, buyer details)
 - [x] Backend: lead status update mutation (ownership-checked)

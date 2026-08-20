@@ -51,17 +51,20 @@ export function serveStatic(app: Express) {
   const distPath =
     process.env.NODE_ENV === "development"
       ? path.resolve(import.meta.dirname, "../..", "dist", "public")
-      : path.resolve(import.meta.dirname, "public");
+      : path.resolve(import.meta.dirname, "..", "dist", "public");
+  // The Vite build outputs into outDir with root set to the project root, so
+  // the SPA entry lands at dist/public/client/index.html; serve that folder.
+  const clientBuildPath = path.join(distPath, "client");
+  const servePath = fs.existsSync(clientBuildPath) ? clientBuildPath : distPath;
   if (!fs.existsSync(distPath)) {
     console.error(
       `Could not find the build directory: ${distPath}, make sure to build the client first`
     );
   }
 
-  app.use(express.static(distPath));
-
+  app.use(express.static(servePath));
   // fall through to index.html if the file doesn't exist
   app.use("*", (_req, res) => {
-    res.sendFile(path.resolve(distPath, "index.html"));
+    res.sendFile(path.resolve(servePath, "index.html"));
   });
 }
