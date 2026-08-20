@@ -5,6 +5,7 @@ import { PropertyCard } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
 import { Link } from "wouter";
 import { startLogin } from "@/const";
+import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import {
   Search,
@@ -53,10 +54,16 @@ const features = [
 ];
 
 export default function Home() {
+  const { isAuthenticated } = useAuth();
   const { data: featured, isLoading: loadingFeatured } =
     trpc.property.featured.useQuery();
   const { data: latest, isLoading: loadingLatest } =
     trpc.property.latest.useQuery();
+  const { data: recsData, isLoading: recsLoading } =
+    trpc.modern.recommendations.useQuery(undefined, {
+      enabled: isAuthenticated,
+    });
+  const recs = recsData?.items ?? [];
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -154,6 +161,59 @@ export default function Home() {
           )}
         </div>
       </section>
+
+      {/* Picked for You — personalized recommendations for logged-in users */}
+      {isAuthenticated && (
+        <section className="py-12 md:py-16 bg-gradient-to-r from-[oklch(0.45_0.18_260/0.05)] via-white to-[oklch(0.72_0.15_80/0.05)] border-y border-border/40">
+          <div className="container">
+            <div className="flex items-end justify-between mb-8">
+              <div>
+                <div className="flex items-center gap-2 mb-1">
+                  <Sparkles className="w-5 h-5 text-[oklch(0.72_0.15_80)]" />
+                  <h2 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
+                    Picked for You
+                  </h2>
+                </div>
+                <p className="text-muted-foreground">AI recommendations based on your favorites and preferences</p>
+              </div>
+              <Link href="/properties">
+                <Button variant="outline" className="gap-2">
+                  Browse All <ArrowRight className="w-4 h-4" />
+                </Button>
+              </Link>
+            </div>
+            {recsLoading ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-white rounded-xl border border-border/50 animate-pulse">
+                    <div className="aspect-[4/3] bg-muted" />
+                    <div className="p-4 space-y-3">
+                      <div className="h-5 bg-muted rounded w-3/4" />
+                      <div className="h-4 bg-muted rounded w-1/2" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (recs && recs.length > 0) ? (
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {recs.map((p) => (
+                  <PropertyCard key={p.id} property={p} />
+                ))}
+              </div>
+            ) : (
+              <div className="text-center py-12 text-muted-foreground bg-white/60 rounded-xl border border-border/40">
+                <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
+                <p>Save favorites and set preferences to get personalized picks.</p>
+                <Link href="/assistant">
+                  <Button variant="outline" size="sm" className="mt-4 gap-2">
+                    Ask the AI Assistant <ArrowRight className="w-3.5 h-3.5" />
+                  </Button>
+                </Link>
+              </div>
+            )}
+          </div>
+        </section>
+      )}
 
       {/* Latest Properties */}
       <section className="py-16 md:py-20 bg-secondary/30">

@@ -1,9 +1,37 @@
 import { Link } from "wouter";
-import { Bed, Bath, Maximize, MapPin, Heart, Tag, BadgeCheck } from "lucide-react";
+import { Bed, Bath, Maximize, MapPin, Heart, Tag, BadgeCheck, GitCompareArrows } from "lucide-react";
+import { emitCompareChange } from "@/pages/Compare";
+import { useCompareIds } from "@/hooks/useCompareIds";
 import { useMemo, useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import type { Property } from "../../../drizzle/schema";
+
+export function PropertyScoreChip({ propertyId }: { propertyId: number }) {
+  const { data } = trpc.modern.propertyScore.useQuery({ propertyId }, {
+    enabled: !!propertyId,
+  });
+  if (!data) return null;
+  const score = data.score ?? 0;
+  const color = score >= 80 ? "text-emerald-600 bg-emerald-50" : score >= 60 ? "text-blue-600 bg-blue-50" : "text-amber-600 bg-amber-50";
+  return (
+    <span className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 ${color}`}>
+      Pedi Wa Score {score}
+    </span>
+  );
+}
+
+export function MatchBadge({ propertyId }: { propertyId: number }) {
+  const { data } = trpc.modern.matchScore.useQuery({ propertyId }, {
+    enabled: !!propertyId,
+  });
+  if (!data || data.score < 60) return null;
+  return (
+    <span className="px-2.5 py-1 rounded-md text-xs font-bold text-white bg-[oklch(0.55_0.19_300)] inline-flex items-center gap-1">
+      {data.score}% Match for You
+    </span>
+  );
+}
 
 interface PropertyCardProps {
   property: Property & { photos?: { url: string }[] };
@@ -29,6 +57,8 @@ function PremiumBadge() {
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
+  const compareIds = useCompareIds();
+  const isInCompare = compareIds.includes(property.id);
   const [isFav, setIsFav] = useState(false);
   const toggleFav = trpc.favorite.toggle.useMutation({
     onSuccess: (data) => {
@@ -77,19 +107,48 @@ export function PropertyCard({ property }: PropertyCardProps) {
             </span>
           )}
           {isVerifiedSeller && <PremiumBadge />}
+          <MatchBadge propertyId={property.id} />
         </div>
+        <div className="absolute top-3 right-3 flex flex-col gap-2">
         <button
           onClick={(e) => {
             e.preventDefault();
             e.stopPropagation();
             toggleFav.mutate(property.id);
           }}
-          className="absolute top-3 right-3 w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
         >
           <Heart
             className={`w-4 h-4 ${isFav ? "fill-red-500 text-red-500" : "text-muted-foreground"}`}
           />
         </button>
+        <button
+          onClick={(e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const current = ((): number[] => {
+              try {
+                return JSON.parse(localStorage.getItem("pw-compare-ids") ?? "[]") as number[];
+              } catch {
+                return [];
+              }
+            })();
+            const next = isInCompare
+              ? current.filter((id) => id !== property.id)
+              : [...current, property.id].slice(0, 4);
+            localStorage.setItem("pw-compare-ids", JSON.stringify(next));
+            emitCompareChange();
+            toast.success(
+              isInCompare ? "Removed from comparison" : "Added to comparison (max 4)"
+            );
+          }}
+          className="w-8 h-8 rounded-full bg-white/90 backdrop-blur-sm flex items-center justify-center shadow-sm hover:scale-110 transition-transform"
+        >
+          <GitCompareArrows
+            className={`w-4 h-4 ${isInCompare ? "text-[oklch(0.45_0.18_260)]" : "text-muted-foreground"}`}
+          />
+        </button>
+        </div>
       </Link>
 
       {/* Content */}
@@ -141,6 +200,9 @@ export function PropertyCard({ property }: PropertyCardProps) {
           >
             View Details
           </Link>
+        </div>
+        <div className="mt-2">
+          <PropertyScoreChip propertyId={property.id} />
         </div>
       </div>
     </div>

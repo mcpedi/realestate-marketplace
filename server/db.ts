@@ -27,6 +27,16 @@ import {
   type InsertFeaturedListing,
   type InsertPropertyVideo,
   type InsertAgencyProfile,
+  userPreferences,
+  propertyAlerts,
+  viewingBookings,
+  propertyScores,
+  propertyActivity,
+  type InsertUserPreference,
+  type InsertPropertyAlert,
+  type InsertViewingBooking,
+  type InsertPropertyScore,
+  type InsertPropertyActivity,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -915,4 +925,213 @@ export async function getLeadStats(userId: number): Promise<LeadStats> {
     stats.conversionRate = Math.round((stats.closed / stats.total) * 100);
   }
   return stats;
+}
+
+// ─── Modern Features ─────────────────────────────────────────────────────────
+
+// ── User preferences ──────────────────────────────────────────────────────────
+export async function getUserPreferences(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(userPreferences).where(eq(userPreferences.userId, userId)).limit(1);
+  return rows.length > 0 ? rows[0] : undefined;
+}
+
+export async function upsertUserPreferences(userId: number, data: Partial<InsertUserPreference>) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getUserPreferences(userId);
+  if (existing) {
+    await db.update(userPreferences).set(data as any).where(eq(userPreferences.userId, userId));
+  } else {
+    await db.insert(userPreferences).values({ userId, ...data } as InsertUserPreference);
+  }
+}
+
+// ── Activity tracking ─────────────────────────────────────────────────────────
+export async function recordPropertyActivity(data: InsertPropertyActivity) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(propertyActivity).values(data);
+}
+
+export async function getUserActivity(userId: number, eventType?: string, limit = 100) {
+  const db = await getDb();
+  if (!db) return [];
+  const conds = [eq(propertyActivity.userId, userId)];
+  if (eventType) conds.push(eq(propertyActivity.eventType, eventType as any));
+  return db.select().from(propertyActivity).where(and(...conds)).orderBy(desc(propertyActivity.createdAt)).limit(limit);
+}
+
+// ── Alerts ────────────────────────────────────────────────────────────────────
+export async function createAlert(data: InsertPropertyAlert) {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.insert(propertyAlerts).values(data);
+  return data;
+}
+
+export async function getUserAlerts(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const rows = await db.select().from(propertyAlerts).where(eq(propertyAlerts.userId, userId)).orderBy(desc(propertyAlerts.createdAt));
+  return rows.map((r) => {
+    let parsed = null;
+    if (r.criteria) {
+      try {
+        parsed = JSON.parse(r.criteria as string);
+      } catch {
+        parsed = null;
+      }
+    }
+    return { ...r, criteria: parsed };
+  });
+}
+
+export async function deleteAlert(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(propertyAlerts).where(and(eq(propertyAlerts.id, id), eq(propertyAlerts.userId, userId)));
+  return true;
+}
+
+export async function updateAlertStatus(id: number, userId: number, active: boolean) {
+  const db = await getDb();
+  if (!db) return;
+  await db.update(propertyAlerts).set({ active }).where(and(eq(propertyAlerts.id, id), eq(propertyAlerts.userId, userId)));
+}
+
+/**
+ * Property details enriched with first photo, for matching/alert payloads.
+ */
+export async function getPropertyWithPhoto(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(properties).where(eq(properties.id, id)).limit(1);
+  const p = rows.length > 0 ? rows[0] : undefined;
+  if (!p) return undefined;
+  const photos = await db
+    .select()
+    .from(propertyPhotos)
+    .where(eq(propertyPhotos.propertyId, id))
+    .orderBy(asc(propertyPhotos.sortOrder))
+    .limit(1);
+  return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
+}
+
+/**
+ * Check saved properties for price drops and re-arm price-drop alerts.
+ * Returns properties whose price decreased since last check.
+ */
+export async function checkPriceDrops() {
+  const db = await getDb();
+  if (!db) return [];
+  // Find properties whose current price is lower than their original list price
+  // (stored price before update is not persisted, so we compare against saved
+  // favorites: a drop is detected when a user's favorited property price is
+  // lower than the highest price we have recorded for it).
+  const drops: Array<{ userId: number; propertyId: number; newPrice: number; alertIds: number[] }> = [];
+  const alertRows = await db
+    .select()
+    .from(propertyAlerts)
+    .where(and(eq(propertyAlerts.type, "priceDrop"), eq(propertyAlerts.active, true)))
+    .orderBy(asc(propertyAlerts.userId), asc(propertyAlerts.propertyId));
+  const byKey = new Map<string, Array<{ userId: number; propertyId: number; alertId: number }>>();
+  for (const a of alertRows) {
+    if (!a.propertyId) continue;
+    const key = `${a.userId}-${a.propertyId}`;
+    const arr = byKey.get(key) || [];
+    arr.push({ userId: a.userId, propertyId: a.propertyId, alertId: a.id });
+    byKey.set(key, arr);
+  }
+  // Track last known prices in-memory keys; DB cannot store them without schema change.
+  // We compare current price against any previous value stored in criteria.lastKnownPrice.
+  for (const a of alertRows) {
+    if (!a.propertyId) continue;
+    const crit = (a.criteria || {}) as Record<string, unknown>;
+    const lastKnown = typeof crit.lastKnownPrice === "number" ? crit.lastKnownPrice : undefined;
+    const p = await getPropertyWithPhoto(a.propertyId);
+    if (!p) continue;
+    if (lastKnown !== undefined && p.price < lastKnown) {
+      drops.push({ userId: a.userId, propertyId: a.propertyId, newPrice: p.price, alertIds: [a.id] });
+    }
+    // Re-arm: store current price so next drop can be detected.
+    await db
+      .update(propertyAlerts)
+      .set({ criteria: JSON.stringify({ ...((a.criteria || {}) as Record<string, unknown>), lastKnownPrice: p.price }) })
+      .where(eq(propertyAlerts.id, a.id));
+  }
+  return drops;
+}
+
+// ── Viewing bookings ──────────────────────────────────────────────────────────
+export async function createViewingBooking(data: InsertViewingBooking) {
+  const db = await getDb();
+  if (!db) return undefined;
+  await db.insert(viewingBookings).values(data);
+  return data;
+}
+
+export async function getBuyerBookings(buyerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(viewingBookings).where(eq(viewingBookings.buyerId, buyerId)).orderBy(desc(viewingBookings.scheduledAt));
+}
+
+export async function getSellerPendingBookings(sellerId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  // Bookings for properties owned by this seller
+  const sellerProps = await db.select().from(properties).where(eq(properties.userId, sellerId));
+  const ids = sellerProps.map((p) => p.id);
+  if (ids.length === 0) return [];
+  return db.select().from(viewingBookings).where(inArray(viewingBookings.propertyId, ids)).orderBy(desc(viewingBookings.scheduledAt));
+}
+
+export async function updateBookingStatus(id: number, buyerId: number, status: "pending" | "confirmed" | "cancelled" | "completed") {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(viewingBookings).set({ status }).where(and(eq(viewingBookings.id, id), eq(viewingBookings.buyerId, buyerId)));
+  return true;
+}
+
+export async function updateBookingStatusBySeller(id: number, status: "pending" | "confirmed" | "cancelled" | "completed") {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(viewingBookings).set({ status }).where(eq(viewingBookings.id, id));
+  return true;
+}
+
+// ── Property scores ───────────────────────────────────────────────────────────
+export async function getPropertyScore(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(propertyScores).where(eq(propertyScores.propertyId, propertyId)).limit(1);
+  return rows.length > 0 ? rows[0] : undefined;
+}
+
+export async function upsertPropertyScore(propertyId: number, data: InsertPropertyScore) {
+  const db = await getDb();
+  if (!db) return;
+  const existing = await getPropertyScore(propertyId);
+  const row = { ...data, propertyId };
+  if (existing) {
+    await db.update(propertyScores).set(row as any).where(eq(propertyScores.propertyId, propertyId));
+  } else {
+    await db.insert(propertyScores).values(row);
+  }
+}
+
+// ── Property detail helpers for modern features ───────────────────────────────
+export async function getPropertyWithPhotos(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const p = await getPropertyById(id);
+  if (!p) return undefined;
+  const photos = await db
+    .select()
+    .from(propertyPhotos)
+    .where(eq(propertyPhotos.propertyId, id))
+    .orderBy(asc(propertyPhotos.sortOrder));
+  return { ...p, photos: photos.map((ph) => ({ id: ph.id, url: ph.url, fileKey: ph.fileKey, sortOrder: ph.sortOrder })) };
 }

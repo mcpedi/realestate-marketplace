@@ -1,4 +1,4 @@
-import { useState, useRef } from "react";
+import { useEffect, useState, useRef } from "react";
 import { useParams, Link } from "wouter";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
@@ -27,7 +27,21 @@ import {
   Building,
   Tag,
   Home as HomeIcon,
+  CalendarDays,
+  Video,
+  Sparkles,
+  GraduationCap,
+  Stethoscope,
+  ShoppingBag,
+  Bus,
+  Utensils,
+  TreePine,
 } from "lucide-react";
+import { PropertyScoreChip, MatchBadge } from "@/components/PropertyCard";
+import { emitCompareChange } from "@/pages/Compare";
+import { useCompareIds } from "@/hooks/useCompareIds";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Spinner } from "@/components/ui/spinner";
 import {
   Carousel,
   CarouselContent,
@@ -65,6 +79,47 @@ export default function PropertyDetail() {
     enabled: !!propertyId && isAuthenticated,
   });
 
+  const compareIds = useCompareIds();
+  const isInCompare = compareIds.includes(propertyId);
+  const [bookingOpen, setBookingOpen] = useState(false);
+  const [bookingForm, setBookingForm] = useState({
+    date: "",
+    time: "",
+    type: "physical" as "physical" | "virtual",
+    notes: "",
+  });
+
+  const bookingMutation = trpc.modern.bookingCreate.useMutation({
+    onSuccess: () => {
+      toast.success("Viewing booked! The seller will confirm shortly.");
+      setBookingOpen(false);
+      setBookingForm({ date: "", time: "", type: "physical", notes: "" });
+    },
+    onError: () => toast.error("Could not book the viewing. Please try again."),
+  });
+
+  const submitBooking = () => {
+    if (!isAuthenticated) {
+      startLogin();
+      return;
+    }
+    if (!bookingForm.date || !bookingForm.time) {
+      toast.error("Please pick a date and time.");
+      return;
+    }
+    const scheduledAt = new Date(`${bookingForm.date}T${bookingForm.time}`).getTime();
+    if (scheduledAt < Date.now()) {
+      toast.error("Please choose a date and time in the future.");
+      return;
+    }
+    bookingMutation.mutate({
+      propertyId,
+      scheduledAt,
+      type: bookingForm.type,
+      notes: bookingForm.notes || undefined,
+    });
+  };
+
   const inquiryMutation = trpc.inquiry.create.useMutation({
     onSuccess: () => {
       toast.success("Your inquiry has been sent successfully!");
@@ -79,6 +134,19 @@ export default function PropertyDetail() {
       favoriteQuery.refetch();
     },
   });
+
+  const recordActivity = trpc.modern.recordActivity.useMutation();
+  const poiQuery = trpc.modern.nearbyPois.useQuery(
+    { lat: property?.latitude ?? 0, lng: property?.longitude ?? 0, category: "school" },
+    { enabled: !!property?.latitude && !!property?.longitude },
+  );
+
+  // Record view activity when property loads
+  useEffect(() => {
+    if (isAuthenticated && propertyId) {
+      recordActivity.mutate({ propertyId, eventType: "view" });
+    }
+  }, [propertyId, isAuthenticated]);
 
   const handleInquirySubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -176,7 +244,7 @@ export default function PropertyDetail() {
             <h1 className="text-2xl md:text-3xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
               {property.title}
             </h1>
-            <div className="flex items-center gap-3 text-muted-foreground">
+            <div className="flex items-center gap-3 text-muted-foreground flex-wrap">
               <span className="flex items-center gap-1">
                 <MapPin className="w-4 h-4" />
                 {property.location}
@@ -188,6 +256,9 @@ export default function PropertyDetail() {
                 <Tag className="w-3.5 h-3.5" />
                 {property.propertyType}
               </span>
+              <span className="text-xs text-muted-foreground">ID: {property.id}</span>
+              <PropertyScoreChip propertyId={propertyId} />
+              <MatchBadge propertyId={propertyId} />
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -215,6 +286,31 @@ export default function PropertyDetail() {
                 <Heart className="w-5 h-5 text-muted-foreground" />
               </button>
             )}
+            <button
+              onClick={() => {
+                const current = compareIds;
+                const next = isInCompare
+                  ? current.filter((i) => i !== propertyId)
+                  : [...current, propertyId].slice(0, 4);
+                localStorage.setItem("pw-compare-ids", JSON.stringify(next));
+                emitCompareChange();
+                toast.success(
+                  isInCompare ? "Removed from comparison" : "Added to comparison (max 4)"
+                );
+              }}
+              className={`h-10 px-4 rounded-full border flex items-center gap-2 text-sm font-medium transition-colors ${
+                isInCompare
+                  ? "border-[oklch(0.45_0.18_260)] text-[oklch(0.45_0.18_260)] bg-[oklch(0.45_0.18_260/0.06)]"
+                  : "border-border hover:border-[oklch(0.45_0.18_260)]"
+              }`}
+            >
+              <Building className="w-4 h-4" />
+              Compare
+            </button>
+            <Button onClick={() => (isAuthenticated ? setBookingOpen(true) : startLogin())} className="gap-2">
+              <CalendarDays className="w-4 h-4" />
+              Book a Viewing
+            </Button>
           </div>
         </div>
 
@@ -297,6 +393,12 @@ export default function PropertyDetail() {
               </div>
             )}
 
+            {/* Pedi Wa Property Score */}
+            <ScoreBreakdown propertyId={propertyId} />
+
+            {/* Location Insights */}
+            {property.latitude && property.longitude && <LocationInsights lat={property.latitude} lng={property.longitude} />}
+
             {/* Map */}
             <div>
               <h2 className="text-xl font-bold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
@@ -321,6 +423,65 @@ export default function PropertyDetail() {
 
           {/* Sidebar: Contact & Inquiry */}
           <div className="space-y-6">
+            {/* Book Viewing Dialog */}
+            <Dialog open={bookingOpen} onOpenChange={setBookingOpen}>
+              <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                  <DialogTitle className="flex items-center gap-2">
+                    <CalendarDays className="w-4 h-4" /> Book a Viewing
+                  </DialogTitle>
+                  <DialogDescription>
+                    Schedule a physical or virtual viewing of {property.title}. The seller will confirm your request.
+                  </DialogDescription>
+                </DialogHeader>
+                <div className="space-y-4">
+                  <div className="grid grid-cols-2 gap-3">
+                    <Input
+                      type="date"
+                      value={bookingForm.date}
+                      min={new Date().toISOString().split("T")[0]}
+                      onChange={(e) => setBookingForm({ ...bookingForm, date: e.target.value })}
+                    />
+                    <Input
+                      type="time"
+                      value={bookingForm.time}
+                      onChange={(e) => setBookingForm({ ...bookingForm, time: e.target.value })}
+                    />
+                  </div>
+                  <div className="grid grid-cols-2 gap-3">
+                    <Button
+                      variant={bookingForm.type === "physical" ? "default" : "outline"}
+                      onClick={() => setBookingForm({ ...bookingForm, type: "physical" })}
+                    >
+                      Physical
+                    </Button>
+                    <Button
+                      variant={bookingForm.type === "virtual" ? "default" : "outline"}
+                      onClick={() => setBookingForm({ ...bookingForm, type: "virtual" })}
+                    >
+                      Virtual
+                    </Button>
+                  </div>
+                  <Textarea
+                    placeholder="Optional notes for the seller (e.g. preferred time, questions)"
+                    value={bookingForm.notes}
+                    onChange={(e) => setBookingForm({ ...bookingForm, notes: e.target.value })}
+                    rows={3}
+                  />
+                  <Button
+                    className="w-full"
+                    disabled={bookingMutation.isPending}
+                    onClick={submitBooking}
+                  >
+                    {bookingMutation.isPending ? (
+                      <><Spinner /> Booking…</>
+                    ) : (
+                      "Confirm Viewing Request"
+                    )}
+                  </Button>
+                </div>
+              </DialogContent>
+            </Dialog>
             {/* Seller Info */}
             {seller && (
               <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
@@ -351,7 +512,9 @@ export default function PropertyDetail() {
                   </div>
                 </a>
                 <a
-                  href={`https://wa.me/${(seller?.phone || '0716339552').replace(/[^0-9]/g, '')}?text=Hi, I'm interested in ${encodeURIComponent(property.title)}`}
+                  href={`https://wa.me/${(seller?.phone || '0716339552').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
+                    `Hi, I'm interested in your listing: ${property.title} — ${formatPrice(property.price)}${property.listingType === "rent" ? "/month" : ""} — Listing ID: ${property.id}. Could you share more details?`
+                  )}`}
                   target="_blank"
                   rel="noopener noreferrer"
                   className="flex items-center gap-3 p-3 rounded-lg bg-green-500 hover:bg-green-600 transition-colors text-white"
@@ -359,7 +522,7 @@ export default function PropertyDetail() {
                   <MessageSquare className="w-5 h-5" />
                   <div>
                     <div className="text-sm font-medium">WhatsApp</div>
-                    <div className="text-xs opacity-80">Send a message</div>
+                    <div className="text-xs opacity-80">One-tap personalized inquiry</div>
                   </div>
                 </a>
                 <a
@@ -439,6 +602,122 @@ export default function PropertyDetail() {
       </section>
 
       <Footer />
+    </div>
+  );
+}
+
+function ScoreBreakdown({ propertyId }: { propertyId: number }) {
+  const { data: score, isLoading } = trpc.modern.propertyScore.useQuery(
+    { propertyId },
+    { enabled: !!propertyId },
+  );
+  if (isLoading || !score) return null;
+  const rows = [
+    { label: "Value for Money", value: score.valueScore },
+    { label: "Location", value: score.locationScore },
+    { label: "Amenities", value: score.amenitiesScore },
+    { label: "Accessibility", value: score.accessibilityScore },
+  ];
+  return (
+    <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+      <h2 className="text-xl font-bold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
+        <Sparkles className="w-5 h-5 inline mr-2 text-[oklch(0.72_0.15_80)]" />
+        Pedi Wa Property Score
+      </h2>
+      <div className="flex items-center gap-4 mb-4">
+        <div
+          className={`w-16 h-16 rounded-xl flex items-center justify-center text-2xl font-bold text-white ${
+            score.score >= 80
+              ? "bg-emerald-500"
+              : score.score >= 60
+                ? "bg-[oklch(0.45_0.18_260)]"
+                : "bg-amber-500"
+          }`}
+        >
+          {score.score}
+        </div>
+        <div>
+          <div className="text-sm font-semibold text-foreground">
+            {score.score >= 80 ? "Excellent Choice" : score.score >= 60 ? "Great Value" : "Good Potential"}
+          </div>
+          <div className="text-xs text-muted-foreground">Scored out of 100 by Pedi Wa</div>
+        </div>
+      </div>
+      <div className="space-y-2.5">
+        {rows.map((r) => (
+          <div key={r.label}>
+            <div className="flex justify-between text-xs mb-1">
+              <span className="text-muted-foreground">{r.label}</span>
+              <span className="font-medium text-foreground">{r.value}</span>
+            </div>
+            <div className="h-1.5 rounded-full bg-muted overflow-hidden">
+              <div
+                className="h-full rounded-full bg-gradient-to-r from-[oklch(0.45_0.18_260)] to-[oklch(0.72_0.15_80)] transition-all duration-500"
+                style={{ width: `${r.value}%` }}
+              />
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LocationInsights({ lat, lng }: { lat: number; lng: number }) {
+  const categories = [
+    { key: "school", label: "Schools", icon: GraduationCap },
+    { key: "hospital", label: "Hospitals", icon: Stethoscope },
+    { key: "shopping_mall", label: "Shopping", icon: ShoppingBag },
+    { key: "transit_station", label: "Transport", icon: Bus },
+    { key: "restaurant", label: "Restaurants", icon: Utensils },
+    { key: "park", label: "Parks", icon: TreePine },
+  ] as const;
+  return (
+    <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
+      <h2 className="text-xl font-bold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
+        Smart Location Insights
+      </h2>
+      <div className="grid grid-cols-1 gap-3">
+        {categories.map((c) => (
+          <InsightRow key={c.key} lat={lat} lng={lng} category={c.key} label={c.label} icon={c.icon} />
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function InsightRow({
+  lat,
+  lng,
+  category,
+  label,
+  icon: Icon,
+}: {
+  lat: number;
+  lng: number;
+  category: "school" | "hospital" | "shopping_mall" | "transit_station" | "restaurant" | "park";
+  label: string;
+  icon: typeof GraduationCap;
+}) {
+  const { data, isLoading } = trpc.modern.nearbyPois.useQuery({ lat, lng, category });
+  const poi = data?.[0];
+  if (isLoading)
+    return (
+      <div className="h-9 bg-muted/60 rounded-md animate-pulse" />
+    );
+  return (
+    <div className="flex items-center gap-3 text-sm">
+      <div className="w-8 h-8 rounded-lg bg-[oklch(0.45_0.18_260/0.1)] flex items-center justify-center flex-shrink-0">
+        <Icon className="w-4 h-4 text-[oklch(0.45_0.18_260)]" />
+      </div>
+      <div className="min-w-0">
+        <span className="text-muted-foreground">{label} nearby: </span>
+        {poi ? (
+          <span className="font-medium text-foreground truncate block" title={poi.name}>{poi.name}</span>
+        ) : (
+          <span className="text-muted-foreground">No results found</span>
+        )}
+      </div>
     </div>
   );
 }

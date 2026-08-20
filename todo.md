@@ -54,6 +54,26 @@
 - [x] Fix serveStatic in server/_core/vite.ts to serve dist/public/client (where SPA build lands) with dist fallback
 - [x] Verify pnpm build locally succeeds, tests pass (40), dev server serves site correctly, checkpoint and confirm deployment
 
+## Modern & Cool Features MVP
+- [x] Dark/light mode toggle with theme persistence and modern UI (glassmorphism cards, animations)
+- [x] Property match percentage engine (0-100) based on saved preferences + activity
+- [x] User preferences table (budget, location, property type, bedrooms)
+- [x] AI Property Assistant: conversational AI chat that parses queries and returns matching listings
+- [x] Smart property recommendations: Picked for You section based on searches/saved listings/preferences
+- [x] Interactive property map page with markers and area-based search
+- [x] Swipe property discovery (right=save, left=skip, open details)
+- [x] Property comparison tool (side-by-side: price, location, size, beds, amenities, score)
+- [x] Pedi Wa Property Score (0-100 auto-generated: value, location, amenities, accessibility; auto-computed on admin approval)
+- [ ] 360 virtual tour viewer for listings with 360 images (deferred: needs is360 photo flag + viewer component)
+- [x] Smart location insights (nearby schools, hospitals, shopping, transport + travel distance)
+- [x] Instant property alerts (search preference saved, notify on matching new listings)
+- [x] Price-drop alerts for saved properties (alert creation + manual check mutation)
+- [x] Enhanced AI property description generator (seller flow — exists in premium router)
+- [x] One-tap WhatsApp inquiry with personalized pre-filled message (property name, price, listing ID)
+- [x] Virtual/physical viewing booking with calendar scheduling (buyer My Viewings + Seller Viewings)
+- [x] Tests for new procedures (modern.test.ts — 54 tests passing)
+- [x] Checkpoint and deliver
+
 ## Leads Dashboard (agent inquiry management)
 - [x] Backend: seller leads procedure (aggregates inquiries per listing, statuses: new/contacted/viewing/negotiating/closed/lost, buyer details)
 - [x] Backend: lead status update mutation (ownership-checked)

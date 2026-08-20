@@ -43,6 +43,7 @@ import {
   Heart,
   Sparkles,
   Users,
+  CalendarDays,
 } from "lucide-react";
 
 const PROPERTY_TYPES = ["house", "apartment", "villa", "land", "commercial", "townhouse", "studio", "penthouse"];
@@ -307,6 +308,8 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   const approvedCount = myProperties?.filter((p) => p.status === "approved").length || 0;
   const totalViews = myProperties?.reduce((sum, p) => sum + (p.viewsCount || 0), 0) || 0;
   const totalInquiries = myProperties?.reduce((sum, p) => sum + (p.inquiriesCount || 0), 0) || 0;
+  const { data: pendingViewingsData } = trpc.modern.sellerBookings.useQuery();
+  const pendingViewings = (pendingViewingsData ?? []).length;
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -322,6 +325,15 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
               <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.name || "Seller"}</p>
             </div>
             <div className="flex items-center gap-3">
+              <Link href="/seller/viewings" className="inline-flex items-center gap-2 rounded-md border border-[oklch(0.45_0.18_260)]/30 px-4 py-2 text-sm font-medium text-[oklch(0.45_0.18_260)] hover:bg-[oklch(0.45_0.18_260)]/5 transition-colors">
+                <CalendarDays className="w-4 h-4" />
+                Viewings
+                {pendingViewings > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[oklch(0.45_0.18_260)] px-1 text-xs font-semibold text-white">
+                    {pendingViewings}
+                  </span>
+                )}
+              </Link>
               <Link href="/leads" className="inline-flex items-center gap-2 rounded-md border border-[#0d3b9e]/30 px-4 py-2 text-sm font-medium text-[#0d3b9e] hover:bg-[#0d3b9e]/5 transition-colors">
                 <Users className="w-4 h-4" />
                 Leads

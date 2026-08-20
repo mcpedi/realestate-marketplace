@@ -36,8 +36,17 @@ import {
   MessageCircle,
   PenTool,
   Crown,
+  Sun,
+  Moon,
+  Map as MapIcon,
+  Sparkles,
+  Bell,
+  Shuffle,
+  GitCompareArrows,
+  CalendarDays,
 } from "lucide-react";
 import { trpc } from "@/lib/trpc";
+import { useTheme } from "@/contexts/ThemeContext";
 
 const SITE_NAME = "Pedi wa Real Estate";
 
@@ -53,8 +62,19 @@ const navLinks = [
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
+  const { theme, toggleTheme, switchable } = useTheme();
   const [location] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+
+  const themeButton = switchable ? (
+    <button
+      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+      onClick={toggleTheme}
+      className="btn-press p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+    >
+      {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+    </button>
+  ) : null;
 
   const isAuthPage =
     location === "/seller" ||
@@ -104,6 +124,7 @@ export function Navbar() {
 
           {/* Desktop Auth */}
           <div className="hidden lg:flex items-center gap-3">
+            {themeButton}
             {isAuthenticated ? (
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -136,6 +157,42 @@ export function Navbar() {
                     <Link href="/favorites" className="flex items-center gap-2 w-full">
                       <Heart className="w-4 h-4" />
                       My Favorites
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/map" className="flex items-center gap-2 w-full">
+                      <MapIcon className="w-4 h-4" />
+                      Map Discovery
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/assistant" className="flex items-center gap-2 w-full">
+                      <Sparkles className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
+                      AI Assistant
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/alerts" className="flex items-center gap-2 w-full">
+                      <Bell className="w-4 h-4" />
+                      My Alerts
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/discover" className="flex items-center gap-2 w-full">
+                      <Shuffle className="w-4 h-4" />
+                      Swipe Discovery
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/compare" className="flex items-center gap-2 w-full">
+                      <GitCompareArrows className="w-4 h-4" />
+                      Compare
+                    </Link>
+                  </DropdownMenuItem>
+                  <DropdownMenuItem asChild>
+                    <Link href="/bookings" className="flex items-center gap-2 w-full">
+                      <CalendarDays className="w-4 h-4" />
+                      My Viewings
                     </Link>
                   </DropdownMenuItem>
                   {user?.role === "admin" && (
@@ -196,6 +253,18 @@ export function Navbar() {
                     </Link>
                   );
                 })}
+                {themeButton && (
+                  <div className="flex items-center justify-between px-3 py-2 border-b">
+                    <span className="text-xs text-muted-foreground">Appearance</span>
+                    <button
+                      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
+                      onClick={toggleTheme}
+                      className="btn-press p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary"
+                    >
+                      {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+                    </button>
+                  </div>
+                )}
                 <div className="border-t mt-4 pt-4 flex flex-col gap-2">
                   {isAuthenticated ? (
                     <>
@@ -221,6 +290,42 @@ export function Navbar() {
                         <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
                           <Heart className="w-4 h-4" />
                           My Favorites
+                        </span>
+                      </Link>
+                      <Link href="/map">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <MapIcon className="w-4 h-4" />
+                          Map Discovery
+                        </span>
+                      </Link>
+                      <Link href="/assistant">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <Sparkles className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
+                          AI Assistant
+                        </span>
+                      </Link>
+                      <Link href="/alerts">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <Bell className="w-4 h-4" />
+                          My Alerts
+                        </span>
+                      </Link>
+                      <Link href="/discover">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <Shuffle className="w-4 h-4" />
+                          Swipe Discovery
+                        </span>
+                      </Link>
+                      <Link href="/compare">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <GitCompareArrows className="w-4 h-4" />
+                          Compare
+                        </span>
+                      </Link>
+                      <Link href="/bookings">
+                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
+                          <CalendarDays className="w-4 h-4" />
+                          My Viewings
                         </span>
                       </Link>
                       {user?.role === "admin" && (

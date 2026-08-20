@@ -14,6 +14,469 @@ import {
 } from "./_core/trpc";
 import { z } from "zod";
 import * as db from "./db";
+import { users as usersTable } from "../drizzle/schema";
+import { eq } from "drizzle-orm";
+
+// ─── Modern Features (AI assistant, recommendations, alerts, bookings, scores) ──
+
+function computeMatchScore(
+  property: { price: number | null; bedrooms: number | null; propertyType: string | null; listingType: string | null; location: string | null },
+  prefs: { budgetMin: number | null; budgetMax: number | null; minBedrooms: number | null; listingType: string | null; preferredTypes: string[]; preferredLocations: string[] },
+): { score: number; weights: Array<{ name: string; weight: number; earned: number }> } {
+  let score = 0;
+  const weights: { name: string; weight: number; earned: number }[] = [];
+  const price = property.price ?? 0;
+  // Budget fit (35 points)
+  if (prefs.budgetMin !== null && prefs.budgetMax !== null && price > 0) {
+    const inRange = price >= prefs.budgetMin && price <= prefs.budgetMax * 1.1; // 10% buffer above max
+    const nearMid = 1 - Math.min(Math.abs(price - (prefs.budgetMin + prefs.budgetMax) / 2) / (prefs.budgetMax - prefs.budgetMin + 1), 1);
+    const budgetPoints = inRange ? Math.round(20 + 15 * nearMid) : price <= prefs.budgetMax * 1.2 ? 10 : 0;
+    score += budgetPoints;
+    weights.push({ name: "Budget", weight: 35, earned: budgetPoints });
+  } else {
+    score += 25;
+    weights.push({ name: "Budget", weight: 35, earned: 25 });
+  }
+  // Location match (25 points)
+  if (prefs.preferredLocations.length > 0 && property.location) {
+    const loc = (property.location || "").toLowerCase();
+    const matched = prefs.preferredLocations.some((l) => loc.includes(l.toLowerCase()));
+    const points = matched ? 25 : 5;
+    score += points;
+    weights.push({ name: "Location", weight: 25, earned: points });
+  } else {
+    score += 15;
+    weights.push({ name: "Location", weight: 25, earned: 15 });
+  }
+  // Property type (15 points)
+  if (prefs.preferredTypes.length > 0 && property.propertyType) {
+    const matched = prefs.preferredTypes.includes(property.propertyType);
+    const points = matched ? 15 : 3;
+    score += points;
+    weights.push({ name: "Type", weight: 15, earned: points });
+  } else {
+    score += 8;
+    weights.push({ name: "Type", weight: 15, earned: 8 });
+  }
+  // Bedrooms (10 points)
+  if ((prefs.minBedrooms ?? 0) > 0 && property.bedrooms !== null) {
+    const points = (property.bedrooms ?? 0) >= (prefs.minBedrooms ?? 0) ? 10 : 0;
+    score += points;
+    weights.push({ name: "Bedrooms", weight: 10, earned: points });
+  } else {
+    score += 5;
+    weights.push({ name: "Bedrooms", weight: 10, earned: 5 });
+  }
+  // Listing type (15 points)
+  if (prefs.listingType && prefs.listingType !== "any" && property.listingType) {
+    const points = property.listingType === prefs.listingType ? 15 : 0;
+    score += points;
+    weights.push({ name: "Listing type", weight: 15, earned: points });
+  } else {
+    score += 8;
+    weights.push({ name: "Listing type", weight: 15, earned: 8 });
+  }
+  return { score: Math.min(100, Math.max(0, score)), weights };
+}
+
+function computePropertyScore(p: {
+  price: number | null;
+  bedrooms: number | null;
+  bathrooms: number | null;
+  amenities: string | null;
+  location: string | null;
+  featured: boolean | null;
+}) {
+  // Value (40): price relative to size (price per bedroom proxy)
+  const price = typeof p.price === "number" ? p.price : 0;
+  const beds = typeof p.bedrooms === "number" ? p.bedrooms : 1;
+  const baths = typeof p.bathrooms === "number" ? p.bathrooms : 1;
+  const amenityText = typeof p.amenities === "string" ? p.amenities : "";
+  const featured = p.featured === true;
+  const locationText = typeof p.location === "string" ? p.location : null;
+  let valueScore = 60;
+  if (price > 0 && beds > 0) {
+    const perBed = price / beds;
+    if (perBed < 5_000_000) valueScore = 90;
+    else if (perBed < 10_000_000) valueScore = 80;
+    else if (perBed < 20_000_000) valueScore = 70;
+    else if (perBed < 40_000_000) valueScore = 60;
+    else if (perBed < 80_000_000) valueScore = 45;
+    else valueScore = 30;
+  }
+  // Amenities (25)
+  const amenityCount = amenityText.split(",").filter((a) => a.trim()).length;
+  const amenitiesScore = Math.min(25, Math.round((amenityCount / 8) * 25));
+  // Location (20): rough proxy — location provided + featured status
+  const locationScore = locationText ? (featured ? 20 : 15) : 5;
+  // Accessibility (15): rooms balance (bed/bath ratio)
+  const ratio = beds > 0 ? baths / beds : 0.5;
+  const accessibilityScore = ratio >= 0.5 && ratio <= 1.2 ? 15 : ratio >= 0.3 ? 10 : 6;
+  const score = valueScore + amenitiesScore + locationScore + accessibilityScore;
+  return {
+    score: Math.min(100, Math.max(0, score)),
+    valueScore,
+    locationScore,
+    amenitiesScore,
+    accessibilityScore,
+    breakdown: {
+      pricePerBedroom: price > 0 && beds > 0 ? Math.round(price / beds) : null,
+      amenityCount,
+      bedBathRatio: baths > 0 ? Math.round((beds / baths) * 10) / 10 : null,
+    },
+  };
+}
+
+const modernRouter = router({
+  // ── Preferences ─────────────────────────────────────────────────────────────
+  preferencesGet: protectedProcedure.query(async ({ ctx }) => {
+    return db.getUserPreferences(ctx.user.id);
+  }),
+  preferencesSet: protectedProcedure
+    .input(
+      z.object({
+        budgetMin: z.number().nullable(),
+        budgetMax: z.number().nullable(),
+        preferredLocations: z.array(z.string()),
+        preferredTypes: z.array(z.string()),
+        minBedrooms: z.number().min(0).max(10),
+        listingType: z.enum(["sale", "rent", "any"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await db.upsertUserPreferences(ctx.user.id, input);
+      return { success: true };
+    }),
+
+  // ── Match scoring ───────────────────────────────────────────────────────────
+  matchScore: protectedProcedure
+    .input(
+      z.object({
+        propertyId: z.number(),
+      }),
+    )
+    .query(async ({ ctx, input }) => {
+      const prefs = await db.getUserPreferences(ctx.user.id);
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property) throw new TRPCError({ code: "NOT_FOUND" });
+      if (!prefs) return { score: 0, weights: [] };
+      // Activity signals: viewing/saving other properties in the same location or of the same
+      // type adds a modest affinity boost to the match score.
+      const activity = await db.getUserActivity(ctx.user.id, undefined, 50);
+      const activityPropertyIds = activity.map((a) => a.propertyId).filter((id): id is number => !!id);
+      let affinityBoost = 0;
+      if (activityPropertyIds.length > 0) {
+        const related = await Promise.all(activityPropertyIds.slice(0, 10).map((id) => db.getPropertyById(id)));
+        const norm = (s: string) => String(s || "").toLowerCase();
+        const locMatch = related.some(
+          (p) => p && (norm(property.location).includes(norm(p.location)) || norm(p.location).includes(norm(property.location))),
+        );
+        const typeMatch = related.some((p) => p && p.propertyType === property.propertyType);
+        if (locMatch) affinityBoost += 5;
+        if (typeMatch) affinityBoost += 3;
+      }
+      const types = prefs.preferredTypes ? (JSON.parse(JSON.stringify(prefs.preferredTypes)) as string[]) : [];
+      const locs = prefs.preferredLocations ? (JSON.parse(JSON.stringify(prefs.preferredLocations)) as string[]) : [];
+      // Blend in the activity-based affinity boost, capped at 100
+      const base = computeMatchScore(
+        { price: property.price, bedrooms: property.bedrooms, propertyType: property.propertyType, listingType: property.listingType, location: property.location },
+        { budgetMin: prefs.budgetMin ?? null, budgetMax: prefs.budgetMax ?? null, minBedrooms: prefs.minBedrooms ?? null, listingType: prefs.listingType ?? null, preferredTypes: types, preferredLocations: locs },
+      );
+      return { ...base, score: Math.min(100, (base.score ?? 0) + affinityBoost) };
+    }),
+
+  // ── Recommendations ("Picked for You") ──────────────────────────────────────
+  recommendations: protectedProcedure
+    .input(
+      z
+        .object({
+          limit: z.number().min(1).max(24).optional(),
+        })
+        .optional(),
+    )
+    .query(async ({ ctx, input }) => {
+      const limit = input?.limit ?? 8;
+      const prefs = await db.getUserPreferences(ctx.user.id);
+      const favorites = await db.getFavoriteProperties(ctx.user.id);
+      const favTypes = Array.from(new Set(favorites.map((f) => f.propertyType).filter(Boolean)));
+      const favLocs = Array.from(new Set(favorites.map((f) => f.location).filter(Boolean)));
+      const types =
+        (prefs?.preferredTypes ? (JSON.parse(JSON.stringify(prefs.preferredTypes)) as string[]) : favTypes).length > 0
+          ? (prefs?.preferredTypes ? (JSON.parse(JSON.stringify(prefs.preferredTypes)) as string[]) : favTypes)
+          : undefined;
+      const loc = prefs?.preferredLocations
+        ? (JSON.parse(JSON.stringify(prefs.preferredLocations)) as string[])[0]
+        : favLocs[0];
+      const { items } = await db.getProperties({
+        status: "approved",
+        limit: 60,
+        ...(loc ? { location: loc } : {}),
+        ...(types && types.length ? { propertyType: types[0] } : {}),
+        ...(prefs?.budgetMax ? { maxPrice: prefs.budgetMax } : {}),
+        ...(prefs?.budgetMin ? { minPrice: prefs.budgetMin } : {}),
+      });
+      const favIds = new Set(favorites.map((f) => f.id));
+      const ranked = items.filter((i) => !favIds.has(i.id));
+      return { items: ranked.slice(0, limit) };
+    }),
+
+  // ── Activity tracking ───────────────────────────────────────────────────────
+  recordActivity: protectedProcedure
+    .input(
+      z.object({
+        propertyId: z.number(),
+        eventType: z.enum(["view", "save", "search"]),
+        keywords: z.array(z.string()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await db.recordPropertyActivity({
+        userId: ctx.user.id,
+        propertyId: input.propertyId,
+        eventType: input.eventType,
+        keywords: input.keywords ? JSON.stringify(input.keywords) : null,
+      } as any);
+      return { success: true };
+    }),
+
+  // ── AI Property Assistant ───────────────────────────────────────────────────
+  aiAssistant: protectedProcedure
+    .input(
+      z.object({
+        message: z.string().min(1).max(500),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      // Ask the LLM to parse the natural-language query into structured filters.
+      const parseResp = await invokeLLM({
+        messages: [
+          {
+            role: "system",
+            content:
+              "You parse natural-language property search queries from buyers in Kenya into structured filters. Property types are: house, apartment, villa, land, commercial, townhouse, studio, penthouse. Listing types are: sale, rent. Locations are Kenyan cities/counties (e.g., Nairobi, Kisumu, Mombasa, Migori, Nakuru, Eldoret, Machakos). Return JSON.",
+          },
+          { role: "user", content: input.message },
+        ],
+        response_format: {
+          type: "json_schema",
+          json_schema: {
+            name: "search_filters",
+            strict: true,
+            schema: {
+              type: "object",
+              properties: {
+                location: { type: "string", description: "City/area mentioned, empty string if none" },
+                propertyType: { type: "string", description: "Property type or empty string" },
+                listingType: { type: "string", description: "sale or rent or any" },
+                minBedrooms: { type: "integer", description: "Minimum bedrooms, 0 if not mentioned" },
+                maxPrice: { type: "integer", description: "Maximum budget in KES, 0 if not mentioned" },
+                summary: { type: "string", description: "Short confirmation of what the buyer asked for" },
+              },
+              required: ["location", "propertyType", "listingType", "minBedrooms", "maxPrice", "summary"],
+              additionalProperties: false,
+            },
+          },
+        },
+      });
+      const parsed = JSON.parse((parseResp as any).choices?.[0]?.message?.content || "{}");
+      const filters: any = { status: "approved", limit: 12 };
+      if (parsed.location) filters.location = parsed.location;
+      if (parsed.propertyType) filters.propertyType = parsed.propertyType;
+      if (parsed.listingType && parsed.listingType !== "any") filters.listingType = parsed.listingType;
+      if (parsed.minBedrooms > 0) filters.bedrooms = parsed.minBedrooms;
+      if (parsed.maxPrice > 0) filters.maxPrice = parsed.maxPrice;
+      const { items, total } = await db.getProperties(filters);
+      return { summary: parsed.summary, filters, results: items, total };
+    }),
+
+  // ── Alerts ──────────────────────────────────────────────────────────────────
+  alertCreate: protectedProcedure
+    .input(
+      z.object({
+        type: z.enum(["instant", "priceDrop"]),
+        propertyId: z.number().nullable(),
+        criteria: z.record(z.string(), z.unknown()).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      await db.createAlert({
+        userId: ctx.user.id,
+        type: input.type,
+        propertyId: input.propertyId,
+        criteria: input.criteria ? JSON.stringify(input.criteria) : null,
+      } as any);
+      return { success: true };
+    }),
+  alertList: protectedProcedure.query(async ({ ctx }) => {
+    return db.getUserAlerts(ctx.user.id);
+  }),
+  alertDelete: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      await db.deleteAlert(input.id, ctx.user.id);
+      return { success: true };
+    }),
+  alertToggle: protectedProcedure
+    .input(z.object({ id: z.number(), active: z.boolean() }))
+    .mutation(async ({ ctx, input }) => {
+      await db.updateAlertStatus(input.id, ctx.user.id, input.active);
+      return { success: true };
+    }),
+  checkPriceDrops: protectedProcedure.mutation(async ({ ctx }) => {
+    if (ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+    const drops = await db.checkPriceDrops();
+    return { drops };
+  }),
+
+  // ── Viewing bookings ────────────────────────────────────────────────────────
+  bookingCreate: protectedProcedure
+    .input(
+      z.object({
+        propertyId: z.number(),
+        scheduledAt: z.number().min(Date.now()),
+        type: z.enum(["virtual", "physical"]),
+        notes: z.string().max(500).optional(),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || property.status !== "approved") throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createViewingBooking({
+        propertyId: input.propertyId,
+        buyerId: ctx.user.id,
+        scheduledAt: new Date(input.scheduledAt),
+        type: input.type,
+        notes: input.notes ?? null,
+      } as any);
+      return { success: true };
+    }),
+  myBookings: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await db.getBuyerBookings(ctx.user.id);
+    return rows.map((b) => ({ ...b, scheduledAt: b.scheduledAt.getTime() }));
+  }),
+  bookingUpdate: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const ok = await db.updateBookingStatus(input.id, ctx.user.id, input.status);
+      if (!ok) throw new TRPCError({ code: "NOT_FOUND" });
+      return { success: true };
+    }),
+  sellerBookings: protectedProcedure.query(async ({ ctx }) => {
+    const rows = await db.getSellerPendingBookings(ctx.user.id);
+    return rows.map((b) => ({ ...b, scheduledAt: b.scheduledAt.getTime() }));
+  }),
+  sellerBookingUpdate: protectedProcedure
+    .input(
+      z.object({
+        id: z.number(),
+        status: z.enum(["pending", "confirmed", "cancelled", "completed"]),
+      }),
+    )
+    .mutation(async ({ ctx, input }) => {
+      const rows = await db.getSellerPendingBookings(ctx.user.id);
+      const match = rows.find((b) => b.id === input.id);
+      if (!match) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.updateBookingStatusBySeller(input.id, input.status);
+      return { success: true };
+    }),
+  buyerInfo: protectedProcedure
+    .input(z.object({ buyerId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      const rows = await db.getSellerPendingBookings(ctx.user.id);
+      const match = rows.find((b) => b.id && b.buyerId === input.buyerId);
+      if (!match) {
+        const byId = rows.find((b) => b.buyerId === input.buyerId);
+        if (!byId) throw new TRPCError({ code: "NOT_FOUND" });
+      }
+      const dbInstance = await db.getDb();
+      if (!dbInstance) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const users = await dbInstance.select().from(usersTable).where(eq(usersTable.id, input.buyerId)).limit(1);
+      const u = users[0];
+      if (!u) throw new TRPCError({ code: "NOT_FOUND" });
+      return { id: u.id, name: u.name, phone: u.phone ?? null, email: u.email ?? null };
+    }),
+
+  // ── Property score ──────────────────────────────────────────────────────────
+  propertyScore: protectedProcedure
+    .input(z.object({ propertyId: z.number() }))
+    .query(async ({ ctx, input }) => {
+      let score = await db.getPropertyScore(input.propertyId);
+      if (!score) {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property) throw new TRPCError({ code: "NOT_FOUND" });
+        const computed = computePropertyScore({
+          price: property.price,
+          bedrooms: property.bedrooms,
+          bathrooms: property.bathrooms,
+          amenities: typeof property.amenities === "string" ? property.amenities : null,
+          location: property.location,
+          featured: property.featured,
+        });
+        await db.upsertPropertyScore(input.propertyId, computed as any);
+        score = await db.getPropertyScore(input.propertyId);
+      }
+      return score;
+    }),
+  propertyScoreCompute: protectedProcedure
+    .input(z.object({ propertyId: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property) throw new TRPCError({ code: "NOT_FOUND" });
+      const computed = computePropertyScore({
+        price: property.price,
+        bedrooms: property.bedrooms,
+        bathrooms: property.bathrooms,
+        amenities: typeof property.amenities === "string" ? property.amenities : null,
+        location: property.location,
+        featured: property.featured,
+      });
+      await db.upsertPropertyScore(input.propertyId, computed as any);
+      return computed;
+    }),
+
+  // ── Nearby points of interest ───────────────────────────────────────────────
+  nearbyPois: publicProcedure
+    .input(
+      z.object({
+        lat: z.number().min(-90).max(90),
+        lng: z.number().min(-180).max(180),
+        category: z.enum(["school", "hospital", "shopping_mall", "transit_station", "restaurant", "park"]),
+        radius: z.number().min(100).max(50000).optional(),
+      }),
+    )
+    .query(async ({ input }) => {
+      const { makeRequest } = await import("./_core/map");
+      try {
+        const result = (await makeRequest("/maps/api/place/nearbysearch/json", {
+          location: `${input.lat},${input.lng}`,
+          radius: input.radius ?? 3000,
+          type: input.category,
+        })) as { results?: Array<{ name: string; rating?: number; geometry?: { location: { lat: number; lng: number } }; vicinity?: string }> };
+        const results = (result?.results || []) as Array<{
+          name: string;
+          rating?: number;
+          geometry?: { location: { lat: number; lng: number } };
+          vicinity?: string;
+        }>;
+        return results.slice(0, 12).map((r) => ({
+          name: r.name,
+          rating: r.rating ?? null,
+          vicinity: r.vicinity ?? null,
+          lat: r.geometry?.location?.lat ?? null,
+          lng: r.geometry?.location?.lng ?? null,
+        }));
+      } catch {
+        return [];
+      }
+    }),
+});
+
+
 
 export const appRouter = router({
   system: systemRouter,
@@ -272,6 +735,17 @@ export const appRouter = router({
         await db.approveProperty(input);
         const property = await db.getPropertyById(input);
         await sendApprovalNotification(property?.title || "Property", input);
+        if (property) {
+          const computed = computePropertyScore({
+            price: property.price,
+            bedrooms: property.bedrooms,
+            bathrooms: property.bathrooms,
+            amenities: typeof property.amenities === "string" ? property.amenities : null,
+            location: property.location,
+            featured: property.featured,
+          });
+          await db.upsertPropertyScore(input, computed as any).catch(() => undefined);
+        }
         return { success: true };
       }),
 
@@ -939,6 +1413,8 @@ export const appRouter = router({
         return { url };
       }),
   }),
+  // ─── Modern (AI assistant, recommendations, alerts, bookings, scores) ──────
+  modern: modernRouter,
   // ─── Leads (agent inquiry management) ────────────────────────────────────────
   leads: router({
     myLeads: protectedProcedure.query(async ({ ctx }) => {

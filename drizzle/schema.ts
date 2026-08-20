@@ -274,3 +274,80 @@ export const agencyProfiles = mysqlTable("agencyProfiles", {
 
 export type AgencyProfile = typeof agencyProfiles.$inferSelect;
 export type InsertAgencyProfile = typeof agencyProfiles.$inferInsert;
+
+// ─── User preferences (match engine) ──────────────────────────────────────────
+export const userPreferences = mysqlTable("userPreferences", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  budgetMin: double("budgetMin"),
+  budgetMax: double("budgetMax"),
+  preferredLocations: json("preferredLocations"),
+  preferredTypes: json("preferredTypes"),
+  minBedrooms: int("minBedrooms").default(0),
+  listingType: mysqlEnum("listingType", ["sale", "rent", "any"]).default("any"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type UserPreference = typeof userPreferences.$inferSelect;
+export type InsertUserPreference = typeof userPreferences.$inferInsert;
+
+// ─── Property alerts (instant + price drop) ───────────────────────────────────
+export const propertyAlerts = mysqlTable("propertyAlerts", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: mysqlEnum("type", ["instant", "priceDrop"]).notNull(),
+  // For instant alerts: search criteria JSON
+  criteria: json("criteria"),
+  // For price-drop alerts: watched property
+  propertyId: int("propertyId"),
+  // Whether alert is active
+  active: boolean("active").default(true),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PropertyAlert = typeof propertyAlerts.$inferSelect;
+export type InsertPropertyAlert = typeof propertyAlerts.$inferInsert;
+
+// ─── Viewing bookings ─────────────────────────────────────────────────────────
+export const viewingBookings = mysqlTable("viewingBookings", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  buyerId: int("buyerId").notNull(),
+  scheduledAt: timestamp("scheduledAt").notNull(),
+  type: mysqlEnum("type", ["virtual", "physical"]).notNull(),
+  status: mysqlEnum("status", ["pending", "confirmed", "cancelled", "completed"]).default("pending").notNull(),
+  notes: text("notes"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ViewingBooking = typeof viewingBookings.$inferSelect;
+export type InsertViewingBooking = typeof viewingBookings.$inferInsert;
+
+// ─── Property scores (Pedi Wa Property Score) ─────────────────────────────────
+export const propertyScores = mysqlTable("propertyScores", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull().unique(),
+  score: int("score").notNull(),
+  valueScore: int("valueScore").notNull(),
+  locationScore: int("locationScore").notNull(),
+  amenitiesScore: int("amenitiesScore").notNull(),
+  accessibilityScore: int("accessibilityScore").notNull(),
+  breakdown: json("breakdown"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PropertyScore = typeof propertyScores.$inferSelect;
+export type InsertPropertyScore = typeof propertyScores.$inferInsert;
+
+// ─── Viewings count / search activity for recommendations ─────────────────────
+export const propertyActivity = mysqlTable("propertyActivity", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  propertyId: int("propertyId").notNull(),
+  eventType: mysqlEnum("eventType", ["view", "save", "search"]).notNull(),
+  // search keywords used for search events
+  keywords: json("keywords"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type PropertyActivity = typeof propertyActivity.$inferSelect;
+export type InsertPropertyActivity = typeof propertyActivity.$inferInsert;
