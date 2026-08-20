@@ -9,6 +9,7 @@ import Properties from "./pages/Properties";
 import PropertyDetail from "./pages/PropertyDetail";
 import Auth from "./pages/Auth";
 import SellerDashboard from "./pages/SellerDashboard";
+import LeadsDashboard from "./pages/LeadsDashboard";
 import AdminDashboard from "./pages/AdminDashboard";
 import Favorites from "./pages/Favorites";
 import About from "./pages/About";
@@ -28,6 +29,7 @@ function Router() {
       <Route path="/property/:id" component={PropertyDetail} />
       <Route path="/auth" component={Auth} />
       <Route path="/seller" component={SellerDashboard} />
+      <Route path="/leads" component={LeadsDashboard} />
       <Route path="/admin" component={AdminDashboard} />
       <Route path="/favorites" component={Favorites} />
       <Route path="/about" component={About} />

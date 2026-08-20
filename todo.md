@@ -47,3 +47,14 @@
 - [x] Wire Premium route and nav links
 - [x] Tests for premium procedures (35 tests passing incl. premium.test.ts)
 - [x] Checkpoint and deliver
+
+## Leads Dashboard (agent inquiry management)
+- [x] Backend: seller leads procedure (aggregates inquiries per listing, statuses: new/contacted/viewing/negotiating/closed/lost, buyer details)
+- [x] Backend: lead status update mutation (ownership-checked)
+- [x] Backend: lead stats (total, new, contacted, viewing, negotiating, closed, lost, conversion rate)
+- [x] Leads Dashboard page: leads table with per-lead status, listing info, buyer info, actions
+- [x] Leads Dashboard: filter by status and listing, stats cards at top
+- [x] Wire /leads route and nav entry in Seller Dashboard (Leads button with count badge)
+- [x] Vitest tests for leads procedures (5 tests passing, 40 total)
+- [x] Verify production deployment (sync checkpoint re-triggered deployment after index.html build failure)
+- [x] Checkpoint and deliver

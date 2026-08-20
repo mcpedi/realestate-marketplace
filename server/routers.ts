@@ -939,6 +939,25 @@ export const appRouter = router({
         return { url };
       }),
   }),
+  // ─── Leads (agent inquiry management) ────────────────────────────────────────
+  leads: router({
+    myLeads: protectedProcedure.query(async ({ ctx }) => {
+      return db.getSellerLeads(ctx.user.id);
+    }),
+    stats: protectedProcedure.query(async ({ ctx }) => {
+      return db.getLeadStats(ctx.user.id);
+    }),
+    updateStatus: protectedProcedure
+      .input(z.object({
+        leadId: z.number(),
+        status: z.enum(["new", "contacted", "viewing", "negotiating", "closed", "lost"]),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        const ok = await db.updateLeadStatus(input.leadId, ctx.user.id, input.status);
+        if (!ok) throw new TRPCError({ code: "NOT_FOUND" });
+        return { success: true };
+      }),
+  }),
 });
 
 export type AppRouter = typeof appRouter;

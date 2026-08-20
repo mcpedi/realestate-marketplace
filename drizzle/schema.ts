@@ -93,6 +93,7 @@ export const inquiries = mysqlTable("inquiries", {
   email: varchar("email", { length: 320 }).notNull(),
   phone: varchar("phone", { length: 32 }),
   message: text("message").notNull(),
+  leadStatus: mysqlEnum("leadStatus", ["new", "contacted", "viewing", "negotiating", "closed", "lost"]).default("new").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

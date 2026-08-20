@@ -827,3 +827,92 @@ export async function countPropertySaves(propertyId: number): Promise<number> {
   const result = await db.select({ count: count() }).from(favorites).where(eq(favorites.propertyId, propertyId));
   return result[0]?.count || 0;
 }
+
+// ─── Leads (buyer inquiry tracking for sellers) ──────────────────────────────
+
+export type LeadStatus = "new" | "contacted" | "viewing" | "negotiating" | "closed" | "lost";
+
+export interface SellerLead {
+  leadId: number;
+  propertyId: number;
+  propertyTitle: string;
+  propertyType: string | null;
+  price: number;
+  status: string;
+  buyerName: string;
+  buyerEmail: string;
+  buyerPhone: string | null;
+  message: string;
+  buyerUserId: number | null;
+  createdAt: Date;
+}
+
+export async function getSellerLeads(userId: number): Promise<SellerLead[]> {
+  const db = await getDb();
+  if (!db) return [];
+  const props = await getUserProperties(userId);
+  if (props.length === 0) return [];
+  const rows = await db
+    .select()
+    .from(inquiries)
+    .where(inArray(inquiries.propertyId, props.map((p) => p.id)))
+    .orderBy(desc(inquiries.createdAt));
+  const propById = new Map(props.map((p) => [p.id, p]));
+  return rows.map((inq) => {
+    const prop = propById.get(inq.propertyId);
+    return {
+      leadId: inq.id,
+      propertyId: inq.propertyId,
+      propertyTitle: prop?.title ?? "Unknown property",
+      propertyType: (prop as { type?: string | null } | undefined)?.type ?? null,
+      price: (prop as { price?: number } | undefined)?.price ?? 0,
+      status: inq.leadStatus,
+      buyerName: inq.name,
+      buyerEmail: inq.email,
+      buyerPhone: inq.phone ?? null,
+      message: inq.message,
+      buyerUserId: inq.userId,
+      createdAt: inq.createdAt,
+    };
+  });
+}
+
+export async function updateLeadStatus(leadId: number, userId: number, status: LeadStatus): Promise<boolean> {
+  const db = await getDb();
+  if (!db) return false;
+  // Ensure the lead belongs to one of the seller's own properties
+  const leads = await getSellerLeads(userId);
+  const lead = leads.find((l) => l.leadId === leadId);
+  if (!lead) return false;
+  await db.update(inquiries).set({ leadStatus: status }).where(eq(inquiries.id, leadId));
+  return true;
+}
+
+export interface LeadStats {
+  total: number;
+  newLeads: number;
+  contacted: number;
+  viewing: number;
+  negotiating: number;
+  closed: number;
+  lost: number;
+  conversionRate: number;
+}
+
+export async function getLeadStats(userId: number): Promise<LeadStats> {
+  const leads = await getSellerLeads(userId);
+  const stats: LeadStats = {
+    total: leads.length,
+    newLeads: leads.filter((l) => l.status === "new").length,
+    contacted: leads.filter((l) => l.status === "contacted").length,
+    viewing: leads.filter((l) => l.status === "viewing").length,
+    negotiating: leads.filter((l) => l.status === "negotiating").length,
+    closed: leads.filter((l) => l.status === "closed").length,
+    lost: leads.filter((l) => l.status === "lost").length,
+    conversionRate: 0,
+  };
+  if (stats.total > 0) {
+    stats.conversionRate = Math.round((stats.closed / stats.total) * 100);
+  }
+  return stats;
+}

@@ -29,6 +29,13 @@
       "when": 1786816026704,
       "tag": "0003_perfect_kree",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1787256016722,
+      "tag": "0004_graceful_killmonger",
+      "breakpoints": true
     }
   ]
 }

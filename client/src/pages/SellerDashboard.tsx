@@ -42,6 +42,7 @@ import {
   BarChart3,
   Heart,
   Sparkles,
+  Users,
 } from "lucide-react";
 
 const PROPERTY_TYPES = ["house", "apartment", "villa", "land", "commercial", "townhouse", "studio", "penthouse"];
@@ -320,7 +321,17 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
               </h1>
               <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.name || "Seller"}</p>
             </div>
-            <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingProperty(null); resetForm(); } }}>
+            <div className="flex items-center gap-3">
+              <Link href="/leads" className="inline-flex items-center gap-2 rounded-md border border-[#0d3b9e]/30 px-4 py-2 text-sm font-medium text-[#0d3b9e] hover:bg-[#0d3b9e]/5 transition-colors">
+                <Users className="w-4 h-4" />
+                Leads
+                {totalInquiries > 0 && (
+                  <span className="inline-flex h-5 min-w-5 items-center justify-center rounded-full bg-[#0d3b9e] px-1 text-xs font-semibold text-white">
+                    {totalInquiries}
+                  </span>
+                )}
+              </Link>
+              <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingProperty(null); resetForm(); } }}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <PlusCircle className="w-4 h-4" />
@@ -507,6 +518,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                 </form>
               </DialogContent>
             </Dialog>
+            </div>
           </div>
         </div>
       </section>
