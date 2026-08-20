@@ -164,7 +164,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
     landSize: "",
     floorArea: "",
     amenities: [] as string[],
-    photos: [] as { fileKey: string; url: string; preview: string }[],
+    photos: [] as { fileKey: string; url: string; preview: string; is360?: boolean }[],
   });
 
   const resetForm = () => {
@@ -207,7 +207,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
           });
           setFormData((prev) => ({
             ...prev,
-            photos: [...prev.photos, { fileKey: result.key, url: result.url, preview: URL.createObjectURL(file) }],
+            photos: [...prev.photos, { fileKey: result.key, url: result.url, preview: URL.createObjectURL(file), is360: false }],
           }));
         };
         reader.readAsDataURL(file);
@@ -251,7 +251,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
         landSize: formData.landSize ? Number(formData.landSize) : undefined,
         floorArea: formData.floorArea ? Number(formData.floorArea) : undefined,
         amenities: formData.amenities,
-        photos: formData.photos.map((p) => ({ fileKey: p.fileKey, url: p.url })),
+        photos: formData.photos.map((p) => ({ fileKey: p.fileKey, url: p.url, is360: p.is360 })),
       });
     } else {
       createMutation.mutate({
@@ -268,7 +268,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
         landSize: formData.landSize ? Number(formData.landSize) : undefined,
         floorArea: formData.floorArea ? Number(formData.floorArea) : undefined,
         amenities: formData.amenities,
-        photos: formData.photos.map((p) => ({ fileKey: p.fileKey, url: p.url })),
+        photos: formData.photos.map((p) => ({ fileKey: p.fileKey, url: p.url, is360: p.is360 })),
       });
     }
   };
@@ -289,7 +289,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       landSize: property.landSize ? String(property.landSize) : "",
       floorArea: property.floorArea ? String(property.floorArea) : "",
       amenities,
-      photos: (property.photos || []).map((p: any) => ({ fileKey: p.fileKey, url: p.url, preview: p.url })),
+      photos: (property.photos || []).map((p: any) => ({ fileKey: p.fileKey, url: p.url, preview: p.url, is360: Boolean(p.is360) })),
     });
     setEditingProperty(property);
     setShowForm(true);
@@ -457,6 +457,21 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                             className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center"
                           >
                             <X className="w-3 h-3" />
+                          </button>
+                          <button
+                            type="button"
+                            title="Mark as 360° photo (opens the 360° virtual tour viewer)"
+                            onClick={() =>
+                              setFormData((prev) => ({
+                                ...prev,
+                                photos: prev.photos.map((p, j) => (j === i ? { ...p, is360: !p.is360 } : p)),
+                              }))
+                            }
+                            className={`absolute bottom-1 left-1 px-1.5 py-0.5 rounded text-[9px] font-semibold backdrop-blur-sm ${
+                              photo.is360 ? "bg-[oklch(0.45_0.18_260)] text-white" : "bg-black/40 text-white/80 hover:bg-black/60"
+                            }`}
+                          >
+                            360°
                           </button>
                         </div>
                       ))}

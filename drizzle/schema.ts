@@ -8,6 +8,7 @@ import {
   double,
   boolean,
   json,
+  tinyint,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -79,6 +80,7 @@ export const propertyPhotos = mysqlTable("propertyPhotos", {
   url: varchar("url", { length: 512 }).notNull(),
   fileKey: varchar("fileKey", { length: 512 }).notNull(),
   sortOrder: int("sortOrder").default(0),
+  is360: tinyint("is360").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

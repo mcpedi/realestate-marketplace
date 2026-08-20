@@ -64,7 +64,7 @@
 - [x] Swipe property discovery (right=save, left=skip, open details)
 - [x] Property comparison tool (side-by-side: price, location, size, beds, amenities, score)
 - [x] Pedi Wa Property Score (0-100 auto-generated: value, location, amenities, accessibility; auto-computed on admin approval)
-- [ ] 360 virtual tour viewer for listings with 360 images (deferred: needs is360 photo flag + viewer component)
+- [x] 360 virtual tour viewer for listings with 360 images (is360 photo flag in db + drag-to-pan PanoramaViewer on property detail; sellers toggle 360° per photo when uploading/editing)
 - [x] Smart location insights (nearby schools, hospitals, shopping, transport + travel distance)
 - [x] Instant property alerts (search preference saved, notify on matching new listings)
 - [x] Price-drop alerts for saved properties (alert creation + manual check mutation)

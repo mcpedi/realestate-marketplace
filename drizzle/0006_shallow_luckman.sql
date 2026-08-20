@@ -1,0 +1,1 @@
+ALTER TABLE `propertyPhotos` ADD `is360` tinyint DEFAULT 0 NOT NULL;

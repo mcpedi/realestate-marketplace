@@ -341,6 +341,9 @@ const modernRouter = router({
     .mutation(async ({ ctx, input }) => {
       const property = await db.getPropertyById(input.propertyId);
       if (!property || property.status !== "approved") throw new TRPCError({ code: "NOT_FOUND" });
+      if (input.scheduledAt < Date.now()) {
+        throw new TRPCError({ code: "BAD_REQUEST", message: "Viewings cannot be scheduled in the past" });
+      }
       await db.createViewingBooking({
         propertyId: input.propertyId,
         buyerId: ctx.user.id,
@@ -599,7 +602,7 @@ export const appRouter = router({
           floorArea: z.number().optional(),
           amenities: z.array(z.string()).optional(),
           photos: z
-            .array(z.object({ fileKey: z.string(), url: z.string() }))
+            .array(z.object({ fileKey: z.string(), url: z.string(), is360: z.boolean().optional() }))
             .optional(),
         })
       )
@@ -617,6 +620,7 @@ export const appRouter = router({
               url: input.photos[i].url,
               fileKey: input.photos[i].fileKey,
               sortOrder: i,
+              is360: input.photos[i].is360 ? 1 : 0,
             });
           }
         }
@@ -650,7 +654,7 @@ export const appRouter = router({
           floorArea: z.number().optional(),
           amenities: z.array(z.string()).optional(),
           photos: z
-            .array(z.object({ fileKey: z.string(), url: z.string() }))
+            .array(z.object({ fileKey: z.string(), url: z.string(), is360: z.boolean().optional() }))
             .optional(),
         })
       )
@@ -669,6 +673,7 @@ export const appRouter = router({
               url: input.photos[i].url,
               fileKey: input.photos[i].fileKey,
               sortOrder: i,
+              is360: input.photos[i].is360 ? 1 : 0,
             });
           }
         }

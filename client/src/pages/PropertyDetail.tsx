@@ -36,6 +36,7 @@ import {
   Bus,
   Utensils,
   TreePine,
+  X,
 } from "lucide-react";
 import { PropertyScoreChip, MatchBadge } from "@/components/PropertyCard";
 import { emitCompareChange } from "@/pages/Compare";
@@ -81,6 +82,8 @@ export default function PropertyDetail() {
 
   const compareIds = useCompareIds();
   const isInCompare = compareIds.includes(propertyId);
+  const [viewerOpen, setViewerOpen] = useState(false);
+  const [viewerPhotoIndex, setViewerPhotoIndex] = useState(0);
   const [bookingOpen, setBookingOpen] = useState(false);
   const [bookingForm, setBookingForm] = useState({
     date: "",
@@ -222,7 +225,14 @@ export default function PropertyDetail() {
 
   const amenities = property.amenities ? (Array.isArray(property.amenities) ? property.amenities : JSON.parse(String(property.amenities))) : [];
   const photoUrls = photos?.map((p) => p.url) || [];
+  const photoIs360 = photos?.map((p) => Boolean(p.is360)) || [];
   const propertyPhotos = photoUrls.length > 0 ? photoUrls : ["/placeholder-property.jpg"];
+  const viewerPhoto = photos?.[viewerPhotoIndex];
+
+  const openViewer = (index: number) => {
+    setViewerPhotoIndex(index);
+    setViewerOpen(true);
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -321,8 +331,18 @@ export default function PropertyDetail() {
               <CarouselContent>
                 {propertyPhotos.map((url, i) => (
                   <CarouselItem key={i}>
-                    <div className="aspect-[16/9] md:aspect-[21/9] rounded-xl overflow-hidden">
+                    <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-xl overflow-hidden">
                       <img src={url} alt={`${property.title} - Photo ${i + 1}`} className="w-full h-full object-cover" />
+                      {photoIs360[i] && (
+                        <Button
+                          variant="secondary"
+                          size="sm"
+                          className="absolute bottom-3 right-3 gap-1.5 shadow-lg"
+                          onClick={() => openViewer(i)}
+                        >
+                          <Video className="w-4 h-4" /> 360° Tour
+                        </Button>
+                      )}
                     </div>
                   </CarouselItem>
                 ))}
@@ -331,9 +351,28 @@ export default function PropertyDetail() {
               <CarouselNext className="right-4" />
             </Carousel>
           ) : (
-            <div className="aspect-[16/9] md:aspect-[21/9] rounded-xl overflow-hidden">
+            <div className="relative aspect-[16/9] md:aspect-[21/9] rounded-xl overflow-hidden">
               <img src={propertyPhotos[0]} alt={property.title} className="w-full h-full object-cover" />
+              {photoIs360[0] && (
+                <Button
+                  variant="secondary"
+                  size="sm"
+                  className="absolute bottom-3 right-3 gap-1.5 shadow-lg"
+                  onClick={() => openViewer(0)}
+                >
+                  <Video className="w-4 h-4" /> 360° Tour
+                </Button>
+              )}
             </div>
+          )}
+          {viewerOpen && viewerPhoto && (
+            <PanoramaViewer
+              src={viewerPhoto.url}
+              label={`${property.title} — Photo ${viewerPhotoIndex + 1} of ${propertyPhotos.length}`}
+              onClose={() => setViewerOpen(false)}
+              onPrev={() => setViewerPhotoIndex((i) => (i - 1 + propertyPhotos.length) % propertyPhotos.length)}
+              onNext={() => setViewerPhotoIndex((i) => (i + 1) % propertyPhotos.length)}
+            />
           )}
         </div>
 
@@ -717,6 +756,92 @@ function InsightRow({
         ) : (
           <span className="text-muted-foreground">No results found</span>
         )}
+      </div>
+    </div>
+  );
+}
+
+function PanoramaViewer({
+  src,
+  label,
+  onClose,
+  onPrev,
+  onNext,
+}: {
+  src: string;
+  label: string;
+  onClose: () => void;
+  onPrev: () => void;
+  onNext: () => void;
+}) {
+  const areaRef = useRef<HTMLDivElement>(null);
+  const [drag, setDrag] = useState<{ startX: number; startY: number; bgX: number; bgY: number } | null>(null);
+  const [bgPos, setBgPos] = useState({ x: 50, y: 50 });
+
+  const onPointerDown = (e: React.PointerEvent) => {
+    (e.target as HTMLElement).setPointerCapture?.(e.pointerId);
+    setDrag({ startX: e.clientX, startY: e.clientY, bgX: bgPos.x, bgY: bgPos.y });
+  };
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag) return;
+    const width = areaRef.current?.clientWidth || 800;
+    const height = areaRef.current?.clientHeight || 450;
+    const dx = ((e.clientX - drag.startX) / width) * 100;
+    const dy = ((e.clientY - drag.startY) / height) * 100;
+    setBgPos({
+      x: Math.max(0, Math.min(100, drag.bgX + dx)),
+      y: Math.max(0, Math.min(100, drag.bgY - dy)),
+    });
+  };
+
+  const onPointerUp = () => setDrag(null);
+
+  return (
+    <div className="fixed inset-0 z-50 bg-black/80 backdrop-blur-sm flex items-center justify-center p-4" onClick={onClose}>
+      <div className="relative w-full max-w-5xl" onClick={(e) => e.stopPropagation()}>
+        <div className="flex items-center justify-between mb-3">
+          <div className="flex items-center gap-2">
+            <Video className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
+            <span className="text-sm font-medium text-white">{label} — drag to look around</span>
+          </div>
+          <button onClick={onClose} className="w-8 h-8 rounded-full bg-white/10 hover:bg-white/20 text-white flex items-center justify-center transition-colors" aria-label="Close 360 view">
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+        <div
+          ref={areaRef}
+          className="relative aspect-[16/9] md:aspect-[21/9] rounded-xl overflow-hidden cursor-grab active:cursor-grabbing select-none touch-none"
+          style={{
+            backgroundImage: `url(${src})`,
+            backgroundSize: "cover",
+            backgroundPosition: `${bgPos.x}% ${bgPos.y}%`,
+          }}
+          onPointerDown={onPointerDown}
+          onPointerMove={onPointerMove}
+          onPointerUp={onPointerUp}
+          onPointerCancel={onPointerUp}
+          role="img"
+          aria-label={label}
+        >
+          {/* Crosshair hint overlay */}
+          <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+            <div className="w-10 h-10 rounded-full border-2 border-white/40 flex items-center justify-center">
+              <div className="w-1.5 h-1.5 rounded-full bg-white/70" />
+            </div>
+          </div>
+          <span className="absolute bottom-2 left-1/2 -translate-x-1/2 px-2 py-0.5 rounded text-[10px] text-white/70 bg-black/40 pointer-events-none">
+            Drag to pan the view
+          </span>
+        </div>
+        <div className="flex justify-center gap-3 mt-3">
+          <Button variant="secondary" size="sm" onClick={onPrev} className="gap-1.5">
+            <ChevronLeft className="w-4 h-4" /> Previous
+          </Button>
+          <Button variant="secondary" size="sm" onClick={onNext} className="gap-1.5">
+            Next <ChevronRight className="w-4 h-4" />
+          </Button>
+        </div>
       </div>
     </div>
   );
