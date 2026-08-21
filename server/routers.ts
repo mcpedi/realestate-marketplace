@@ -152,6 +152,9 @@ const modernRouter = router({
   accountActivitySummary: protectedProcedure.query(async ({ ctx }) => {
     return db.getAccountActivitySummary(ctx.user.id);
   }),
+  profileHubSummary: protectedProcedure.query(async ({ ctx }) => {
+    return db.getProfileHubSummary(ctx.user.id);
+  }),
   notificationsList: protectedProcedure.query(async ({ ctx }) => {
     return db.getAccountNotifications(ctx.user.id);
   }),

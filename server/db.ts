@@ -981,6 +981,52 @@ export async function getUserActivity(userId: number, eventType?: string, limit 
   return db.select().from(propertyActivity).where(and(...conds)).orderBy(desc(propertyActivity.createdAt)).limit(limit);
 }
 
+export async function getProfileHubSummary(userId: number) {
+  const [savedProperties, alerts, bookings, inquiries, activity] = await Promise.all([
+    getFavoriteProperties(userId),
+    getUserAlerts(userId),
+    getBuyerBookings(userId),
+    getUserInquiries(userId),
+    getUserActivity(userId, "view", 18),
+  ]);
+
+  const recentlyViewedIds: number[] = [];
+  const seen = new Set<number>();
+  for (const entry of activity) {
+    if (entry.propertyId && !seen.has(entry.propertyId)) {
+      seen.add(entry.propertyId);
+      recentlyViewedIds.push(entry.propertyId);
+    }
+    if (recentlyViewedIds.length === 3) break;
+  }
+
+  const recentlyViewed = (
+    await Promise.all(
+      recentlyViewedIds.map(async (propertyId) => {
+        const [property, photos] = await Promise.all([
+          getPropertyById(propertyId),
+          getPropertyPhotos(propertyId),
+        ]);
+        if (!property) return null;
+        const imageUrl: string | null = photos.length > 0 ? photos[0].url : null;
+        return {
+          id: property.id,
+          title: property.title,
+          imageUrl,
+        };
+      }),
+    )
+  ).filter((property): property is { id: number; title: string; imageUrl: string | null } => property !== null);
+
+  return {
+    savedCount: savedProperties.length,
+    alertCount: alerts.filter((alert) => alert.active).length,
+    viewingCount: bookings.filter((booking) => booking.status !== "cancelled").length,
+    inquiryCount: inquiries.length,
+    recentlyViewed,
+  };
+}
+
 // ── Alerts ────────────────────────────────────────────────────────────────────
 export async function createAlert(data: InsertPropertyAlert) {
   const db = await getDb();

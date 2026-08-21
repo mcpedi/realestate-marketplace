@@ -86,6 +86,15 @@ describe("modern activity tracking", () => {
 });
 
 describe("modern account notifications", () => {
+  it("returns a live profile hub summary for the signed-in member", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const summary = await caller.modern.profileHubSummary();
+    expect(summary.savedCount).toEqual(expect.any(Number));
+    expect(summary.alertCount).toEqual(expect.any(Number));
+    expect(summary.viewingCount).toEqual(expect.any(Number));
+    expect(Array.isArray(summary.recentlyViewed)).toBe(true);
+  });
+
   it("returns typed live counts for the persistent account header", async () => {
     const caller = appRouter.createCaller(createUserContext());
     const summary = await caller.modern.accountActivitySummary();

@@ -100,3 +100,11 @@
 - [x] Build a first-use onboarding flow for location, budget, property type, and bedrooms
 - [x] Connect onboarding preferences to the existing recommendation engine and refresh Picked For You on completion
 - [x] Add procedure coverage, verify responsive behavior, build, checkpoint, and publish (57 tests and production build passing)
+
+## Reference-inspired profile hub
+- [x] Rebuild the signed-in profile page as a mobile-first identity and account summary hub
+- [x] Add live saved-property, alert, viewing, and message statistics to the profile header
+- [x] Add a premium membership callout and connect its action to the Premium plan page
+- [x] Add grouped Account, Activity, and Help actions connected to available profile and marketplace routes
+- [x] Preserve profile editing, picture upload, and logout access behind the refined profile hub
+- [x] Add or update tests, verify responsive rendering, build, checkpoint, and publish (58 tests, production build, and mobile/desktop verification passing)
