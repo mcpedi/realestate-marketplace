@@ -108,3 +108,17 @@
 - [x] Add grouped Account, Activity, and Help actions connected to available profile and marketplace routes
 - [x] Preserve profile editing, picture upload, and logout access behind the refined profile hub
 - [x] Add or update tests, verify responsive rendering, build, checkpoint, and publish (58 tests, production build, and mobile/desktop verification passing)
+
+## Website documentation
+- [x] Document product purpose, branding, public site navigation, and buyer journeys
+- [x] Document seller, agent, admin, premium, and profile workflows
+- [x] Document modern discovery, AI, map, alert, booking, and notification features
+- [x] Document the technical architecture, data model, security model, operations, and deployment workflow
+- [x] Review documentation for accuracy and deliver the Markdown guide (3,640 words; 17 top-level sections)
+
+## Public contact and footer update
+- [x] Change the public address to Nairobi, Kilimani
+- [x] Make the public phone number callable and email address open a new email message when clicked
+- [x] Add the “Designed and made by Jacks Ict Solutions” footer credit
+- [x] Verify the contact links and responsive footer (61 tests passing; production build plus mobile and desktop Contact/footer views verified)
+- [x] Checkpoint and publish the public contact/footer update

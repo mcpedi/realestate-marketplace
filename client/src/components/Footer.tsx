@@ -64,15 +64,15 @@ export function Footer() {
             <ul className="space-y-3 text-sm">
               <li className="flex items-center gap-2">
                 <MapPin className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                <span>123 Property Lane, Business District</span>
+                <span>Nairobi, Kilimani</span>
               </li>
               <li className="flex items-center gap-2">
                 <Phone className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                <span>0716339552</span>
+                <a href="tel:+254716339552" className="hover:text-[oklch(0.72_0.15_80)] transition-colors">0716339552</a>
               </li>
               <li className="flex items-center gap-2">
                 <Mail className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                <span>pediwarealestate@gmail.com</span>
+                <a href="mailto:pediwarealestate@gmail.com" className="hover:text-[oklch(0.72_0.15_80)] transition-colors">pediwarealestate@gmail.com</a>
               </li>
             </ul>
           </div>
@@ -85,6 +85,9 @@ export function Footer() {
             <Link href="#" className="hover:text-[oklch(0.72_0.15_80)] transition-colors">Terms of Service</Link>
           </div>
         </div>
+        <p className="mt-2 text-center text-xs opacity-60">
+          Designed and made by <span className="text-[oklch(0.72_0.15_80)]">Jacks Ict Solutions</span>
+        </p>
       </div>
     </footer>
   );
