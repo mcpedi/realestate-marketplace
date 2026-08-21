@@ -84,3 +84,12 @@
 - [x] Vitest tests for leads procedures (5 tests passing, 40 total)
 - [x] Verify production deployment (sync checkpoint re-triggered deployment after index.html build failure)
 - [x] Checkpoint and deliver
+
+## Reference-inspired mobile-first layout refresh
+- [x] Rebuild the home dashboard layout around compact mobile navigation, a search-first header, and a visual property hero
+- [x] Add a mobile quick-actions strip for AI Assistant, Map Search, Saved, Compare, and Alerts
+- [x] Restyle recommendation cards as horizontally scrollable mobile property cards while preserving live listing data
+- [x] Add a map discovery preview and compact AI assistant prompt card to the mobile home flow
+- [x] Introduce a fixed mobile bottom navigation with Home, Explore, Add Property, Saved, and Profile links
+- [x] Preserve and refine the desktop layout so it complements the new mobile-first experience
+- [x] Verify responsive rendering, run tests/build, checkpoint, and publish (mobile and desktop home plus key discovery pages checked; 54 tests and production build passing)

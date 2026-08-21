@@ -82,7 +82,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
   const firstPhoto = property.photos?.[0]?.url || "/placeholder-property.jpg";
 
   return (
-    <div className="group bg-white rounded-xl overflow-hidden border border-border/50 shadow-sm hover:shadow-lg transition-all duration-300">
+    <div className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.07)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-border dark:bg-card">
       {/* Image */}
       <Link href={`/property/${property.id}`} className="block relative overflow-hidden aspect-[4/3]">
         <img
@@ -155,7 +155,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
       <div className="p-4">
         <div className="flex items-start justify-between gap-2 mb-2">
           <Link href={`/property/${property.id}`}>
-            <h3 className="font-semibold text-foreground line-clamp-1 hover:text-[oklch(0.45_0.18_260)] transition-colors">
+            <h3 className="font-sans font-bold text-foreground line-clamp-1 hover:text-emerald-700 transition-colors">
               {property.title}
             </h3>
           </Link>
@@ -188,7 +188,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-border/50">
-          <span className="text-lg font-bold text-[oklch(0.45_0.18_260)]">
+          <span className="text-lg font-extrabold text-emerald-700">
             {formatPrice(property.price)}
             {property.listingType === "rent" && (
               <span className="text-sm font-normal text-muted-foreground">/month</span>

@@ -8,324 +8,236 @@ import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
 import {
-  Search,
-  PlusCircle,
-  Shield,
   ArrowRight,
-  Home as HomeIcon,
-  Building,
-  Users,
-  Star,
-  TrendingUp,
-  Phone,
-  Mail,
+  Bell,
+  Bot,
+  ChevronRight,
+  Compass,
+  GitCompareArrows,
+  Heart,
+  Map,
   MapPin,
+  PlusCircle,
+  Search,
+  SlidersHorizontal,
   Sparkles,
 } from "lucide-react";
 
-const stats = [
-  { icon: Building, label: "Properties", value: "2,500+" },
-  { icon: Users, label: "Happy Clients", value: "5,000+" },
-  { icon: TrendingUp, label: "Cities Served", value: "15+" },
-  { icon: Star, label: "5-Star Reviews", value: "1,200+" },
+const quickActions = [
+  { href: "/assistant", label: "AI Assistant", icon: Bot, color: "bg-emerald-50 text-emerald-700" },
+  { href: "/map", label: "Map Search", icon: MapPin, color: "bg-sky-50 text-sky-700" },
+  { href: "/favorites", label: "Saved", icon: Heart, color: "bg-rose-50 text-rose-600" },
+  { href: "/compare", label: "Compare", icon: GitCompareArrows, color: "bg-emerald-50 text-emerald-700" },
+  { href: "/alerts", label: "Alerts", icon: Bell, color: "bg-amber-50 text-amber-600" },
 ];
 
-const features = [
-  {
-    icon: Search,
-    title: "Smart Search",
-    description: "Find your dream property with advanced filters for location, price, type, and more.",
-  },
-  {
-    icon: Shield,
-    title: "Verified Listings",
-    description: "All properties are reviewed and verified by our team before going live.",
-  },
-  {
-    icon: Phone,
-    title: "Direct Contact",
-    description: "Connect directly with property owners via call, WhatsApp, or inquiry form.",
-  },
-  {
-    icon: Sparkles,
-    title: "Premium Experience",
-    description: "Enjoy a seamless, modern browsing experience on any device.",
-  },
-];
+function HomeMapPreview({ properties }: { properties: Array<{ id: number; price: number; listingType: string; latitude?: number | null; longitude?: number | null }> }) {
+  const pins = properties.slice(0, 4);
+  const placements = ["left-[13%] top-[26%]", "left-[39%] top-[52%]", "right-[22%] top-[25%]", "right-[7%] bottom-[18%]"];
 
-export default function Home() {
-  const { isAuthenticated } = useAuth();
-  const { data: featured, isLoading: loadingFeatured } =
-    trpc.property.featured.useQuery();
-  const { data: latest, isLoading: loadingLatest } =
-    trpc.property.latest.useQuery();
-  const { data: recsData, isLoading: recsLoading } =
-    trpc.modern.recommendations.useQuery(undefined, {
-      enabled: isAuthenticated,
-    });
-  const recs = recsData?.items ?? [];
+  const priceLabel = (price: number, listingType: string) => {
+    const formatted = price >= 1_000_000 ? `${Math.round(price / 1_000_000)}M` : `${Math.round(price / 1000)}K`;
+    return `KSh ${formatted}${listingType === "rent" ? "/mo" : ""}`;
+  };
 
   return (
-    <div className="min-h-screen flex flex-col">
+    <Link href="/map" className="block group">
+      <div className="relative h-44 md:h-64 overflow-hidden rounded-[1.35rem] border border-emerald-100 bg-[radial-gradient(circle_at_18%_32%,rgba(255,255,255,.94)_0_2px,transparent_3px),radial-gradient(circle_at_78%_68%,rgba(255,255,255,.86)_0_2px,transparent_3px),linear-gradient(138deg,#d7f1db_0%,#edf7ea_45%,#bfe9f3_100%)] shadow-sm">
+        <div className="absolute inset-0 opacity-45 [background-image:linear-gradient(102deg,transparent_0_19%,#9acfa6_20%_21%,transparent_22%_36%,#b2d9aa_37%_38%,transparent_39%_100%),linear-gradient(12deg,transparent_0_31%,#8ebfd1_32%_34%,transparent_35%_56%,#9ed1ad_57%_59%,transparent_60%_100%)]" />
+        <div className="absolute inset-0 bg-[linear-gradient(90deg,transparent_0_15%,rgba(255,255,255,.5)_16%_17%,transparent_18%_100%)] opacity-70" />
+        <div className="absolute left-[43%] top-[35%] h-16 w-16 rounded-full border-[10px] border-emerald-500/25 bg-emerald-600/80 text-white shadow-lg flex items-center justify-center font-bold">
+          {properties.length || 0}
+        </div>
+        {pins.map((property, index) => (
+          <span
+            key={property.id}
+            className={`absolute ${placements[index]} rounded-full bg-white px-2.5 py-1 text-[11px] font-bold text-emerald-700 shadow-md transition-transform group-hover:-translate-y-0.5`}
+          >
+            {priceLabel(property.price, property.listingType)}
+          </span>
+        ))}
+        <span className="absolute bottom-3 right-3 grid h-10 w-10 place-items-center rounded-full bg-white text-emerald-700 shadow-md">
+          <Compass className="h-5 w-5" />
+        </span>
+        <div className="absolute inset-x-0 bottom-0 flex items-center justify-between bg-gradient-to-t from-emerald-950/55 via-emerald-950/5 to-transparent px-4 pb-3 pt-10 text-white">
+          <span className="text-sm font-semibold">Discover homes by location</span>
+          <span className="flex items-center gap-1 text-xs font-semibold">Open map <ChevronRight className="h-3.5 w-3.5" /></span>
+        </div>
+      </div>
+    </Link>
+  );
+}
+
+function QuickActionStrip() {
+  return (
+    <div className="rounded-[1.45rem] border border-slate-100 bg-white px-1.5 py-3.5 shadow-[0_10px_24px_rgba(15,23,42,0.07)] md:px-3">
+      <div className="grid grid-cols-5 gap-0.5">
+        {quickActions.map(({ href, label, icon: Icon, color }) => (
+          <Link href={href} key={href} className="flex min-w-0 flex-col items-center gap-1.5 rounded-xl px-1 py-1 text-center transition-transform active:scale-[0.96]">
+            <span className={`grid h-10 w-10 place-items-center rounded-xl ${color}`}>
+              <Icon className="h-5 w-5" />
+            </span>
+            <span className="truncate text-[10px] font-semibold tracking-[-0.01em] text-slate-700 md:text-xs">{label}</span>
+          </Link>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function AssistantPrompt({ name }: { name?: string | null }) {
+  const chips = ["Homes under 30K", "2 bedroom in Migori", "Land in Rongo"];
+  return (
+    <section className="overflow-hidden rounded-[1.45rem] border border-emerald-100 bg-gradient-to-br from-white via-emerald-50/50 to-lime-50/60 p-4 shadow-sm md:p-5">
+      <div className="flex items-center gap-3">
+        <div className="relative grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-emerald-100 text-emerald-700 shadow-inner">
+          <Bot className="h-6 w-6" />
+          <span className="absolute -bottom-0.5 -right-0.5 h-3.5 w-3.5 rounded-full border-2 border-white bg-emerald-500" />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="flex items-center gap-2">
+            <h2 className="truncate text-sm font-bold text-slate-900">Pedi Wa AI Assistant</h2>
+            <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-emerald-800">BETA</span>
+          </div>
+          <p className="mt-0.5 text-xs leading-5 text-slate-600">Hi {name?.split(" ")[0] || "there"}! What kind of property are you looking for?</p>
+        </div>
+        <Link href="/assistant" className="shrink-0">
+          <Button size="sm" variant="outline" className="h-9 rounded-full border-emerald-600 px-3 text-xs font-bold text-emerald-700 hover:bg-emerald-600 hover:text-white">
+            <Sparkles className="mr-1.5 h-3.5 w-3.5" /> Ask AI
+          </Button>
+        </Link>
+      </div>
+      <div className="mt-4 flex gap-2 overflow-x-auto pb-1 [scrollbar-width:none]">
+        {chips.map((chip) => (
+          <Link href="/assistant" key={chip} className="shrink-0 rounded-full border border-slate-200 bg-white px-3 py-2 text-xs font-medium text-slate-600 shadow-sm transition-colors hover:border-emerald-300 hover:text-emerald-700">
+            <Search className="mr-1.5 inline h-3.5 w-3.5" />{chip}
+          </Link>
+        ))}
+      </div>
+    </section>
+  );
+}
+
+export default function Home() {
+  const { isAuthenticated, user } = useAuth();
+  const { data: featured, isLoading: loadingFeatured } = trpc.property.featured.useQuery();
+  const { data: latest, isLoading: loadingLatest } = trpc.property.latest.useQuery();
+  const { data: recsData, isLoading: recsLoading } = trpc.modern.recommendations.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
+
+  const recommendations = recsData?.items ?? [];
+  const spotlight = isAuthenticated && recommendations.length > 0 ? recommendations : featured ?? [];
+  const mapProperties = (featured ?? latest ?? []).slice(0, 4);
+  const spotlightLoading = isAuthenticated ? recsLoading : loadingFeatured;
+
+  return (
+    <div className="min-h-screen bg-[#f8faf9] pb-24 md:bg-background md:pb-0">
       <Navbar />
-
-      {/* Hero Section */}
-      <section className="relative overflow-hidden">
-        <div
-          className="absolute inset-0 bg-cover bg-center"
-          style={{ backgroundImage: "url('/manus-storage/159512_dacaa659.jpg')" }}
-        />
-        <div className="absolute inset-0 bg-gradient-to-b from-black/50 via-black/30 to-black/60" />
-        <div className="absolute top-0 right-0 w-96 h-96 bg-[oklch(0.45_0.18_260/0.06)] rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-        <div className="absolute bottom-0 left-0 w-72 h-72 bg-[oklch(0.72_0.15_80/0.06)] rounded-full blur-3xl translate-y-1/2 -translate-x-1/2" />
-        
-        <div className="relative container py-16 md:py-24 lg:py-32">
-          <div className="text-center max-w-3xl mx-auto mb-10">
-            <div className="inline-flex items-center gap-2 px-3 py-1.5 rounded-full bg-white/15 backdrop-blur-sm text-white text-sm font-medium mb-6">
-              <Sparkles className="w-4 h-4" />
-              Your Trusted Real Estate Partner
-            </div>
-            <h1
-              className="text-4xl md:text-5xl lg:text-6xl font-bold text-white leading-tight mb-5"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Find Your <span className="text-[oklch(0.72_0.15_80)]">Dream</span>{" "}
-              <span className="text-[oklch(0.72_0.15_80)]">Property</span>
-            </h1>
-            <p className="text-lg md:text-xl text-white/80 leading-relaxed max-w-2xl mx-auto">
-              Discover exceptional properties in prime locations. Whether you're buying, selling, or renting, Pedi wa Real Estate connects you with the perfect opportunity.
-            </p>
-          </div>
-
-          {/* Search */}
-          <PropertySearch />
-        </div>
-      </section>
-
-      {/* Stats */}
-      <section className="bg-white border-y border-border/50">
-        <div className="container py-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-6 md:gap-8">
-            {stats.map((stat) => (
-              <div key={stat.label} className="text-center">
-                <stat.icon className="w-6 h-6 text-[oklch(0.45_0.18_260)] mx-auto mb-2" />
-                <div className="text-2xl md:text-3xl font-bold text-foreground">{stat.value}</div>
-                <div className="text-sm text-muted-foreground">{stat.label}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* Featured Properties */}
-      <section className="py-16 md:py-20">
-        <div className="container">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Featured Properties
-              </h2>
-              <p className="text-muted-foreground">Handpicked properties for discerning buyers</p>
-            </div>
-            <Link href="/properties">
-              <Button variant="outline" className="gap-2">
-                View All <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
-
-          {loadingFeatured ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-border/50 animate-pulse">
-                  <div className="aspect-[4/3] bg-muted" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-5 bg-muted rounded w-3/4" />
-                    <div className="h-4 bg-muted rounded w-1/2" />
-                    <div className="h-4 bg-muted rounded w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (featured && featured.length > 0) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {featured.map((p) => (
-                <PropertyCard key={p.id} property={p} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <HomeIcon className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>No featured properties yet. Check back soon!</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Picked for You — personalized recommendations for logged-in users */}
-      {isAuthenticated && (
-        <section className="py-12 md:py-16 bg-gradient-to-r from-[oklch(0.45_0.18_260/0.05)] via-white to-[oklch(0.72_0.15_80/0.05)] border-y border-border/40">
-          <div className="container">
-            <div className="flex items-end justify-between mb-8">
-              <div>
-                <div className="flex items-center gap-2 mb-1">
-                  <Sparkles className="w-5 h-5 text-[oklch(0.72_0.15_80)]" />
-                  <h2 className="text-3xl md:text-4xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
-                    Picked for You
-                  </h2>
-                </div>
-                <p className="text-muted-foreground">AI recommendations based on your favorites and preferences</p>
-              </div>
-              <Link href="/properties">
-                <Button variant="outline" className="gap-2">
-                  Browse All <ArrowRight className="w-4 h-4" />
-                </Button>
+      <main>
+        {/* Reference-inspired mobile dashboard */}
+        <div className="md:hidden">
+          <section className="px-4 pt-4">
+            <div className="flex gap-2">
+              <Link href="/properties" className="flex min-w-0 flex-1 items-center gap-2.5 rounded-2xl border border-slate-200 bg-white px-4 py-3.5 text-sm text-slate-400 shadow-sm">
+                <Search className="h-5 w-5 shrink-0 text-slate-500" />
+                <span className="truncate">Search location, property or keyword...</span>
+              </Link>
+              <Link href="/properties" className="grid h-[52px] w-[52px] shrink-0 place-items-center rounded-2xl border border-slate-200 bg-white text-emerald-700 shadow-sm">
+                <SlidersHorizontal className="h-5 w-5" />
               </Link>
             </div>
-            {recsLoading ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {Array.from({ length: 4 }).map((_, i) => (
-                  <div key={i} className="bg-white rounded-xl border border-border/50 animate-pulse">
-                    <div className="aspect-[4/3] bg-muted" />
-                    <div className="p-4 space-y-3">
-                      <div className="h-5 bg-muted rounded w-3/4" />
-                      <div className="h-4 bg-muted rounded w-1/2" />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            ) : (recs && recs.length > 0) ? (
-              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-                {recs.map((p) => (
-                  <PropertyCard key={p.id} property={p} />
-                ))}
-              </div>
-            ) : (
-              <div className="text-center py-12 text-muted-foreground bg-white/60 rounded-xl border border-border/40">
-                <Sparkles className="w-12 h-12 mx-auto mb-3 opacity-30" />
-                <p>Save favorites and set preferences to get personalized picks.</p>
-                <Link href="/assistant">
-                  <Button variant="outline" size="sm" className="mt-4 gap-2">
-                    Ask the AI Assistant <ArrowRight className="w-3.5 h-3.5" />
+          </section>
+
+          <section className="px-4 pt-5">
+            <div className="relative min-h-[290px] overflow-hidden rounded-[1.55rem] bg-emerald-950 p-6 shadow-[0_20px_34px_rgba(6,78,59,.2)]">
+              <div className="absolute inset-0 bg-cover bg-center opacity-70" style={{ backgroundImage: "url('/manus-storage/159512_dacaa659.jpg')" }} />
+              <div className="absolute inset-0 bg-gradient-to-r from-emerald-950 via-emerald-950/80 to-emerald-950/5" />
+              <div className="absolute -right-20 top-0 h-44 w-44 rounded-full bg-lime-300/15 blur-3xl" />
+              <div className="relative flex h-full flex-col items-start">
+                <span className="rounded-lg bg-lime-300/15 px-3 py-1.5 text-xs font-semibold text-lime-200 backdrop-blur-sm">Find Your Perfect Home</span>
+                <h1 className="mt-4 max-w-[250px] !font-sans text-[2.1rem] font-black leading-[1.08] tracking-[-0.04em] text-white">
+                  Property.<br /><span className="text-lime-300">Your Future.</span>
+                </h1>
+                <p className="mt-3 max-w-[210px] text-sm leading-5 text-emerald-50/90">Buy, rent or sell properties in Kenya with confidence.</p>
+                <Link href="/properties" className="mt-auto">
+                  <Button className="mt-6 h-11 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-lg hover:bg-emerald-500">
+                    Explore Properties <ChevronRight className="ml-1.5 h-4 w-4" />
                   </Button>
                 </Link>
+                <span className="absolute bottom-0 right-0 flex gap-1.5">
+                  <i className="h-1.5 w-5 rounded-full bg-lime-400" />
+                  <i className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                  <i className="h-1.5 w-1.5 rounded-full bg-white/80" />
+                </span>
               </div>
-            )}
-          </div>
-        </section>
-      )}
+            </div>
+          </section>
 
-      {/* Latest Properties */}
-      <section className="py-16 md:py-20 bg-secondary/30">
-        <div className="container">
-          <div className="flex items-end justify-between mb-8">
-            <div>
-              <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-2" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Latest Listings
-              </h2>
-              <p className="text-muted-foreground">Newly added properties to the marketplace</p>
-            </div>
-            <Link href="/properties">
-              <Button variant="outline" className="gap-2">
-                Browse All <ArrowRight className="w-4 h-4" />
-              </Button>
-            </Link>
-          </div>
+          <section className="px-4 pt-4"><QuickActionStrip /></section>
 
-          {loadingLatest ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {Array.from({ length: 4 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-border/50 animate-pulse">
-                  <div className="aspect-[4/3] bg-muted" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-5 bg-muted rounded w-3/4" />
-                    <div className="h-4 bg-muted rounded w-1/2" />
-                    <div className="h-4 bg-muted rounded w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : (latest && latest.length > 0) ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {latest.map((p) => (
-                <PropertyCard key={p.id} property={p} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-12 text-muted-foreground">
-              <Building className="w-12 h-12 mx-auto mb-3 opacity-30" />
-              <p>No properties listed yet. Be the first to add one!</p>
-            </div>
-          )}
-        </div>
-      </section>
-
-      {/* Features */}
-      <section className="py-16 md:py-20">
-        <div className="container">
-          <div className="text-center mb-12">
-            <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>
-              Why Choose Us
-            </h2>
-            <p className="text-muted-foreground max-w-xl mx-auto">
-              We provide a comprehensive real estate experience designed to make your journey seamless
-            </p>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {features.map((feature) => (
-              <div
-                key={feature.title}
-                className="bg-white p-6 rounded-xl border border-border/50 shadow-sm hover:shadow-md transition-shadow"
-              >
-                <div className="w-12 h-12 rounded-lg bg-[oklch(0.45_0.18_260/0.08)] flex items-center justify-center mb-4">
-                  <feature.icon className="w-6 h-6 text-[oklch(0.45_0.18_260)]" />
-                </div>
-                <h3 className="font-semibold text-foreground mb-2">{feature.title}</h3>
-                <p className="text-sm text-muted-foreground leading-relaxed">{feature.description}</p>
+          <section className="pt-6">
+            <div className="flex items-end justify-between px-4">
+              <div>
+                <h2 className="!font-sans text-lg font-extrabold tracking-[-0.02em] text-slate-900">{isAuthenticated ? "Picked For You" : "Featured Properties"}</h2>
+                <p className="mt-0.5 text-xs text-slate-500">{isAuthenticated ? "Based on your recent activity" : "Explore verified listings near you"}</p>
               </div>
-            ))}
-          </div>
-        </div>
-      </section>
-
-      {/* CTA Section */}
-      <section className="py-16 md:py-20 bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.35_0.18_260)] text-white">
-        <div className="container">
-          <div className="max-w-3xl mx-auto text-center">
-            <h2
-              className="text-3xl md:text-4xl font-bold mb-4"
-              style={{ fontFamily: "'Playfair Display', serif" }}
-            >
-              Ready to List Your Property?
-            </h2>
-            <p className="text-lg opacity-90 mb-8 max-w-xl mx-auto">
-              Join thousands of property owners who trust Pedi wa Real Estate to showcase their listings to qualified buyers and renters.
-            </p>
-            <div className="flex flex-col sm:flex-row gap-4 justify-center">
-              <Button
-                size="lg"
-                className="bg-white text-[oklch(0.45_0.18_260)] hover:bg-[oklch(0.72_0.15_80)] hover:text-white transition-colors gap-2"
-                onClick={() => startLogin()}
-              >
-                <PlusCircle className="w-5 h-5" />
-                List Your Property
-              </Button>
-              <Link href="/properties">
-                <Button
-                  size="lg"
-                  variant="outline"
-                  className="border-white/30 text-white hover:bg-white/10 gap-2"
-                >
-                  <Search className="w-5 h-5" />
-                  Browse Properties
-                </Button>
-              </Link>
+              <Link href="/properties" className="pb-0.5 text-sm font-bold text-emerald-700">View all</Link>
             </div>
-          </div>
-        </div>
-      </section>
+            <div className="mt-3 flex gap-3 overflow-x-auto px-4 pb-2 [scrollbar-width:none]">
+              {spotlightLoading ? Array.from({ length: 3 }).map((_, index) => (
+                <div className="h-[295px] w-[265px] shrink-0 rounded-2xl bg-white animate-pulse" key={index} />
+              )) : spotlight.length > 0 ? spotlight.slice(0, 6).map((property) => (
+                <div className="w-[265px] shrink-0" key={property.id}><PropertyCard property={property} /></div>
+              )) : (
+                <div className="mx-4 w-full rounded-2xl border border-dashed border-slate-200 bg-white py-10 text-center text-sm text-slate-500">New verified listings will appear here soon.</div>
+              )}
+            </div>
+          </section>
 
-      <Footer />
+          <section className="px-4 pt-6">
+            <div className="mb-3 flex items-center justify-between">
+              <h2 className="!font-sans text-lg font-extrabold tracking-[-0.02em] text-slate-900">Explore Properties on Map</h2>
+              <Link href="/map" className="text-sm font-bold text-emerald-700">View map</Link>
+            </div>
+            <HomeMapPreview properties={mapProperties} />
+          </section>
+
+          <section className="px-4 pb-4 pt-6"><AssistantPrompt name={user?.name} /></section>
+        </div>
+
+        {/* Wider screens retain a richer marketplace landing experience. */}
+        <div className="hidden md:block">
+          <section className="relative overflow-hidden">
+            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/manus-storage/159512_dacaa659.jpg')" }} />
+            <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-950/55 to-slate-950/35" />
+            <div className="relative container grid min-h-[530px] items-center gap-12 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
+              <div className="max-w-2xl text-white">
+                <span className="inline-flex items-center gap-2 rounded-full bg-lime-300/15 px-3 py-1.5 text-sm font-semibold text-lime-100 backdrop-blur-sm"><Sparkles className="h-4 w-4" /> Find your perfect Kenyan property</span>
+                <h1 className="mt-6 !font-sans text-5xl font-black leading-[1.02] tracking-[-0.05em] lg:text-6xl">Property.<br /><span className="text-lime-300">Your Future.</span></h1>
+                <p className="mt-5 max-w-lg text-lg leading-8 text-emerald-50/85">Search verified homes, apartments, land, and commercial spaces with AI-powered recommendations and local insights.</p>
+                <div className="mt-8 flex flex-wrap gap-3">
+                  <Link href="/properties"><Button size="lg" className="rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500">Explore Properties <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+                  <Link href="/assistant"><Button size="lg" variant="outline" className="rounded-xl border-white/35 bg-white/10 font-bold text-white hover:bg-white/20"><Bot className="mr-2 h-4 w-4" /> Ask the AI</Button></Link>
+                </div>
+              </div>
+              <div className="self-end"><PropertySearch /></div>
+            </div>
+          </section>
+
+          <section className="border-b border-slate-100 bg-white py-7"><div className="container"><QuickActionStrip /></div></section>
+
+          <section className="container py-16">
+            <div className="mb-8 flex items-end justify-between"><div><p className="text-sm font-bold uppercase tracking-wider text-emerald-700">Personalized discovery</p><h2 className="mt-2 !font-sans text-4xl font-black tracking-[-0.04em] text-slate-900">{isAuthenticated ? "Picked For You" : "Featured Properties"}</h2></div><Link href="/properties"><Button variant="outline" className="gap-2">View All <ArrowRight className="h-4 w-4" /></Button></Link></div>
+            {spotlightLoading ? <div className="grid grid-cols-3 gap-6">{Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-96 rounded-2xl bg-slate-100 animate-pulse" />)}</div> : spotlight.length > 0 ? <div className="grid grid-cols-3 gap-6">{spotlight.slice(0, 3).map((property) => <PropertyCard key={property.id} property={property} />)}</div> : <div className="rounded-2xl border border-dashed p-12 text-center text-slate-500">New verified listings will appear here soon.</div>}
+          </section>
+
+          <section className="bg-emerald-50/55 py-16"><div className="container grid items-center gap-10 lg:grid-cols-[1.1fr_.9fr]"><HomeMapPreview properties={mapProperties} /><AssistantPrompt name={user?.name} /></div></section>
+
+          <section className="container py-16 text-center"><p className="text-sm font-bold uppercase tracking-wider text-emerald-700">List with confidence</p><h2 className="mx-auto mt-2 max-w-2xl !font-sans text-4xl font-black tracking-[-0.04em] text-slate-900">Ready to put your property in front of the right buyers?</h2><p className="mx-auto mt-4 max-w-xl text-slate-600">Create a listing, add high-quality photos, and manage inquiries from one trusted marketplace.</p><Button size="lg" className="mt-7 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500" onClick={() => startLogin()}><PlusCircle className="mr-2 h-5 w-5" /> List Your Property</Button></section>
+        </div>
+      </main>
+      <div className="hidden md:block"><Footer /></div>
     </div>
   );
 }

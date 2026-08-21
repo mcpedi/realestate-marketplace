@@ -126,6 +126,11 @@
   body {
     @apply bg-background text-foreground;
   }
+  @media (max-width: 767px) {
+    body {
+      padding-bottom: calc(5rem + env(safe-area-inset-bottom));
+    }
+  }
   button:not(:disabled),
   [role="button"]:not([aria-disabled="true"]),
   [type="button"]:not(:disabled),
@@ -138,7 +143,7 @@
     @apply cursor-pointer;
   }
   h1, h2, h3 {
-    font-family: 'Playfair Display', Georgia, serif;
+    font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
   }
 }
 
@@ -245,4 +250,10 @@
 /* Smooth scroll */
 html {
   scroll-behavior: smooth;
+}
+
+@media (max-width: 767px) {
+  ::-webkit-scrollbar {
+    display: none;
+  }
 }

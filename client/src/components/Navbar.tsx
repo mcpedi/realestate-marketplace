@@ -8,56 +8,62 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import {
-  Sheet,
-  SheetContent,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
 import {
-  Menu,
-  X,
-  Home,
-  Search,
-  PlusCircle,
-  Shield,
-  Heart,
-  MessageSquare,
-  User,
-  LogOut,
-  ChevronDown,
-  FileText,
-  Phone,
-  HelpCircle,
-  MessageCircle,
-  PenTool,
-  Crown,
-  Sun,
-  Moon,
-  Map as MapIcon,
-  Sparkles,
   Bell,
-  Shuffle,
-  GitCompareArrows,
   CalendarDays,
+  ChevronDown,
+  Crown,
+  FileText,
+  GitCompareArrows,
+  Heart,
+  Home,
+  Map as MapIcon,
+  Menu,
+  MessageSquare,
+  Moon,
+  PenTool,
+  Plus,
+  PlusCircle,
+  Search,
+  Shield,
+  Sparkles,
+  Sun,
+  User,
+  X,
 } from "lucide-react";
-import { trpc } from "@/lib/trpc";
 import { useTheme } from "@/contexts/ThemeContext";
 
 const SITE_NAME = "Pedi wa Real Estate";
 
-const navLinks = [
+const desktopLinks = [
+  { href: "/", label: "Home" },
+  { href: "/properties", label: "Explore" },
+  { href: "/map", label: "Map Search" },
+  { href: "/assistant", label: "AI Assistant" },
+];
+
+const menuLinks = [
+  { href: "/properties", label: "Browse Properties", icon: Search },
+  { href: "/map", label: "Map Discovery", icon: MapIcon },
+  { href: "/assistant", label: "AI Property Assistant", icon: Sparkles },
+  { href: "/discover", label: "Swipe Discovery", icon: Sparkles },
+  { href: "/compare", label: "Compare Properties", icon: GitCompareArrows },
+  { href: "/alerts", label: "Property Alerts", icon: Bell },
+  { href: "/bookings", label: "My Viewings", icon: CalendarDays },
+  { href: "/about", label: "About Us", icon: FileText },
+  { href: "/blog", label: "Property Guides", icon: PenTool },
+];
+
+const bottomTabs = [
   { href: "/", label: "Home", icon: Home },
-  { href: "/properties", label: "Properties", icon: Search },
-  { href: "/about", label: "About", icon: FileText },
-  { href: "/blog", label: "Blog", icon: PenTool },
-  { href: "/testimonials", label: "Testimonials", icon: MessageCircle },
-  { href: "/faq", label: "FAQ", icon: HelpCircle },
-  { href: "/contact", label: "Contact", icon: Phone },
+  { href: "/properties", label: "Explore", icon: Search },
+  { href: "/seller", label: "Add Property", icon: Plus, elevated: true },
+  { href: "/favorites", label: "Saved", icon: Heart },
+  { href: "/profile", label: "Profile", icon: User },
 ];
 
 export function Navbar() {
@@ -70,288 +76,104 @@ export function Navbar() {
     <button
       aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
       onClick={toggleTheme}
-      className="btn-press p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary transition-colors"
+      className="grid h-9 w-9 place-items-center rounded-full text-slate-500 transition-colors hover:bg-slate-100 hover:text-slate-900"
     >
-      {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
+      {theme === "light" ? <Moon className="h-4 w-4" /> : <Sun className="h-4 w-4" />}
     </button>
   ) : null;
 
-  const isAuthPage =
-    location === "/seller" ||
-    location === "/admin" ||
-    location === "/favorites" ||
-    location.startsWith("/seller/") ||
-    location.startsWith("/admin/");
-
-  const handleLogout = () => {
-    logout();
-  };
+  const isActive = (href: string) => href === "/" ? location === "/" : location === href || location.startsWith(`${href}/`);
 
   return (
-    <header className="sticky top-0 z-50 bg-white/95 backdrop-blur-md border-b border-border/50 shadow-sm">
-      <div className="container">
-        <div className="flex items-center justify-between h-16 md:h-18">
-          {/* Logo */}
-          <Link href="/" className="flex items-center gap-2 shrink-0">
-            <div className="w-9 h-9 rounded-lg bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.72_0.15_80)] flex items-center justify-center">
-              <Home className="w-5 h-5 text-white" />
-            </div>
-            <span className="font-bold text-lg tracking-tight text-foreground hidden sm:block" style={{ fontFamily: "'Playfair Display', serif" }}>
-              {SITE_NAME}
-            </span>
-            <span className="font-bold text-lg tracking-tight text-foreground sm:hidden" style={{ fontFamily: "'Playfair Display', serif" }}>
-              PWRE
-            </span>
-          </Link>
-
-          {/* Desktop Nav */}
-          <nav className="hidden lg:flex items-center gap-1">
-            {navLinks.map((link) => (
-              <Link key={link.href} href={link.href}>
-                <span
-                  className={cn(
-                    "px-3 py-2 rounded-md text-sm font-medium transition-colors",
-                    location === link.href
-                      ? "text-[oklch(0.45_0.18_260)] bg-[oklch(0.45_0.18_260/0.08)]"
-                      : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                  )}
-                >
-                  {link.label}
-                </span>
-              </Link>
-            ))}
-          </nav>
-
-          {/* Desktop Auth */}
-          <div className="hidden lg:flex items-center gap-3">
-            {themeButton}
-            {isAuthenticated ? (
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button variant="outline" size="sm" className="gap-2">
-                    <User className="w-4 h-4" />
-                    {user?.name || "Account"}
-                    <ChevronDown className="w-3 h-3" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-56">
-                  <DropdownMenuItem asChild>
-                    <Link href="/profile" className="flex items-center gap-2 w-full">
-                      <User className="w-4 h-4" />
-                      My Profile
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/seller" className="flex items-center gap-2 w-full">
-                      <PlusCircle className="w-4 h-4" />
-                      Seller Dashboard
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/premium" className="flex items-center gap-2 w-full">
-                      <Crown className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                      Premium Plans
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/favorites" className="flex items-center gap-2 w-full">
-                      <Heart className="w-4 h-4" />
-                      My Favorites
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/map" className="flex items-center gap-2 w-full">
-                      <MapIcon className="w-4 h-4" />
-                      Map Discovery
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/assistant" className="flex items-center gap-2 w-full">
-                      <Sparkles className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                      AI Assistant
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/alerts" className="flex items-center gap-2 w-full">
-                      <Bell className="w-4 h-4" />
-                      My Alerts
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/discover" className="flex items-center gap-2 w-full">
-                      <Shuffle className="w-4 h-4" />
-                      Swipe Discovery
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/compare" className="flex items-center gap-2 w-full">
-                      <GitCompareArrows className="w-4 h-4" />
-                      Compare
-                    </Link>
-                  </DropdownMenuItem>
-                  <DropdownMenuItem asChild>
-                    <Link href="/bookings" className="flex items-center gap-2 w-full">
-                      <CalendarDays className="w-4 h-4" />
-                      My Viewings
-                    </Link>
-                  </DropdownMenuItem>
-                  {user?.role === "admin" && (
-                    <DropdownMenuItem asChild>
-                      <Link href="/admin" className="flex items-center gap-2 w-full">
-                        <Shield className="w-4 h-4" />
-                        Admin Dashboard
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
-                  <DropdownMenuSeparator />
-                  <DropdownMenuItem onClick={handleLogout}>
-                    <LogOut className="w-4 h-4" />
-                    Sign Out
-                  </DropdownMenuItem>
-                </DropdownMenuContent>
-              </DropdownMenu>
-            ) : (
-              <Button size="sm" onClick={() => startLogin()}>
-                Sign In
-              </Button>
-            )}
-          </div>
-
-          {/* Mobile Toggle */}
-          <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
-            <SheetTrigger asChild>
-              <Button variant="ghost" size="icon" className="lg:hidden">
-                {mobileOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
-              </Button>
-            </SheetTrigger>
-            <SheetContent side="right" className="w-80">
-              <SheetHeader>
-                <SheetTitle className="text-left flex items-center gap-2">
-                  <div className="w-8 h-8 rounded-lg bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.72_0.15_80)] flex items-center justify-center">
-                    <Home className="w-4 h-4 text-white" />
-                  </div>
-                  {SITE_NAME}
-                </SheetTitle>
-              </SheetHeader>
-              <nav className="flex flex-col gap-1 mt-6">
-                {navLinks.map((link) => {
-                  const Icon = link.icon;
-                  return (
-                    <Link key={link.href} href={link.href}>
-                      <span
-                        onClick={() => setMobileOpen(false)}
-                        className={cn(
-                          "flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium transition-colors",
-                          location === link.href
-                            ? "text-[oklch(0.45_0.18_260)] bg-[oklch(0.45_0.18_260/0.08)]"
-                            : "text-muted-foreground hover:text-foreground hover:bg-secondary"
-                        )}
-                      >
-                        <Icon className="w-4 h-4" />
-                        {link.label}
+    <>
+      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-xl">
+        <div className="container flex h-[68px] items-center justify-between md:h-[74px]">
+          <div className="flex items-center gap-2 md:gap-4">
+            <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>
+              <SheetTrigger asChild>
+                <button aria-label="Open navigation menu" className="grid h-10 w-10 place-items-center rounded-xl text-slate-800 transition-colors hover:bg-slate-100 lg:hidden">
+                  {mobileOpen ? <X className="h-6 w-6" /> : <Menu className="h-6 w-6" />}
+                </button>
+              </SheetTrigger>
+              <SheetContent side="left" className="w-[min(22rem,90vw)] border-r-slate-100 bg-white p-0">
+                <SheetHeader className="border-b border-slate-100 px-5 py-5 text-left">
+                  <SheetTitle className="flex items-center gap-3 text-left">
+                    <BrandMark size="sm" />
+                    <span><span className="block text-base font-extrabold text-slate-900">Pedi Wa</span><span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-600">Real Estate</span></span>
+                  </SheetTitle>
+                </SheetHeader>
+                <nav className="space-y-1 px-3 py-4">
+                  {menuLinks.map(({ href, label, icon: Icon }) => (
+                    <Link href={href} key={href} onClick={() => setMobileOpen(false)}>
+                      <span className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors", isActive(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}>
+                        <Icon className="h-4.5 w-4.5" /> {label}
                       </span>
                     </Link>
-                  );
-                })}
-                {themeButton && (
-                  <div className="flex items-center justify-between px-3 py-2 border-b">
-                    <span className="text-xs text-muted-foreground">Appearance</span>
-                    <button
-                      aria-label={`Switch to ${theme === "light" ? "dark" : "light"} mode`}
-                      onClick={toggleTheme}
-                      className="btn-press p-2 rounded-md text-muted-foreground hover:text-foreground hover:bg-secondary"
-                    >
-                      {theme === "light" ? <Moon className="w-4 h-4" /> : <Sun className="w-4 h-4" />}
-                    </button>
-                  </div>
-                )}
-                <div className="border-t mt-4 pt-4 flex flex-col gap-2">
+                  ))}
+                </nav>
+                <div className="border-t border-slate-100 px-4 py-4">
                   {isAuthenticated ? (
-                    <>
-                      <Link href="/profile">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <User className="w-4 h-4" />
-                          My Profile
-                        </span>
-                      </Link>
-                      <Link href="/seller">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <PlusCircle className="w-4 h-4" />
-                          Seller Dashboard
-                        </span>
-                      </Link>
-                      <Link href="/premium">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <Crown className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                          Premium Plans
-                        </span>
-                      </Link>
-                      <Link href="/favorites">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <Heart className="w-4 h-4" />
-                          My Favorites
-                        </span>
-                      </Link>
-                      <Link href="/map">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <MapIcon className="w-4 h-4" />
-                          Map Discovery
-                        </span>
-                      </Link>
-                      <Link href="/assistant">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <Sparkles className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
-                          AI Assistant
-                        </span>
-                      </Link>
-                      <Link href="/alerts">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <Bell className="w-4 h-4" />
-                          My Alerts
-                        </span>
-                      </Link>
-                      <Link href="/discover">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <Shuffle className="w-4 h-4" />
-                          Swipe Discovery
-                        </span>
-                      </Link>
-                      <Link href="/compare">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <GitCompareArrows className="w-4 h-4" />
-                          Compare
-                        </span>
-                      </Link>
-                      <Link href="/bookings">
-                        <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                          <CalendarDays className="w-4 h-4" />
-                          My Viewings
-                        </span>
-                      </Link>
-                      {user?.role === "admin" && (
-                        <Link href="/admin">
-                          <span onClick={() => setMobileOpen(false)} className="flex items-center gap-3 px-3 py-3 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-secondary">
-                            <Shield className="w-4 h-4" />
-                            Admin Dashboard
-                          </span>
-                        </Link>
-                      )}
-                      <Button variant="outline" size="sm" className="mt-2" onClick={handleLogout}>
-                        <LogOut className="w-4 h-4" />
-                        Sign Out
-                      </Button>
-                    </>
-                  ) : (
-                    <Button size="sm" onClick={() => { startLogin(); setMobileOpen(false); }}>
-                      Sign In
-                    </Button>
-                  )}
+                    <div className="space-y-2">
+                      <Link href="/profile" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><User className="h-4.5 w-4.5" /> My Profile</span></Link>
+                      <Link href="/seller" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><PlusCircle className="h-4.5 w-4.5" /> Seller Dashboard</span></Link>
+                      {user?.role === "admin" && <Link href="/admin" onClick={() => setMobileOpen(false)}><span className="flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold text-slate-700 hover:bg-slate-50"><Shield className="h-4.5 w-4.5" /> Admin Dashboard</span></Link>}
+                      <Button variant="outline" className="mt-2 w-full" onClick={logout}>Sign out</Button>
+                    </div>
+                  ) : <Button className="w-full bg-emerald-600 font-bold hover:bg-emerald-500" onClick={() => { startLogin(); setMobileOpen(false); }}>Sign in to your account</Button>}
+                  {switchable && <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"><span className="text-xs font-semibold text-slate-600">Appearance</span>{themeButton}</div>}
                 </div>
-              </nav>
-            </SheetContent>
-          </Sheet>
+              </SheetContent>
+            </Sheet>
+
+            <Link href="/" className="flex items-center gap-2.5" aria-label="Pedi wa Real Estate home">
+              <BrandMark />
+              <span className="leading-none"><span className="block text-[1.15rem] font-extrabold tracking-[-0.04em] text-slate-900">Pedi Wa</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.24em] text-emerald-600">Real Estate</span></span>
+            </Link>
+          </div>
+
+          <nav className="hidden items-center gap-1 lg:flex">
+            {desktopLinks.map(({ href, label }) => <Link href={href} key={href}><span className={cn("rounded-lg px-3 py-2 text-sm font-semibold transition-colors", isActive(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950")}>{label}</span></Link>)}
+          </nav>
+
+          <div className="flex items-center gap-1.5 md:gap-3">
+            <Link href={isAuthenticated ? "/leads" : "/contact"} className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label="Messages and leads"><MessageSquare className="h-5 w-5" /><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" /></Link>
+            <Link href="/alerts" className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label="Property alerts"><Bell className="h-5 w-5" /><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" /></Link>
+            <div className="hidden lg:block">{themeButton}</div>
+            <div className="hidden lg:block">
+              {isAuthenticated ? (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild><Button variant="outline" size="sm" className="h-10 rounded-xl border-slate-200 px-3 font-semibold"><User className="mr-2 h-4 w-4" />{user?.name || "Account"}<ChevronDown className="ml-2 h-3.5 w-3.5" /></Button></DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56 rounded-xl">
+                    <DropdownMenuItem asChild><Link href="/profile"><User className="mr-2 h-4 w-4" /> My Profile</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/seller"><PlusCircle className="mr-2 h-4 w-4" /> Seller Dashboard</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/premium"><Crown className="mr-2 h-4 w-4 text-amber-500" /> Premium Plans</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/favorites"><Heart className="mr-2 h-4 w-4" /> Saved Properties</Link></DropdownMenuItem>
+                    {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>}
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem onClick={logout}>Sign out</DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              ) : <Button size="sm" className="h-10 rounded-xl bg-emerald-600 px-4 font-bold hover:bg-emerald-500" onClick={startLogin}>Sign In</Button>}
+            </div>
+          </div>
         </div>
-      </div>
-    </header>
+      </header>
+
+      <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-100 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden" aria-label="Primary mobile navigation">
+        <div className="mx-auto flex max-w-md items-end justify-between">
+          {bottomTabs.map(({ href, label, icon: Icon, elevated }) => (
+            <Link href={href} key={href} className="relative flex w-[20%] flex-col items-center gap-1 text-center">
+              {elevated ? <span className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-white shadow-[0_8px_18px_rgba(5,150,105,0.38)] ring-4 ring-white"><Icon className="h-7 w-7" /></span> : <Icon className={cn("h-6 w-6", isActive(href) ? "text-emerald-600" : "text-slate-500")} />}
+              <span className={cn("text-[10px] font-semibold", isActive(href) ? "text-emerald-700" : "text-slate-500")}>{label}</span>
+            </Link>
+          ))}
+        </div>
+      </nav>
+    </>
   );
+}
+
+function BrandMark({ size = "md" }: { size?: "sm" | "md" }) {
+  const compact = size === "sm";
+  return <span className={cn("relative grid shrink-0 place-items-center rounded-xl bg-gradient-to-br from-emerald-600 via-emerald-500 to-lime-500 text-white shadow-sm", compact ? "h-9 w-9" : "h-10 w-10")}><Home className={compact ? "h-5 w-5" : "h-5.5 w-5.5"} /><span className="absolute bottom-1 h-1 w-4 rounded-full bg-lime-200/90" /></span>;
 }
