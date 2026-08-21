@@ -148,6 +148,21 @@ const modernRouter = router({
       return { success: true };
     }),
 
+  // ── Persistent account navigation counts ───────────────────────────────────
+  accountActivitySummary: protectedProcedure.query(async ({ ctx }) => {
+    return db.getAccountActivitySummary(ctx.user.id);
+  }),
+  notificationsList: protectedProcedure.query(async ({ ctx }) => {
+    return db.getAccountNotifications(ctx.user.id);
+  }),
+  notificationMarkRead: protectedProcedure
+    .input(z.object({ id: z.number() }))
+    .mutation(async ({ ctx, input }) => {
+      const success = await db.markAccountNotificationRead(input.id, ctx.user.id);
+      if (!success) throw new TRPCError({ code: "NOT_FOUND" });
+      return { success };
+    }),
+
   // ── Match scoring ───────────────────────────────────────────────────────────
   matchScore: protectedProcedure
     .input(
@@ -351,6 +366,13 @@ const modernRouter = router({
         type: input.type,
         notes: input.notes ?? null,
       } as any);
+      await db.createAccountNotification({
+        userId: property.userId,
+        type: "viewing_request",
+        title: "New viewing request",
+        message: `${ctx.user.name || "A buyer"} requested a ${input.type} viewing for ${property.title}.`,
+        href: "/seller/viewings",
+      } as any);
       return { success: true };
     }),
   myBookings: protectedProcedure.query(async ({ ctx }) => {
@@ -385,6 +407,14 @@ const modernRouter = router({
       const match = rows.find((b) => b.id === input.id);
       if (!match) throw new TRPCError({ code: "NOT_FOUND" });
       await db.updateBookingStatusBySeller(input.id, input.status);
+      const property = await db.getPropertyById(match.propertyId);
+      await db.createAccountNotification({
+        userId: match.buyerId,
+        type: "viewing_update",
+        title: "Viewing status updated",
+        message: `${property?.title || "Your property viewing"} is now ${input.status}.`,
+        href: "/bookings",
+      } as any);
       return { success: true };
     }),
   buyerInfo: protectedProcedure
@@ -919,6 +949,13 @@ export const appRouter = router({
         await db.updateProperty(input.propertyId, {
           inquiriesCount: (property.inquiriesCount || 0) + 1,
         });
+        await db.createAccountNotification({
+          userId: property.userId,
+          type: "inquiry",
+          title: "New buyer inquiry",
+          message: `${input.name} sent an inquiry about ${property.title}.`,
+          href: "/leads",
+        } as any);
         await sendInquiryNotification(property.title, input.name, input.email, input.message);
         return { success: true };
       }),

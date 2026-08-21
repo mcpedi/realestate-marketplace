@@ -310,6 +310,20 @@ export const propertyAlerts = mysqlTable("propertyAlerts", {
 export type PropertyAlert = typeof propertyAlerts.$inferSelect;
 export type InsertPropertyAlert = typeof propertyAlerts.$inferInsert;
 
+// ─── In-app account notifications ────────────────────────────────────────────
+export const accountNotifications = mysqlTable("accountNotifications", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  type: varchar("type", { length: 64 }).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  message: text("message").notNull(),
+  href: varchar("href", { length: 512 }),
+  readAt: timestamp("readAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+export type AccountNotification = typeof accountNotifications.$inferSelect;
+export type InsertAccountNotification = typeof accountNotifications.$inferInsert;
+
 // ─── Viewing bookings ─────────────────────────────────────────────────────────
 export const viewingBookings = mysqlTable("viewingBookings", {
   id: int("id").autoincrement().primaryKey(),

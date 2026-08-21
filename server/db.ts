@@ -1,4 +1,4 @@
-import { eq, desc, asc, and, like, sql, count, inArray, gt } from "drizzle-orm";
+import { eq, desc, asc, and, like, sql, count, inArray, gt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -29,11 +29,13 @@ import {
   type InsertAgencyProfile,
   userPreferences,
   propertyAlerts,
+  accountNotifications,
   viewingBookings,
   propertyScores,
   propertyActivity,
   type InsertUserPreference,
   type InsertPropertyAlert,
+  type InsertAccountNotification,
   type InsertViewingBooking,
   type InsertPropertyScore,
   type InsertPropertyActivity,
@@ -927,6 +929,22 @@ export async function getLeadStats(userId: number): Promise<LeadStats> {
   return stats;
 }
 
+/**
+ * Small, live summary intended for persistent account navigation. A message is
+ * a new buyer inquiry on one of the member's listings; notifications are
+ * persisted account events that have not been read by the member.
+ */
+export async function getAccountActivitySummary(userId: number) {
+  const [leadStats, unreadNotificationCount] = await Promise.all([
+    getLeadStats(userId),
+    countUnreadNotifications(userId),
+  ]);
+  return {
+    newLeadCount: leadStats.newLeads,
+    unreadNotificationCount,
+  };
+}
+
 // ─── Modern Features ─────────────────────────────────────────────────────────
 
 // ── User preferences ──────────────────────────────────────────────────────────
@@ -1001,6 +1019,44 @@ export async function updateAlertStatus(id: number, userId: number, active: bool
   await db.update(propertyAlerts).set({ active }).where(and(eq(propertyAlerts.id, id), eq(propertyAlerts.userId, userId)));
 }
 
+// ── In-app notifications ─────────────────────────────────────────────────────
+export async function createAccountNotification(data: InsertAccountNotification) {
+  const db = await getDb();
+  if (!db) return;
+  await db.insert(accountNotifications).values(data);
+}
+
+export async function getAccountNotifications(userId: number, limit = 20) {
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select()
+    .from(accountNotifications)
+    .where(eq(accountNotifications.userId, userId))
+    .orderBy(desc(accountNotifications.createdAt))
+    .limit(limit);
+}
+
+export async function countUnreadNotifications(userId: number) {
+  const db = await getDb();
+  if (!db) return 0;
+  const rows = await db
+    .select({ total: count() })
+    .from(accountNotifications)
+    .where(and(eq(accountNotifications.userId, userId), isNull(accountNotifications.readAt)));
+  return rows[0]?.total ?? 0;
+}
+
+export async function markAccountNotificationRead(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db
+    .update(accountNotifications)
+    .set({ readAt: new Date() })
+    .where(and(eq(accountNotifications.id, id), eq(accountNotifications.userId, userId)));
+  return true;
+}
+
 /**
  * Property details enriched with first photo, for matching/alert payloads.
  */
@@ -1054,6 +1110,13 @@ export async function checkPriceDrops() {
     if (!p) continue;
     if (lastKnown !== undefined && p.price < lastKnown) {
       drops.push({ userId: a.userId, propertyId: a.propertyId, newPrice: p.price, alertIds: [a.id] });
+      await createAccountNotification({
+        userId: a.userId,
+        type: "price_drop",
+        title: "Price drop detected",
+        message: `${p.title} is now listed at KSh ${Math.round(p.price).toLocaleString()}.`,
+        href: `/properties/${p.id}`,
+      } as InsertAccountNotification);
     }
     // Re-arm: store current price so next drop can be detected.
     await db

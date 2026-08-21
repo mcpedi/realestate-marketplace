@@ -85,6 +85,30 @@ describe("modern activity tracking", () => {
   });
 });
 
+describe("modern account notifications", () => {
+  it("returns typed live counts for the persistent account header", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const summary = await caller.modern.accountActivitySummary();
+    expect(summary.newLeadCount).toEqual(expect.any(Number));
+    expect(summary.unreadNotificationCount).toEqual(expect.any(Number));
+  });
+
+  it("lists the signed-in member's notification inbox", async () => {
+    const caller = appRouter.createCaller(createUserContext());
+    const notifications = await caller.modern.notificationsList();
+    expect(Array.isArray(notifications)).toBe(true);
+  });
+
+  it("rejects anonymous notification inbox requests", async () => {
+    const caller = appRouter.createCaller({
+      user: null,
+      req: { protocol: "https", headers: {} } as TrpcContext["req"],
+      res: {} as TrpcContext["res"],
+    });
+    await expect(caller.modern.notificationsList()).rejects.toThrow(TRPCError);
+  });
+});
+
 describe("modern alerts", () => {
   it("creates and lists an instant alert", async () => {
     const caller = appRouter.createCaller(createUserContext());

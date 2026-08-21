@@ -93,3 +93,10 @@
 - [x] Introduce a fixed mobile bottom navigation with Home, Explore, Add Property, Saved, and Profile links
 - [x] Preserve and refine the desktop layout so it complements the new mobile-first experience
 - [x] Verify responsive rendering, run tests/build, checkpoint, and publish (mobile and desktop home plus key discovery pages checked; 54 tests and production build passing)
+
+## Discovery personalization enhancement
+- [x] Generate and integrate a high-quality Kenyan estate hero image with left-side text-safe composition
+- [x] Add protected live header activity counts for unread buyer inquiries and persisted account notifications
+- [x] Build a first-use onboarding flow for location, budget, property type, and bedrooms
+- [x] Connect onboarding preferences to the existing recommendation engine and refresh Picked For You on completion
+- [x] Add procedure coverage, verify responsive behavior, build, checkpoint, and publish (57 tests and production build passing)

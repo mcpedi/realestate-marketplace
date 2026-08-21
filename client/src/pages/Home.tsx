@@ -3,10 +3,14 @@ import { Footer } from "@/components/Footer";
 import { PropertySearch } from "@/components/PropertySearch";
 import { PropertyCard } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Link } from "wouter";
 import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { trpc } from "@/lib/trpc";
+import { useEffect, useState } from "react";
 import {
   ArrowRight,
   Bell,
@@ -118,13 +122,97 @@ function AssistantPrompt({ name }: { name?: string | null }) {
   );
 }
 
+function PreferenceOnboarding({
+  open,
+  onComplete,
+}: {
+  open: boolean;
+  onComplete: () => void;
+}) {
+  const utils = trpc.useUtils();
+  const [location, setLocation] = useState("");
+  const [budget, setBudget] = useState("");
+  const [propertyType, setPropertyType] = useState("apartment");
+  const [bedrooms, setBedrooms] = useState("2");
+  const [listingType, setListingType] = useState<"rent" | "sale" | "any">("rent");
+  const [formError, setFormError] = useState("");
+  const savePreferences = trpc.modern.preferencesSet.useMutation({
+    onSuccess: async () => {
+      await Promise.all([
+        utils.modern.preferencesGet.invalidate(),
+        utils.modern.recommendations.invalidate(),
+      ]);
+      onComplete();
+    },
+    onError: () => setFormError("We could not save your preferences. Please try again."),
+  });
+
+  const handleSubmit = (event: React.FormEvent) => {
+    event.preventDefault();
+    const normalizedLocation = location.trim();
+    const budgetMax = Number(budget.replace(/,/g, ""));
+    if (!normalizedLocation || !Number.isFinite(budgetMax) || budgetMax <= 0) {
+      setFormError("Add a location and your maximum budget to continue.");
+      return;
+    }
+    setFormError("");
+    savePreferences.mutate({
+      budgetMin: null,
+      budgetMax,
+      preferredLocations: [normalizedLocation],
+      preferredTypes: [propertyType],
+      minBedrooms: Math.max(0, Number(bedrooms) || 0),
+      listingType,
+    });
+  };
+
+  return (
+    <Dialog open={open} onOpenChange={() => undefined}>
+      <DialogContent className="max-w-md overflow-hidden rounded-[1.6rem] border-emerald-100 bg-white p-0 sm:rounded-[1.8rem]">
+        <div className="bg-[radial-gradient(circle_at_78%_15%,rgba(190,242,100,.62),transparent_26%),linear-gradient(135deg,#064e3b,#047857)] px-6 pb-7 pt-8 text-white">
+          <span className="inline-grid h-11 w-11 place-items-center rounded-2xl bg-white/15 text-lime-200"><Sparkles className="h-5 w-5" /></span>
+          <DialogHeader className="mt-4 text-left">
+            <DialogTitle className="!font-sans text-2xl font-black tracking-[-0.04em] text-white">Make your picks personal</DialogTitle>
+            <DialogDescription className="mt-2 max-w-sm text-sm leading-6 text-emerald-50/85">Tell us what home you want and we will prioritise better matches in Picked For You.</DialogDescription>
+          </DialogHeader>
+        </div>
+        <form onSubmit={handleSubmit} className="space-y-4 px-6 pb-6 pt-5">
+          <div className="space-y-2">
+            <Label htmlFor="preference-location" className="font-bold text-slate-800">Preferred location</Label>
+            <div className="relative"><MapPin className="pointer-events-none absolute left-3 top-3 h-4 w-4 text-emerald-600" /><Input id="preference-location" value={location} onChange={(event) => setLocation(event.target.value)} placeholder="e.g. Migori Town" className="h-11 rounded-xl border-slate-200 pl-10" autoFocus /></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label htmlFor="preference-budget" className="font-bold text-slate-800">Maximum budget</Label><Input id="preference-budget" inputMode="numeric" value={budget} onChange={(event) => setBudget(event.target.value)} placeholder="e.g. 25,000" className="h-11 rounded-xl border-slate-200" /></div>
+            <div className="space-y-2"><Label htmlFor="preference-listing-type" className="font-bold text-slate-800">Looking to</Label><select id="preference-listing-type" value={listingType} onChange={(event) => setListingType(event.target.value as "rent" | "sale" | "any")} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500"><option value="rent">Rent</option><option value="sale">Buy</option><option value="any">Either</option></select></div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div className="space-y-2"><Label htmlFor="preference-type" className="font-bold text-slate-800">Property type</Label><select id="preference-type" value={propertyType} onChange={(event) => setPropertyType(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500"><option value="apartment">Apartment</option><option value="house">House</option><option value="townhouse">Townhouse</option><option value="villa">Villa</option><option value="land">Land</option><option value="commercial">Commercial</option></select></div>
+            <div className="space-y-2"><Label htmlFor="preference-bedrooms" className="font-bold text-slate-800">Minimum bedrooms</Label><select id="preference-bedrooms" value={bedrooms} onChange={(event) => setBedrooms(event.target.value)} className="h-11 w-full rounded-xl border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700 outline-none focus:border-emerald-500"><option value="0">Any</option><option value="1">1+</option><option value="2">2+</option><option value="3">3+</option><option value="4">4+</option><option value="5">5+</option></select></div>
+          </div>
+          {formError && <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-medium text-rose-600">{formError}</p>}
+          <Button type="submit" disabled={savePreferences.isPending} className="h-11 w-full rounded-xl bg-emerald-600 font-extrabold hover:bg-emerald-500">{savePreferences.isPending ? "Saving your picks..." : "Show my matches"}<ArrowRight className="ml-2 h-4 w-4" /></Button>
+          <p className="text-center text-[11px] leading-4 text-slate-400">You can update these preferences anytime from the AI Assistant.</p>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
+
 export default function Home() {
   const { isAuthenticated, user } = useAuth();
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const { data: featured, isLoading: loadingFeatured } = trpc.property.featured.useQuery();
   const { data: latest, isLoading: loadingLatest } = trpc.property.latest.useQuery();
+  const { data: preferences, isLoading: preferencesLoading } = trpc.modern.preferencesGet.useQuery(undefined, {
+    enabled: isAuthenticated,
+  });
   const { data: recsData, isLoading: recsLoading } = trpc.modern.recommendations.useQuery(undefined, {
     enabled: isAuthenticated,
   });
+
+  useEffect(() => {
+    if (isAuthenticated && !preferencesLoading && !preferences) setShowOnboarding(true);
+  }, [isAuthenticated, preferences, preferencesLoading]);
 
   const recommendations = recsData?.items ?? [];
   const spotlight = isAuthenticated && recommendations.length > 0 ? recommendations : featured ?? [];
@@ -134,6 +222,7 @@ export default function Home() {
   return (
     <div className="min-h-screen bg-[#f8faf9] pb-24 md:bg-background md:pb-0">
       <Navbar />
+      <PreferenceOnboarding open={showOnboarding} onComplete={() => setShowOnboarding(false)} />
       <main>
         {/* Reference-inspired mobile dashboard */}
         <div className="md:hidden">
@@ -151,7 +240,7 @@ export default function Home() {
 
           <section className="px-4 pt-5">
             <div className="relative min-h-[290px] overflow-hidden rounded-[1.55rem] bg-emerald-950 p-6 shadow-[0_20px_34px_rgba(6,78,59,.2)]">
-              <div className="absolute inset-0 bg-cover bg-center opacity-70" style={{ backgroundImage: "url('/manus-storage/159512_dacaa659.jpg')" }} />
+              <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: "url('/manus-storage/pediwa-kenyan-estate-hero_d54d8e46.jpg')" }} />
               <div className="absolute inset-0 bg-gradient-to-r from-emerald-950 via-emerald-950/80 to-emerald-950/5" />
               <div className="absolute -right-20 top-0 h-44 w-44 rounded-full bg-lime-300/15 blur-3xl" />
               <div className="relative flex h-full flex-col items-start">
@@ -209,7 +298,7 @@ export default function Home() {
         {/* Wider screens retain a richer marketplace landing experience. */}
         <div className="hidden md:block">
           <section className="relative overflow-hidden">
-            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/manus-storage/159512_dacaa659.jpg')" }} />
+            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: "url('/manus-storage/pediwa-kenyan-estate-hero_d54d8e46.jpg')" }} />
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-950/55 to-slate-950/35" />
             <div className="relative container grid min-h-[530px] items-center gap-12 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
               <div className="max-w-2xl text-white">

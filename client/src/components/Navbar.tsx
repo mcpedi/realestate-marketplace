@@ -9,6 +9,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
 import { Link, useLocation } from "wouter";
 import { useState } from "react";
@@ -69,8 +70,26 @@ const bottomTabs = [
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme, switchable } = useTheme();
-  const [location] = useLocation();
+  const [location, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
+  const utils = trpc.useUtils();
+  const { data: accountActivity } = trpc.modern.accountActivitySummary.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchInterval: 30_000,
+  });
+  const { data: notifications = [] } = trpc.modern.notificationsList.useQuery(undefined, {
+    enabled: isAuthenticated,
+    refetchInterval: 30_000,
+  });
+  const markNotificationRead = trpc.modern.notificationMarkRead.useMutation({
+    onSuccess: () => {
+      utils.modern.accountActivitySummary.invalidate();
+      utils.modern.notificationsList.invalidate();
+    },
+  });
+  const newLeadCount = accountActivity?.newLeadCount ?? 0;
+  const unreadNotificationCount = accountActivity?.unreadNotificationCount ?? 0;
+  const formatBadgeCount = (value: number) => (value > 9 ? "9+" : String(value));
 
   const themeButton = switchable ? (
     <button
@@ -136,8 +155,42 @@ export function Navbar() {
           </nav>
 
           <div className="flex items-center gap-1.5 md:gap-3">
-            <Link href={isAuthenticated ? "/leads" : "/contact"} className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label="Messages and leads"><MessageSquare className="h-5 w-5" /><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-emerald-500 ring-2 ring-white" /></Link>
-            <Link href="/alerts" className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label="Property alerts"><Bell className="h-5 w-5" /><span className="absolute right-1 top-1 h-2 w-2 rounded-full bg-rose-500 ring-2 ring-white" /></Link>
+            <Link href={isAuthenticated ? "/leads" : "/contact"} className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label={newLeadCount ? `${newLeadCount} new buyer inquiries` : "Messages and leads"}>
+              <MessageSquare className="h-5 w-5" />
+              {newLeadCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-emerald-600 px-1 text-[10px] font-extrabold text-white ring-2 ring-white">{formatBadgeCount(newLeadCount)}</span>}
+            </Link>
+            {isAuthenticated ? (
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <button className="relative grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label={unreadNotificationCount ? `${unreadNotificationCount} unread notifications` : "Notifications"}>
+                    <Bell className="h-5 w-5" />
+                    {unreadNotificationCount > 0 && <span className="absolute -right-1 -top-1 grid h-5 min-w-5 place-items-center rounded-full bg-rose-500 px-1 text-[10px] font-extrabold text-white ring-2 ring-white">{formatBadgeCount(unreadNotificationCount)}</span>}
+                  </button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-80 rounded-xl p-1.5">
+                  <div className="px-2 py-2 text-xs font-extrabold uppercase tracking-[0.16em] text-slate-500">Notifications</div>
+                  {notifications.length === 0 ? (
+                    <div className="px-2 py-5 text-center text-sm text-slate-500">You are all caught up.</div>
+                  ) : notifications.slice(0, 6).map((notification) => (
+                    <DropdownMenuItem
+                      key={notification.id}
+                      className={cn("flex cursor-pointer flex-col items-start gap-1 rounded-lg px-2.5 py-2.5 whitespace-normal", !notification.readAt && "bg-emerald-50/70")}
+                      onSelect={() => {
+                        if (!notification.readAt) markNotificationRead.mutate({ id: notification.id });
+                        if (notification.href) setLocation(notification.href);
+                      }}
+                    >
+                      <span className="text-sm font-bold text-slate-800">{notification.title}</span>
+                      <span className="line-clamp-2 text-xs leading-5 text-slate-500">{notification.message}</span>
+                    </DropdownMenuItem>
+                  ))}
+                  <DropdownMenuSeparator className="my-1" />
+                  <DropdownMenuItem asChild><Link href="/alerts" className="cursor-pointer justify-center font-bold text-emerald-700">Manage property alerts</Link></DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            ) : (
+              <Link href="/alerts" className="grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label="Property alerts"><Bell className="h-5 w-5" /></Link>
+            )}
             <div className="hidden lg:block">{themeButton}</div>
             <div className="hidden lg:block">
               {isAuthenticated ? (
