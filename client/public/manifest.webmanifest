@@ -1,0 +1,23 @@
+{
+  "name": "Nyumba 360",
+  "short_name": "Nyumba 360",
+  "description": "Find homes, apartments, land, and commercial properties across Kenya.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#0F4BA5",
+  "theme_color": "#0F4BA5",
+  "icons": [
+    {
+      "src": "/manus-storage/nyumba-360-app-icon_46e5b435.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any"
+    },
+    {
+      "src": "/manus-storage/nyumba-360-app-icon_46e5b435.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}

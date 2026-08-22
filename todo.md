@@ -127,3 +127,9 @@
 - [x] Update all public-facing brand references, metadata, and product labels to Nyumba 360
 - [x] Verify the Nyumba 360 brand across responsive layouts, tests, and production build (64 tests passing; production build passed; desktop Home/About and mobile Home branding reviewed)
 - [x] Checkpoint and publish the Nyumba 360 rebrand
+
+## Nyumba 360 favicon and app icon
+- [x] Create a recognizable Nyumba 360 favicon and app icon asset set (finished 1920×1920 house-and-orbit image confirmed)
+- [x] Add browser and app metadata that uses the Nyumba 360 icon assets
+- [x] Verify favicon/app-icon delivery, metadata, and production build (asset URL and install manifest resolve; 66 tests passing; production build and mobile home view verified)
+- [x] Checkpoint and publish the Nyumba 360 icon update
