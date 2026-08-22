@@ -20,11 +20,20 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { isNewListingRequest, rememberNewListingAfterSignIn, sellerDashboardHref } from "@/lib/sellerListing";
+import { LocationSuggestionInput } from "@/components/LocationSuggestionInput";
+import {
+  clearListingDraft,
+  createEmptyListingForm,
+  LISTING_FORM_STEPS,
+  listingStepError,
+  loadListingDraft,
+  saveListingDraft,
+} from "@/lib/listingDraft";
+import { advanceSellerListingWorkflow, applySuggestedLocation } from "@/lib/sellerWorkflow";
 import { Loader2 } from "lucide-react";
 import {
   PlusCircle,
@@ -46,6 +55,10 @@ import {
   Sparkles,
   Users,
   CalendarDays,
+  Check,
+  ChevronLeft,
+  ChevronRight,
+  MapPin,
 } from "lucide-react";
 
 const PROPERTY_TYPES = ["house", "apartment", "villa", "land", "commercial", "townhouse", "studio", "penthouse"];
@@ -104,6 +117,8 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [showAiTools, setShowAiTools] = useState(false);
+  const [listingStep, setListingStep] = useState(0);
+  const [draftStatus, setDraftStatus] = useState<"idle" | "saved" | "restored">("idle");
 
   const { data: myProperties, isLoading, refetch } = trpc.property.myProperties.useQuery();
 
@@ -137,6 +152,8 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       toast.success("Property listing submitted for review!");
       setShowForm(false);
       resetForm();
+      clearListingDraft(window.localStorage, user.id);
+      setListingStep(0);
       refetch();
       setLocation(sellerDashboardHref());
     },
@@ -148,6 +165,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       setShowForm(false);
       setEditingProperty(null);
       resetForm();
+      setListingStep(0);
       refetch();
     },
     onError: () => toast.error("Failed to update listing"),
@@ -161,48 +179,48 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   });
   const uploadMutation = trpc.upload.useMutation();
 
-  const [formData, setFormData] = useState({
-    title: "",
-    description: "",
-    price: "",
-    location: "",
-    latitude: "",
-    longitude: "",
-    propertyType: "house",
-    listingType: "sale",
-    bedrooms: "0",
-    bathrooms: "0",
-    landSize: "",
-    floorArea: "",
-    amenities: [] as string[],
-    photos: [] as { fileKey: string; url: string; preview: string; is360?: boolean }[],
-  });
+  const [formData, setFormData] = useState(createEmptyListingForm);
 
   const resetForm = () => {
-    setFormData({
-      title: "",
-      description: "",
-      price: "",
-      location: "",
-      latitude: "",
-      longitude: "",
-      propertyType: "house",
-      listingType: "sale",
-      bedrooms: "0",
-      bathrooms: "0",
-      landSize: "",
-      floorArea: "",
-      amenities: [],
-      photos: [],
-    });
+    setFormData(createEmptyListingForm());
+    setDraftStatus("idle");
   };
+
+  const openNewListing = useCallback(() => {
+    setEditingProperty(null);
+    setListingStep(0);
+    const savedDraft = loadListingDraft(window.localStorage, user.id);
+    if (savedDraft) {
+      setFormData(savedDraft);
+      setDraftStatus("restored");
+    } else {
+      resetForm();
+    }
+    setShowForm(true);
+  }, [user.id]);
+
+  const closeListingForm = useCallback(() => {
+    if (!editingProperty) saveListingDraft(window.localStorage, user.id, formData);
+    setShowForm(false);
+    setEditingProperty(null);
+    setShowAiTools(false);
+    setListingStep(0);
+    if (newListingRequested) setLocation(sellerDashboardHref());
+  }, [editingProperty, formData, newListingRequested, setLocation, user.id]);
 
   useEffect(() => {
     if (newListingRequested && !editingProperty) {
-      resetForm();
-      setShowForm(true);
+      openNewListing();
     }
-  }, [newListingRequested, editingProperty]);
+  }, [newListingRequested, editingProperty, openNewListing]);
+
+  useEffect(() => {
+    if (!showForm || editingProperty) return;
+    const timer = window.setTimeout(() => {
+      if (saveListingDraft(window.localStorage, user.id, formData)) setDraftStatus("saved");
+    }, 650);
+    return () => window.clearTimeout(timer);
+  }, [editingProperty, formData, showForm, user.id]);
 
   const handlePhotoUpload = useCallback(async (files: FileList | null) => {
     if (!files) return;
@@ -253,6 +271,12 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    const basicError = listingStepError(formData, 0) || listingStepError(formData, 1);
+    if (basicError) {
+      toast.error(basicError);
+      setListingStep(listingStepError(formData, 0) ? 0 : 1);
+      return;
+    }
     if (editingProperty) {
       updateMutation.mutate({
         id: editingProperty.id,
@@ -310,7 +334,18 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       photos: (property.photos || []).map((p: any) => ({ fileKey: p.fileKey, url: p.url, preview: p.url, is360: Boolean(p.is360) })),
     });
     setEditingProperty(property);
+    setListingStep(0);
+    setDraftStatus("idle");
     setShowForm(true);
+  };
+
+  const advanceListingStep = () => {
+    const { error, nextStep } = advanceSellerListingWorkflow(formData, listingStep);
+    if (error) {
+      toast.error(error);
+      return;
+    }
+    setListingStep(nextStep);
   };
 
   const getStatusBadge = (status: string) => {
@@ -361,25 +396,31 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   </span>
                 )}
               </Link>
-              <Dialog open={showForm} onOpenChange={(open) => {
-                if (!open) {
-                  setShowForm(false);
-                  setEditingProperty(null);
-                  resetForm();
-                  if (newListingRequested) setLocation(sellerDashboardHref());
-                }
-              }}>
-              <DialogTrigger asChild>
-                <Button className="gap-2">
+              <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeListingForm(); }}>
+                <Button onClick={openNewListing} className="gap-2">
                   <PlusCircle className="w-4 h-4" />
                   Add Property
                 </Button>
-              </DialogTrigger>
-              <DialogContent className="max-w-2xl max-h-[90vh] overflow-y-auto">
+              <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0">
                 <DialogHeader>
-                  <DialogTitle>{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
+                  <div className="border-b border-slate-100 px-5 pb-4 pt-5 sm:px-7 sm:pt-7">
+                    <DialogTitle className="text-xl font-extrabold tracking-tight">{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
+                    <p className="mt-1 text-sm text-slate-500">{editingProperty ? "Update your listing details" : "Your progress is saved automatically on this device."}</p>
+                    <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Listing form progress">
+                      {LISTING_FORM_STEPS.map((step, index) => (
+                        <li key={step.label} className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-extrabold ${index < listingStep ? "bg-emerald-600 text-white" : index === listingStep ? "bg-emerald-600 text-white ring-4 ring-emerald-100" : "bg-slate-100 text-slate-500"}`}>{index < listingStep ? <Check className="h-4 w-4" /> : index + 1}</span>
+                            <span className={`truncate text-xs font-bold ${index <= listingStep ? "text-slate-900" : "text-slate-400"}`}>{step.label}</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ol>
+                  </div>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-4">
+                <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+                  {!editingProperty && draftStatus !== "idle" && <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"><Check className="h-3.5 w-3.5" />{draftStatus === "restored" ? "Your saved draft was restored." : "Draft saved automatically."}</div>}
+                  {listingStep === 0 && <>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Title *</label>
                     <Input required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Modern 3BR Villa in Karen" />
@@ -387,26 +428,6 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   <div>
                     <label className="text-sm font-medium mb-1 block">Description *</label>
                     <Textarea required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} placeholder="Describe the property..." />
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Price (Ksh) *</label>
-                      <Input required type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} placeholder="5000000" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Location *</label>
-                      <Input required value={formData.location} onChange={(e) => setFormData({ ...formData, location: e.target.value })} placeholder="e.g. Karen, Nairobi" />
-                    </div>
-                  </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Latitude</label>
-                      <Input type="number" step="any" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} placeholder="-1.3100" />
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium mb-1 block">Longitude</label>
-                      <Input type="number" step="any" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} placeholder="36.7069" />
-                    </div>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>
@@ -428,7 +449,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Bedrooms</label>
                       <Input type="number" min="0" value={formData.bedrooms} onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })} />
@@ -437,15 +458,38 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                       <label className="text-sm font-medium mb-1 block">Bathrooms</label>
                       <Input type="number" min="0" value={formData.bathrooms} onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })} />
                     </div>
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Floor Area (sqm)</label>
+                    <Input type="number" value={formData.floorArea} onChange={(e) => setFormData({ ...formData, floorArea: e.target.value })} />
+                  </div>
+                  </>}
+                  {listingStep === 1 && <>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Price (Ksh) *</label>
+                    <Input required type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} placeholder="5000000" />
+                  </div>
+                  <LocationSuggestionInput
+                    value={formData.location}
+                    onChange={(location: string) => setFormData((current) => ({ ...current, location }))}
+                    onSelect={(selection) => setFormData((current) => applySuggestedLocation(current, selection))}
+                  />
+                  <div className="grid grid-cols-2 gap-4">
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Land Size (sqm)</label>
-                      <Input type="number" value={formData.landSize} onChange={(e) => setFormData({ ...formData, landSize: e.target.value })} />
+                      <label className="text-sm font-medium mb-1 block">Latitude</label>
+                      <Input type="number" step="any" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} placeholder="-1.3100" />
                     </div>
                     <div>
-                      <label className="text-sm font-medium mb-1 block">Floor Area (sqm)</label>
-                      <Input type="number" value={formData.floorArea} onChange={(e) => setFormData({ ...formData, floorArea: e.target.value })} />
+                      <label className="text-sm font-medium mb-1 block">Longitude</label>
+                      <Input type="number" step="any" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} placeholder="36.7069" />
                     </div>
                   </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Land Size (sqm)</label>
+                    <Input type="number" value={formData.landSize} onChange={(e) => setFormData({ ...formData, landSize: e.target.value })} />
+                  </div>
+                  </>}
+                  {listingStep === 2 && <>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Amenities</label>
                     <div className="flex flex-wrap gap-2">
@@ -558,14 +602,18 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                       </div>
                     )}
                   </div>
-
-                  <div className="flex gap-3 pt-2">
-                    <Button type="submit" className="flex-1" disabled={createMutation.isPending || updateMutation.isPending}>
-                      {createMutation.isPending || updateMutation.isPending ? "Saving..." : editingProperty ? "Update Property" : "Submit for Review"}
+                  </>}
+                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
+                    <Button type="button" variant="outline" className="rounded-xl" onClick={() => listingStep > 0 ? setListingStep((step) => step - 1) : closeListingForm()}>
+                      {listingStep > 0 ? <><ChevronLeft className="mr-1 h-4 w-4" />Back</> : "Save & close"}
                     </Button>
-                    <Button type="button" variant="outline" onClick={() => { setShowForm(false); setEditingProperty(null); resetForm(); }}>
-                      Cancel
-                    </Button>
+                    {listingStep < LISTING_FORM_STEPS.length - 1 ? (
+                      <Button type="button" className="rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500" onClick={advanceListingStep}>Continue <ChevronRight className="ml-1 h-4 w-4" /></Button>
+                    ) : (
+                      <Button type="submit" className="rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500" disabled={createMutation.isPending || updateMutation.isPending}>
+                        {createMutation.isPending || updateMutation.isPending ? "Saving..." : editingProperty ? "Update Property" : "Submit for Review"}
+                      </Button>
+                    )}
                   </div>
                 </form>
               </DialogContent>

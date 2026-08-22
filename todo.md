@@ -152,3 +152,15 @@
 - [x] Strengthen direct-add route behavior coverage and query-clearing logic
 - [x] Reconfirm the authenticated seller form launch on mobile and desktop without creating test listings (authenticated New Property form opened on both layouts; 77 tests and production build passing)
 - [x] Preserve the direct Add Property intent across sign-in for unauthenticated users (one-time post-auth continuation covered; 78 tests and production build passing)
+
+## Seller listing workflow enhancements
+- [x] Audit current seller form state and reusable map/location capabilities
+- [x] Add local draft autosave and restoration for incomplete new listings
+- [x] Convert the listing form into a clear multi-step flow with progress indication
+- [x] Add address suggestions that populate location and coordinates
+- [x] Add coverage and verify responsive form behavior (84 tests passing; production build and mobile/desktop Add Property dialogs reviewed)
+- [x] Checkpoint and publish the seller listing workflow enhancements
+- [x] Prevent stale saved drafts from returning after a seller discards all listing content
+- [x] Strengthen behavior coverage for draft lifecycle, step progression, and location selection
+- [x] Route seller form step and location-selection updates through behavior-tested workflow helpers
+- [x] Re-run seller workflow tests and production build after behavior-test hardening
