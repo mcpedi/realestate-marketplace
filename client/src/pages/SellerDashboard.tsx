@@ -1,4 +1,5 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useEffect, useMemo } from "react";
+import { Link, useLocation, useSearch } from "wouter";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { startLogin } from "@/const";
 import { Navbar } from "@/components/Navbar";
@@ -23,6 +24,7 @@ import {
 } from "@/components/ui/dialog";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
+import { isNewListingRequest, rememberNewListingAfterSignIn, sellerDashboardHref } from "@/lib/sellerListing";
 import { Loader2 } from "lucide-react";
 import {
   PlusCircle,
@@ -57,6 +59,8 @@ const AMENITY_OPTIONS = [
 
 export default function SellerDashboard() {
   const { user, isAuthenticated, loading } = useAuth();
+  const search = useSearch();
+  const requestedNewListing = isNewListingRequest(search);
 
   if (loading) {
     return (
@@ -79,7 +83,10 @@ export default function SellerDashboard() {
             <HomeIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
             <h2 className="text-2xl font-bold mb-2">Sign In Required</h2>
             <p className="text-muted-foreground mb-6">Please sign in to access the Seller Dashboard</p>
-            <Button onClick={() => startLogin()}>Sign In</Button>
+            <Button onClick={() => {
+              if (requestedNewListing) rememberNewListingAfterSignIn(window.sessionStorage);
+              startLogin();
+            }}>{requestedNewListing ? "Sign In & Add Property" : "Sign In"}</Button>
           </div>
         </div>
         <Footer />
@@ -91,6 +98,9 @@ export default function SellerDashboard() {
 }
 
 function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof useAuth>["user"]> }) {
+  const [, setLocation] = useLocation();
+  const search = useSearch();
+  const newListingRequested = useMemo(() => isNewListingRequest(search), [search]);
   const [showForm, setShowForm] = useState(false);
   const [editingProperty, setEditingProperty] = useState<any>(null);
   const [showAiTools, setShowAiTools] = useState(false);
@@ -128,8 +138,9 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       setShowForm(false);
       resetForm();
       refetch();
+      setLocation(sellerDashboardHref());
     },
-    onError: () => toast.error("Failed to create listing"),
+    onError: (error) => toast.error(error.message || "Failed to create listing"),
   });
   const updateMutation = trpc.property.update.useMutation({
     onSuccess: () => {
@@ -185,6 +196,13 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       photos: [],
     });
   };
+
+  useEffect(() => {
+    if (newListingRequested && !editingProperty) {
+      resetForm();
+      setShowForm(true);
+    }
+  }, [newListingRequested, editingProperty]);
 
   const handlePhotoUpload = useCallback(async (files: FileList | null) => {
     if (!files) return;
@@ -343,7 +361,14 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   </span>
                 )}
               </Link>
-              <Dialog open={showForm} onOpenChange={(open) => { if (!open) { setShowForm(false); setEditingProperty(null); resetForm(); } }}>
+              <Dialog open={showForm} onOpenChange={(open) => {
+                if (!open) {
+                  setShowForm(false);
+                  setEditingProperty(null);
+                  resetForm();
+                  if (newListingRequested) setLocation(sellerDashboardHref());
+                }
+              }}>
               <DialogTrigger asChild>
                 <Button className="gap-2">
                   <PlusCircle className="w-4 h-4" />
@@ -724,9 +749,6 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
     </div>
   );
 }
-
-// Helper import
-import { Link } from "wouter";
 
 // Video upload row for premium users (Premium)
 function VideoUploadRow({ propertyId, maxVideos, uploadMutation }: { propertyId: number; maxVideos: number; uploadMutation: any }) {

@@ -143,3 +143,12 @@
 - [x] Add an explicit property-query error state with a retry action
 - [x] Strengthen Explore behavior coverage for live querying, sorting, and pagination expectations
 - [x] Re-run tests, build, and visual review after the production-quality hardening (72 tests passing; production build and final mobile Explore view verified)
+
+## Add Property repair
+- [x] Diagnose the broken Add Property navigation and seller listing workflow
+- [x] Repair the broken Add Property path and preserve authenticated seller behavior
+- [x] Add regression coverage and verify the direct mobile seller form (75 tests passing; production build passed; /seller?new=1 opens the listing form)
+- [x] Checkpoint and publish the Add Property repair
+- [x] Strengthen direct-add route behavior coverage and query-clearing logic
+- [x] Reconfirm the authenticated seller form launch on mobile and desktop without creating test listings (authenticated New Property form opened on both layouts; 77 tests and production build passing)
+- [x] Preserve the direct Add Property intent across sign-in for unauthenticated users (one-time post-auth continuation covered; 78 tests and production build passing)

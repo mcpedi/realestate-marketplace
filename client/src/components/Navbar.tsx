@@ -11,8 +11,9 @@ import {
 import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
 import { trpc } from "@/lib/trpc";
 import { cn } from "@/lib/utils";
+import { consumePostAuthSellerPath, sellerDashboardHref } from "@/lib/sellerListing";
 import { Link, useLocation } from "wouter";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import {
   Bell,
   CalendarDays,
@@ -62,7 +63,7 @@ const menuLinks = [
 const bottomTabs = [
   { href: "/", label: "Home", icon: Home },
   { href: "/properties", label: "Explore", icon: Search },
-  { href: "/seller", label: "Add Property", icon: Plus, elevated: true },
+  { href: sellerDashboardHref(true), label: "Add Property", icon: Plus, elevated: true },
   { href: "/favorites", label: "Saved", icon: Heart },
   { href: "/profile", label: "Profile", icon: User },
 ];
@@ -90,6 +91,12 @@ export function Navbar() {
   const newLeadCount = accountActivity?.newLeadCount ?? 0;
   const unreadNotificationCount = accountActivity?.unreadNotificationCount ?? 0;
   const formatBadgeCount = (value: number) => (value > 9 ? "9+" : String(value));
+
+  useEffect(() => {
+    if (!isAuthenticated) return;
+    const postAuthSellerPath = consumePostAuthSellerPath(window.sessionStorage);
+    if (postAuthSellerPath) setLocation(postAuthSellerPath);
+  }, [isAuthenticated, setLocation]);
 
   const themeButton = switchable ? (
     <button
