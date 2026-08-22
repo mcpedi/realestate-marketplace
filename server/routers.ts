@@ -1089,7 +1089,7 @@ export const appRouter = router({
     }),
 
     subscribe: protectedProcedure
-      .input(z.object({ planId: z.number(), method: z.enum(["mpesa", "card", "bank_transfer"]).default("mpesa") }))
+      .input(z.object({ planId: z.number(), method: z.enum(["mpesa", "card", "bank_transfer"]).default("mpesa"), reference: z.string().max(255).optional() }))
       .mutation(async ({ ctx, input }) => {
         const plan = await db.getSubscriptionPlanById(input.planId);
         if (!plan || !plan.active) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
@@ -1100,6 +1100,7 @@ export const appRouter = router({
           amount: plan.price,
           currency: plan.currency,
           method: input.method,
+          reference: input.reference,
           status: "completed",
           type: "subscription",
           description: `${plan.name} plan - ${plan.period} subscription`,

@@ -5,9 +5,12 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { PremiumCheckoutDialog, type PremiumCheckoutPlan } from "@/components/PremiumCheckoutDialog";
+import { parsePremiumCheckoutPlanId } from "@/lib/premiumCheckout";
 import { Check, Crown, Loader2, Zap, Star, Shield, BarChart3, Video, Image, Share2, Headphones, Building2, Calendar } from "lucide-react";
 import { toast } from "sonner";
-import { useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
+import { useSearch } from "wouter";
 
 const planIcons = [Building2, Crown, Star];
 
@@ -41,8 +44,12 @@ const featureIcons: Record<string, any> = {
 
 export default function Premium() {
   const { user, isAuthenticated } = useAuth();
+  const search = useSearch();
   const [activeTab, setActiveTab] = useState("plans");
   const [subscribing, setSubscribing] = useState(false);
+  const [checkoutPlan, setCheckoutPlan] = useState<PremiumCheckoutPlan | null>(null);
+  const directCheckoutHandled = useRef<number | null>(null);
+  const requestedCheckoutPlanId = useMemo(() => parsePremiumCheckoutPlanId(search), [search]);
 
   const { data: plans, isLoading: plansLoading } = trpc.subscription.plans.useQuery();
   const { data: mySub, isLoading: subLoading } = trpc.subscription.mySubscription.useQuery(undefined, {
@@ -55,12 +62,22 @@ export default function Premium() {
     enabled: isAuthenticated,
   });
 
+  useEffect(() => {
+    if (!requestedCheckoutPlanId || !plans?.length || directCheckoutHandled.current === requestedCheckoutPlanId) return;
+    const selectedPlan = plans.find((plan) => plan.id === requestedCheckoutPlanId);
+    if (!selectedPlan) return;
+    directCheckoutHandled.current = requestedCheckoutPlanId;
+    setCheckoutPlan({ id: selectedPlan.id, name: selectedPlan.name, price: selectedPlan.price, period: selectedPlan.period, currency: selectedPlan.currency });
+    window.history.replaceState({}, "", "/premium");
+  }, [plans, requestedCheckoutPlanId]);
+
   const utils = trpc.useUtils();
 
   const subscribeMutation = trpc.subscription.subscribe.useMutation({
     onSuccess: (data) => {
       setSubscribing(false);
-      toast.success(`Subscribed to ${data.plan.name} plan! Your premium benefits are now active.`);
+      setCheckoutPlan(null);
+      toast.success(`Membership request confirmed for the ${data.plan.name} plan. Your premium benefits are now active.`);
       utils.subscription.mySubscription.invalidate();
       utils.subscription.paymentHistory.invalidate();
       setActiveTab("my-subscription");
@@ -71,14 +88,15 @@ export default function Premium() {
     },
   });
 
-  const handleSubscribe = async (planId: number) => {
+  const handleSubscribe = async ({ method, reference }: { method: "mpesa" | "bank_transfer"; reference: string }) => {
     if (!isAuthenticated) {
       startLogin();
       return;
     }
+    if (!checkoutPlan) return;
     setSubscribing(true);
     try {
-      await subscribeMutation.mutateAsync({ planId, method: "mpesa" });
+      await subscribeMutation.mutateAsync({ planId: checkoutPlan.id, method, reference });
     } catch {
       setSubscribing(false);
     }
@@ -246,10 +264,9 @@ export default function Premium() {
                           <Button
                             className="w-full bg-[oklch(0.45_0.18_260)] hover:bg-[oklch(0.4_0.17_260)]"
                             disabled={subscribing}
-                            onClick={() => handleSubscribe(plan.id)}
+                            onClick={() => setCheckoutPlan({ id: plan.id, name: plan.name, price: plan.price, period: plan.period, currency: plan.currency })}
                           >
-                            {subscribing ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
-                            {subscribing ? "Processing..." : "Upgrade Now"}
+                            Continue to payment
                           </Button>
                         )}
                       </CardFooter>
@@ -359,6 +376,7 @@ export default function Premium() {
                           <th className="pb-2 pr-4">Date</th>
                           <th className="pb-2 pr-4">Description</th>
                           <th className="pb-2 pr-4">Method</th>
+                          <th className="pb-2 pr-4">Reference</th>
                           <th className="pb-2 pr-4">Status</th>
                           <th className="pb-2 text-right">Amount</th>
                         </tr>
@@ -369,6 +387,7 @@ export default function Premium() {
                             <td className="py-2.5 pr-4 whitespace-nowrap">{new Date(p.createdAt).toLocaleDateString()}</td>
                             <td className="py-2.5 pr-4">{p.description}</td>
                             <td className="py-2.5 pr-4 capitalize">{p.method.replace("_", " ")}</td>
+                            <td className="py-2.5 pr-4 font-mono text-xs text-gray-600">{p.reference || "—"}</td>
                             <td className="py-2.5 pr-4">
                               <Badge variant={p.status === "completed" ? "default" : "secondary"} className="text-xs">
                                 {p.status}
@@ -424,6 +443,13 @@ export default function Premium() {
           </TabsContent>
         </Tabs>
       </div>
+      <PremiumCheckoutDialog
+        plan={checkoutPlan}
+        open={Boolean(checkoutPlan)}
+        isSubmitting={subscribing}
+        onClose={() => { if (!subscribing) setCheckoutPlan(null); }}
+        onConfirm={handleSubscribe}
+      />
     </div>
   );
 }

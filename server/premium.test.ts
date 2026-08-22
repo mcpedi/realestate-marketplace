@@ -92,9 +92,10 @@ describe("subscription.subscribe + cancel", () => {
       throw new Error("Premium plan not seeded");
     }
 
-    const result = await caller.subscription.subscribe({ planId: plan.id, method: "mpesa" });
+    const result = await caller.subscription.subscribe({ planId: plan.id, method: "mpesa", reference: "MPESA-****9552" });
     expect(result.subscription).toBeDefined();
     expect(result.plan.id).toBe(plan.id);
+    expect(result.payment.reference).toBe("MPESA-****9552");
 
     // Active subscription now visible
     const sub = await caller.subscription.mySubscription();

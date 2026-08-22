@@ -171,3 +171,18 @@
 - [x] Add regression coverage and verify the repair (85 tests passing; production build and mobile seller form guidance reviewed)
 - [x] Checkpoint and publish the listing description validation repair
 - [x] Add behavior coverage that blocks a sub-10-character description at the Basics step
+
+## Premium membership checkout form
+- [x] Audit the current plan-selection, subscription, and payment-record flow
+- [x] Open a payment form for the selected premium plan with payment-method-specific details
+- [x] Safely validate payment details and connect completion to the existing subscription flow
+- [x] Add coverage and verify the checkout experience (92 tests passing; production build, rendered-dialog interaction tests, and opened desktop/mobile checkout dialogs reviewed)
+- [x] Checkpoint and publish the premium membership checkout form
+- [x] Send normalized checkout payment details through the subscription flow and persist the payment reference safely
+- [x] Add interaction-focused checkout payload coverage and verify the opened payment form on responsive layouts
+- [x] Support direct plan checkout links and visually verify the opened payment form
+- [x] Add dialog-level checkout flow coverage for plan selection, validation, method changes, and confirmation payloads
+- [x] Capture direct-checkout evidence confirming selected-plan payment form contents on mobile and desktop
+- [x] Add component-level behavior coverage for premium checkout dialog interactions
+- [x] Capture inspectable direct-checkout page evidence for selected-plan dialog contents
+- [x] Add accessible dialog title and description metadata for the premium payment form
