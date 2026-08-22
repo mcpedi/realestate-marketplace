@@ -7,6 +7,9 @@ describe("seller listing workflow enhancements", () => {
     const incomplete = createEmptyListingForm();
     expect(advanceSellerListingWorkflow(incomplete, 0)).toMatchObject({ nextStep: 0, error: expect.any(String) });
 
+    const shortDescription = { ...incomplete, title: "Modern apartment", description: "Too short" };
+    expect(advanceSellerListingWorkflow(shortDescription, 0)).toMatchObject({ nextStep: 0, error: "Add at least 10 characters to the property description before continuing." });
+
     const basicsComplete = { ...incomplete, title: "Modern apartment", description: "A bright apartment near key amenities." };
     expect(advanceSellerListingWorkflow(basicsComplete, 0)).toEqual({ nextStep: 1, error: null });
 

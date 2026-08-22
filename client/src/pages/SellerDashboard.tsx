@@ -31,6 +31,7 @@ import {
   LISTING_FORM_STEPS,
   listingStepError,
   loadListingDraft,
+  MIN_LISTING_DESCRIPTION_LENGTH,
   saveListingDraft,
 } from "@/lib/listingDraft";
 import { advanceSellerListingWorkflow, applySuggestedLocation } from "@/lib/sellerWorkflow";
@@ -157,7 +158,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       refetch();
       setLocation(sellerDashboardHref());
     },
-    onError: (error) => toast.error(error.message || "Failed to create listing"),
+    onError: (error) => toast.error(error.message?.toLowerCase().includes("description") ? `Please enter at least ${MIN_LISTING_DESCRIPTION_LENGTH} characters in the property description.` : error.message || "Failed to create listing"),
   });
   const updateMutation = trpc.property.update.useMutation({
     onSuccess: () => {
@@ -180,6 +181,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   const uploadMutation = trpc.upload.useMutation();
 
   const [formData, setFormData] = useState(createEmptyListingForm);
+  const descriptionLength = formData.description.trim().length;
 
   const resetForm = () => {
     setFormData(createEmptyListingForm());
@@ -427,7 +429,19 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Description *</label>
-                    <Textarea required value={formData.description} onChange={(e) => setFormData({ ...formData, description: e.target.value })} rows={4} placeholder="Describe the property..." />
+                    <Textarea
+                      required
+                      minLength={MIN_LISTING_DESCRIPTION_LENGTH}
+                      value={formData.description}
+                      onChange={(e) => setFormData({ ...formData, description: e.target.value })}
+                      rows={4}
+                      placeholder="Describe the property, key features, and nearby conveniences..."
+                      aria-invalid={descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH}
+                      className={descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? "border-amber-400 focus-visible:ring-amber-300" : ""}
+                    />
+                    <p className={`mt-1.5 text-xs ${descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? "font-semibold text-amber-700" : "text-slate-500"}`}>
+                      {descriptionLength}/{MIN_LISTING_DESCRIPTION_LENGTH} characters minimum {descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? `— add ${MIN_LISTING_DESCRIPTION_LENGTH - descriptionLength} more.` : ""}
+                    </p>
                   </div>
                   <div className="grid grid-cols-2 gap-4">
                     <div>

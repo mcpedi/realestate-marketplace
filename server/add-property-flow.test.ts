@@ -19,6 +19,7 @@ describe("Add Property flow", () => {
   });
 
   it("keeps actionable create-listing errors visible to sellers", () => {
-    expect(sellerSource).toContain('toast.error(error.message || "Failed to create listing")');
+    expect(sellerSource).toContain("Please enter at least");
+    expect(sellerSource).toContain('error.message || "Failed to create listing"');
   });
 });

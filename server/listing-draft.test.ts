@@ -39,6 +39,7 @@ describe("seller listing drafts", () => {
     const storage = createStorage();
     const form = createEmptyListingForm();
     expect(listingStepError(form, 0)).toContain("title");
+    expect(listingStepError({ ...form, title: "Home", description: "Short" }, 0)).toContain("at least 10 characters");
     expect(listingStepError({ ...form, title: "Home", description: "A bright home" }, 1)).toContain("price");
     expect(listingStepError({ ...form, title: "Home", description: "A bright home", price: "120000", location: "Kilimani" }, 1)).toBeNull();
     expect(getNextListingStep({ ...form, title: "Home", description: "A bright home" }, 0)).toEqual({ nextStep: 1, error: null });

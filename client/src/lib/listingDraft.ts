@@ -30,6 +30,8 @@ export const LISTING_FORM_STEPS = [
   { label: "Details & media", description: "Make the listing stand out" },
 ] as const;
 
+export const MIN_LISTING_DESCRIPTION_LENGTH = 10;
+
 export function createEmptyListingForm(): ListingFormDraft {
   return {
     title: "",
@@ -98,7 +100,9 @@ export function clearListingDraft(storage: StorageLike, userId: number): void {
 export function listingStepError(form: ListingFormDraft, step: number): string | null {
   if (step === 0) {
     if (!form.title.trim()) return "Add a clear property title before continuing.";
-    if (!form.description.trim()) return "Add a property description before continuing.";
+    if (form.description.trim().length < MIN_LISTING_DESCRIPTION_LENGTH) {
+      return `Add at least ${MIN_LISTING_DESCRIPTION_LENGTH} characters to the property description before continuing.`;
+    }
   }
   if (step === 1) {
     if (!Number.isFinite(Number(form.price)) || Number(form.price) <= 0) return "Enter a valid asking price before continuing.";

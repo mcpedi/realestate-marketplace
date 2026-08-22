@@ -164,3 +164,10 @@
 - [x] Strengthen behavior coverage for draft lifecycle, step progression, and location selection
 - [x] Route seller form step and location-selection updates through behavior-tested workflow helpers
 - [x] Re-run seller workflow tests and production build after behavior-test hardening
+
+## Listing description validation repair
+- [x] Confirm the server description requirements and current client validation gap (server enforces a 10-character minimum)
+- [x] Add description-length guidance and aligned client-side validation to the listing form
+- [x] Add regression coverage and verify the repair (85 tests passing; production build and mobile seller form guidance reviewed)
+- [x] Checkpoint and publish the listing description validation repair
+- [x] Add behavior coverage that blocks a sub-10-character description at the Basics step
