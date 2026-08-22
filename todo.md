@@ -133,3 +133,13 @@
 - [x] Add browser and app metadata that uses the Nyumba 360 icon assets
 - [x] Verify favicon/app-icon delivery, metadata, and production build (asset URL and install manifest resolve; 66 tests passing; production build and mobile home view verified)
 - [x] Checkpoint and publish the Nyumba 360 icon update
+
+## Reference-inspired Explore redesign
+- [x] Audit the existing Explore page data, filtering controls, and reusable property components
+- [x] Rebuild the mobile Explore layout with category tiles, compact filters, map discovery, sorting, and rich property rows
+- [x] Preserve live search/filter/listing behavior and add targeted regression coverage
+- [x] Verify responsive Explore layouts and build (69 tests passing; production build plus mobile and desktop Explore layouts reviewed)
+- [x] Checkpoint and publish the Explore redesign
+- [x] Add an explicit property-query error state with a retry action
+- [x] Strengthen Explore behavior coverage for live querying, sorting, and pagination expectations
+- [x] Re-run tests, build, and visual review after the production-quality hardening (72 tests passing; production build and final mobile Explore view verified)
