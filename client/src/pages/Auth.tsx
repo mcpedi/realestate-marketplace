@@ -41,7 +41,7 @@ export default function Auth() {
                 <Home className="w-7 h-7 text-white" />
               </div>
               <CardTitle className="text-2xl" style={{ fontFamily: "'Playfair Display', serif" }}>
-                Welcome to Pedi wa Real Estate
+                Welcome to Nyumba 360
               </CardTitle>
               <CardDescription>
                 Sign in to list properties, save favorites, and connect with sellers.

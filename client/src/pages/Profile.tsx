@@ -257,7 +257,7 @@ export default function Profile() {
               </div>
               <div className="min-w-0 flex-1 pt-1">
                 <div className="flex flex-wrap items-center gap-2">
-                  <h2 className="truncate text-xl font-extrabold tracking-tight sm:text-2xl">{currentProfile.name || "Pedi wa member"}</h2>
+                  <h2 className="truncate text-xl font-extrabold tracking-tight sm:text-2xl">{currentProfile.name || "Nyumba 360 member"}</h2>
                   {isPremium && <BadgeCheck className="h-5 w-5 shrink-0 text-emerald-300" aria-label="Premium member" />}
                 </div>
                 <p className="mt-0.5 text-sm font-medium text-emerald-200">{memberLabel}</p>
@@ -316,7 +316,7 @@ export default function Profile() {
             <AccountGroup title="More">
               <ActionRow icon={CircleHelp} label="Help center" href="/faq" />
               <ActionRow icon={UsersRound} label="Invite a friend" onClick={() => toast.info("Friend invitations are coming soon.")} value="Coming soon" />
-              <ActionRow icon={Info} label="About Pedi wa Real Estate" href="/about" />
+              <ActionRow icon={Info} label="About Nyumba 360" href="/about" />
               <ActionRow icon={LogOut} label="Log out" tone="danger" onClick={handleLogout} />
             </AccountGroup>
           </div>
@@ -342,7 +342,7 @@ export default function Profile() {
 
       <Dialog open={editingPreferences} onOpenChange={setEditingPreferences}>
         <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-lg">
-          <DialogHeader><DialogTitle>Search preferences</DialogTitle><DialogDescription>These details help Pedi wa find homes that suit you.</DialogDescription></DialogHeader>
+          <DialogHeader><DialogTitle>Search preferences</DialogTitle><DialogDescription>These details help Nyumba 360 find homes that suit you.</DialogDescription></DialogHeader>
           <form onSubmit={handlePreferenceSubmit} className="space-y-4 pt-2">
             <div className="space-y-2"><Label htmlFor="pref-location">Preferred location</Label><Input id="pref-location" placeholder="e.g. Migori" value={preferenceData.location} onChange={(event) => setPreferenceData({ ...preferenceData, location: event.target.value })} /></div>
             <div className="grid grid-cols-2 gap-4">

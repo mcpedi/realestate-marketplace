@@ -20,7 +20,7 @@ export default function Testimonials() {
               </h1>
             </div>
             <p className="text-lg opacity-90">
-              Hear from property owners, buyers, and agents who trust Pedi wa Real Estate.
+              Hear from property owners, buyers, and agents who trust Nyumba 360.
             </p>
           </div>
         </div>

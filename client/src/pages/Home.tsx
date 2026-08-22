@@ -100,7 +100,7 @@ function AssistantPrompt({ name }: { name?: string | null }) {
         </div>
         <div className="min-w-0 flex-1">
           <div className="flex items-center gap-2">
-            <h2 className="truncate text-sm font-bold text-slate-900">Pedi Wa AI Assistant</h2>
+            <h2 className="truncate text-sm font-bold text-slate-900">Nyumba 360 AI Assistant</h2>
             <span className="rounded bg-emerald-100 px-1.5 py-0.5 text-[9px] font-bold tracking-wide text-emerald-800">BETA</span>
           </div>
           <p className="mt-0.5 text-xs leading-5 text-slate-600">Hi {name?.split(" ")[0] || "there"}! What kind of property are you looking for?</p>

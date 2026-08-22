@@ -16,7 +16,7 @@ export function PropertyScoreChip({ propertyId }: { propertyId: number }) {
   const color = score >= 80 ? "text-emerald-600 bg-emerald-50" : score >= 60 ? "text-blue-600 bg-blue-50" : "text-amber-600 bg-amber-50";
   return (
     <span className={`px-2.5 py-1 rounded-md text-xs font-bold inline-flex items-center gap-1 ${color}`}>
-      Pedi Wa Score {score}
+      Nyumba 360 Score {score}
     </span>
   );
 }

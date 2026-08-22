@@ -122,3 +122,8 @@
 - [x] Add the “Designed and made by Jacks Ict Solutions” footer credit
 - [x] Verify the contact links and responsive footer (61 tests passing; production build plus mobile and desktop Contact/footer views verified)
 - [x] Checkpoint and publish the public contact/footer update
+
+## Nyumba 360 brand update
+- [x] Update all public-facing brand references, metadata, and product labels to Nyumba 360
+- [x] Verify the Nyumba 360 brand across responsive layouts, tests, and production build (64 tests passing; production build passed; desktop Home/About and mobile Home branding reviewed)
+- [x] Checkpoint and publish the Nyumba 360 rebrand

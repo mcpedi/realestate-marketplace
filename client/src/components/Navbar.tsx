@@ -38,7 +38,7 @@ import {
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
 
-const SITE_NAME = "Pedi wa Real Estate";
+const SITE_NAME = "Nyumba 360";
 
 const desktopLinks = [
   { href: "/", label: "Home" },
@@ -118,7 +118,7 @@ export function Navbar() {
                 <SheetHeader className="border-b border-slate-100 px-5 py-5 text-left">
                   <SheetTitle className="flex items-center gap-3 text-left">
                     <BrandMark size="sm" />
-                    <span><span className="block text-base font-extrabold text-slate-900">Pedi Wa</span><span className="block text-[10px] font-bold uppercase tracking-[0.22em] text-emerald-600">Real Estate</span></span>
+                    <span className="block text-base font-extrabold text-slate-900">Nyumba 360</span>
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="space-y-1 px-3 py-4">
@@ -144,9 +144,9 @@ export function Navbar() {
               </SheetContent>
             </Sheet>
 
-            <Link href="/" className="flex items-center gap-2.5" aria-label="Pedi wa Real Estate home">
+            <Link href="/" className="flex items-center gap-2.5" aria-label="Nyumba 360 home">
               <BrandMark />
-              <span className="leading-none"><span className="block text-[1.15rem] font-extrabold tracking-[-0.04em] text-slate-900">Pedi Wa</span><span className="mt-1 block text-[9px] font-bold uppercase tracking-[0.24em] text-emerald-600">Real Estate</span></span>
+              <span className="text-[1.15rem] font-extrabold tracking-[-0.04em] text-slate-900">Nyumba 360</span>
             </Link>
           </div>
 

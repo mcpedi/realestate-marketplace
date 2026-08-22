@@ -163,7 +163,7 @@ export default function Compare() {
                   ))}
                 />
                 <Row
-                  label="Pedi Wa Score"
+                  label="Nyumba 360 Score"
                   value={properties.map((p) => (p ? <PropertyScoreChip key={p.id} propertyId={p.id} /> : null))}
                 />
                 <Row

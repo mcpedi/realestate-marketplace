@@ -1,7 +1,7 @@
 import { Link } from "wouter";
 import { Home, Phone, Mail, MapPin, Facebook, Twitter, Instagram } from "lucide-react";
 
-const SITE_NAME = "Pedi wa Real Estate";
+const SITE_NAME = "Nyumba 360";
 
 export function Footer() {
   return (

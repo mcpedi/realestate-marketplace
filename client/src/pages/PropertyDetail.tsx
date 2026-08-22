@@ -432,7 +432,7 @@ export default function PropertyDetail() {
               </div>
             )}
 
-            {/* Pedi Wa Property Score */}
+            {/* Nyumba 360 Property Score */}
             <ScoreBreakdown propertyId={propertyId} />
 
             {/* Location Insights */}
@@ -661,7 +661,7 @@ function ScoreBreakdown({ propertyId }: { propertyId: number }) {
     <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
       <h2 className="text-xl font-bold text-foreground mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
         <Sparkles className="w-5 h-5 inline mr-2 text-[oklch(0.72_0.15_80)]" />
-        Pedi Wa Property Score
+        Nyumba 360 Property Score
       </h2>
       <div className="flex items-center gap-4 mb-4">
         <div
@@ -679,7 +679,7 @@ function ScoreBreakdown({ propertyId }: { propertyId: number }) {
           <div className="text-sm font-semibold text-foreground">
             {score.score >= 80 ? "Excellent Choice" : score.score >= 60 ? "Great Value" : "Good Potential"}
           </div>
-          <div className="text-xs text-muted-foreground">Scored out of 100 by Pedi Wa</div>
+          <div className="text-xs text-muted-foreground">Scored out of 100 by Nyumba 360</div>
         </div>
       </div>
       <div className="space-y-2.5">

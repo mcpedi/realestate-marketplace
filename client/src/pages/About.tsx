@@ -11,7 +11,7 @@ import {
   Building,
 } from "lucide-react";
 
-const SITE_NAME = "Pedi wa Real Estate";
+const SITE_NAME = "Nyumba 360";
 
 const team = [
   { name: "Peter Wambua", role: "Founder & CEO", bio: "Over 15 years of experience in real estate development and property management." },

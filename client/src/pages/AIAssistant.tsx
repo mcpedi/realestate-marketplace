@@ -51,7 +51,7 @@ export default function AIAssistant() {
   const [messages, setMessages] = useState<ChatMsg[]>([
     {
       role: "assistant",
-      text: "Hi! I'm the Pedi Wa AI Assistant. Tell me what you're looking for — a location, budget, number of bedrooms, or property type — and I'll find matching listings for you. For example: \"Find me a 2-bedroom apartment in Migori under KSh 25,000.\"",
+      text: "Hi! I'm the Nyumba 360 AI Assistant. Tell me what you're looking for — a location, budget, number of bedrooms, or property type — and I'll find matching listings for you. For example: \"Find me a 2-bedroom apartment in Migori under KSh 25,000.\"",
     },
   ]);
   const [busy, setBusy] = useState(false);

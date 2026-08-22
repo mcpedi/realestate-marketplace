@@ -10,7 +10,7 @@ import { HelpCircle, Search } from "lucide-react";
 
 const faqs = [
   {
-    question: "How do I list my property on Pedi wa Real Estate?",
+    question: "How do I list my property on Nyumba 360?",
     answer: "To list your property, sign in with your account, navigate to the Seller Dashboard, and click 'Add Property'. Fill in all the required details including photos, description, price, and location. Your listing will be reviewed by our admin team and published within 24-48 hours.",
   },
   {
@@ -74,7 +74,7 @@ export default function FAQ() {
               </h1>
             </div>
             <p className="text-lg opacity-90">
-              Find answers to common questions about using Pedi wa Real Estate.
+              Find answers to common questions about using Nyumba 360.
             </p>
           </div>
         </div>
