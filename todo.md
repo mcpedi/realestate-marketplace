@@ -186,3 +186,29 @@
 - [x] Add component-level behavior coverage for premium checkout dialog interactions
 - [x] Capture inspectable direct-checkout page evidence for selected-plan dialog contents
 - [x] Add accessible dialog title and description metadata for the premium payment form
+
+## Live M-Pesa STK Push integration
+- [ ] Confirm the selected live payment provider, merchant account type, and callback requirements
+- [ ] Add secure Daraja payment initiation and callback handling for premium subscriptions
+- [ ] Store pending, successful, and failed STK Push outcomes without exposing payment secrets
+- [ ] Update premium checkout status feedback and payment history for live transactions
+- [ ] Test with authorized provider credentials, verify the webhook, checkpoint, and publish
+
+## Advanced platform enhancement program
+- [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
+- [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries
+- [ ] Build the first coherent advanced-module release without duplicating existing marketplace functionality
+- [ ] Add regression coverage, verify responsive workflows, checkpoint, and publish each release
+- [x] Specify shared advanced-platform entities, ownership relationships, lifecycle statuses, and module boundaries
+- [x] Define auditable sensitive actions, actor/resource metadata, access rules, and admin review surfaces
+
+## Advanced release 1 — Planning Studio
+- [x] Add shared investment-analysis records and ownership-safe APIs for saved planning scenarios
+- [x] Build ROI and rental-yield calculators using user-provided assumptions and clearly labelled estimates
+- [x] Build construction and development estimators with transparent, configurable inputs and cost breakdowns
+- [x] Add a responsive Planning Studio dashboard with reusable charts and saved-scenario management
+- [x] Add server-side validation, behavior tests, migration, and visual checks (100 tests passing; desktop and mobile Planning Studio views reviewed)
+- [x] Replace the zero-value Planning Studio chart blank state with clear calculation guidance
+- [x] Checkpoint and publish Advanced release 1 — Planning Studio
+- [x] Add user-scoped Planning Studio router behavior tests for save, list, delete, and owned-property linking
+- [x] Add server-side validation coverage for invalid Planning Studio percentage inputs

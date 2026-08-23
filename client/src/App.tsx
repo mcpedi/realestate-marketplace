@@ -27,6 +27,7 @@ import Compare from "./pages/Compare";
 import Alerts from "./pages/Alerts";
 import MyBookings from "./pages/MyBookings";
 import AIAssistant from "./pages/AIAssistant";
+import PlanningStudio from "./pages/PlanningStudio";
 
 function Router() {
   return (
@@ -54,6 +55,7 @@ function Router() {
       <Route path="/alerts" component={Alerts} />
       <Route path="/bookings" component={MyBookings} />
       <Route path="/assistant" component={AIAssistant} />
+      <Route path="/planning" component={PlanningStudio} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

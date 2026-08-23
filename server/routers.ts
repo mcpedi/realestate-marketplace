@@ -16,6 +16,7 @@ import { z } from "zod";
 import * as db from "./db";
 import { users as usersTable } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
+import { calculatePlanningAnalysis, planningAnalysisKinds } from "../shared/planning";
 
 // ─── Modern Features (AI assistant, recommendations, alerts, bookings, scores) ──
 
@@ -1477,6 +1478,47 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const ok = await db.updateLeadStatus(input.leadId, ctx.user.id, input.status);
         if (!ok) throw new TRPCError({ code: "NOT_FOUND" });
+        return { success: true };
+      }),
+  }),
+  // ─── Planning Studio (user-owned financial planning scenarios) ───────────────
+  planning: router({
+    calculate: protectedProcedure
+      .input(z.object({
+        kind: z.enum(planningAnalysisKinds),
+        inputs: z.record(z.string(), z.number().finite().min(0)).superRefine((inputs, ctx) => {
+          for (const [key, value] of Object.entries(inputs)) {
+            if (key.endsWith("Rate") && value > 100) ctx.addIssue({ code: "custom", message: `${key} cannot exceed 100%` });
+          }
+        }),
+      }))
+      .mutation(({ input }) => ({ result: calculatePlanningAnalysis(input.kind, input.inputs) })),
+    list: protectedProcedure.query(async ({ ctx }) => db.getUserPlanningAnalyses(ctx.user.id)),
+    save: protectedProcedure
+      .input(z.object({
+        kind: z.enum(planningAnalysisKinds),
+        name: z.string().trim().min(2).max(160),
+        propertyId: z.number().int().positive().optional(),
+        inputs: z.record(z.string(), z.number().finite().min(0)).superRefine((inputs, ctx) => {
+          for (const [key, value] of Object.entries(inputs)) {
+            if (key.endsWith("Rate") && value > 100) ctx.addIssue({ code: "custom", message: `${key} cannot exceed 100%` });
+          }
+        }),
+      }))
+      .mutation(async ({ ctx, input }) => {
+        if (input.propertyId) {
+          const property = await db.getPropertyById(input.propertyId);
+          if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You can only link a scenario to your own property." });
+        }
+        const results = calculatePlanningAnalysis(input.kind, input.inputs);
+        const analysis = await db.createPlanningAnalysis({ ...input, userId: ctx.user.id, results });
+        return { analysis, result: results };
+      }),
+    delete: protectedProcedure
+      .input(z.object({ id: z.number().int().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const deleted = await db.deletePlanningAnalysis(input.id, ctx.user.id);
+        if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
         return { success: true };
       }),
   }),

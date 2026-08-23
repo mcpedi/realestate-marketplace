@@ -39,6 +39,8 @@ import {
   type InsertViewingBooking,
   type InsertPropertyScore,
   type InsertPropertyActivity,
+  planningAnalyses,
+  type InsertPlanningAnalysis,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1243,4 +1245,28 @@ export async function getPropertyWithPhotos(id: number) {
     .where(eq(propertyPhotos.propertyId, id))
     .orderBy(asc(propertyPhotos.sortOrder));
   return { ...p, photos: photos.map((ph) => ({ id: ph.id, url: ph.url, fileKey: ph.fileKey, sortOrder: ph.sortOrder })) };
+}
+
+// ─── Planning Studio ─────────────────────────────────────────────────────────
+
+export async function createPlanningAnalysis(data: Omit<InsertPlanningAnalysis, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(planningAnalyses).values(data).$returningId();
+  if (!result) return undefined;
+  const rows = await db.select().from(planningAnalyses).where(eq(planningAnalyses.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function getUserPlanningAnalyses(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(planningAnalyses).where(eq(planningAnalyses.userId, userId)).orderBy(desc(planningAnalyses.updatedAt)).limit(50);
+}
+
+export async function deletePlanningAnalysis(id: number, userId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(planningAnalyses).where(and(eq(planningAnalyses.id, id), eq(planningAnalyses.userId, userId)));
+  return result[0].affectedRows > 0;
 }

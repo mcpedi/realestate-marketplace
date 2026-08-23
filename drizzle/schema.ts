@@ -9,6 +9,7 @@ import {
   boolean,
   json,
   tinyint,
+  index,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -367,3 +368,21 @@ export const propertyActivity = mysqlTable("propertyActivity", {
 });
 export type PropertyActivity = typeof propertyActivity.$inferSelect;
 export type InsertPropertyActivity = typeof propertyActivity.$inferInsert;
+
+// ─── Planning Studio scenarios ───────────────────────────────────────────────
+export const planningAnalyses = mysqlTable("planningAnalyses", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  propertyId: int("propertyId"),
+  kind: mysqlEnum("kind", ["roi", "rental_yield", "construction", "development"]).notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  inputs: json("inputs").notNull(),
+  results: json("results").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("planning_user_created_idx").on(table.userId, table.createdAt),
+  index("planning_property_idx").on(table.propertyId),
+]);
+export type PlanningAnalysis = typeof planningAnalyses.$inferSelect;
+export type InsertPlanningAnalysis = typeof planningAnalyses.$inferInsert;
