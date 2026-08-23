@@ -1853,12 +1853,14 @@ export const appRouter = router({
         priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
         participantName: z.string().trim().max(160).optional(),
         participantContact: z.string().trim().max(160).optional(),
+        tenantUserId: z.number().int().positive().optional(),
         amount: z.number().finite().min(0).optional(),
         dueDate: z.date().optional(),
         details: z.string().trim().max(1500).optional(),
       })).mutation(async ({ ctx, input }) => {
         const property = await db.getPropertyById(input.propertyId);
         if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        if (input.tenantUserId && !(await db.hasActiveTenantAssignment(input.propertyId, input.tenantUserId))) throw new TRPCError({ code: "BAD_REQUEST", message: "The selected tenant does not have an active assignment for this property." });
         const record = await db.createPropertyOperationRecord({ ...input, ownerUserId: ctx.user.id, amount: input.amount !== undefined ? String(input.amount) : null, details: input.details ? { notes: input.details } : null });
         if (!record) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
         await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: `operations.${input.type}.create`, resourceType: "propertyOperation", resourceId: record.id, propertyId: input.propertyId, metadata: { status: input.status, priority: input.priority } });
@@ -1874,6 +1876,55 @@ export const appRouter = router({
         return { success: true };
       }),
     }),
+  }),
+  // ─── Tenant identity: explicit owner invitation, acceptance, and scoped dashboard ──
+  tenantAccess: router({
+    ownerAssignments: protectedProcedure.query(async ({ ctx }) => {
+      const assignments = await db.getOwnerPropertyTenantAssignments(ctx.user.id);
+      const properties = await db.getUserProperties(ctx.user.id);
+      const byId = new Map(properties.map((property) => [property.id, property]));
+      return assignments.map((assignment) => ({ assignment, property: byId.get(assignment.propertyId) ?? null }));
+    }),
+    createInvitation: protectedProcedure.input(z.object({ propertyId: z.number().int().positive(), unitLabel: z.string().trim().max(120).optional(), expiresAt: z.date().optional() })).mutation(async ({ ctx, input }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (input.expiresAt && input.expiresAt <= new Date()) throw new TRPCError({ code: "BAD_REQUEST", message: "Invitation expiry must be in the future." });
+      let assignment;
+      for (let attempt = 0; attempt < 3 && !assignment; attempt += 1) {
+        const invitationCode = `N360-T-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+        try { assignment = await db.createPropertyTenantAssignment({ propertyId: property.id, ownerUserId: ctx.user.id, invitationCode, status: "pending", unitLabel: input.unitLabel ?? null, expiresAt: input.expiresAt ?? null }); } catch { /* retry a cryptographically unique invitation code */ }
+      }
+      if (!assignment) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create a tenant invitation." });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "tenant_assignment.create", resourceType: "propertyTenantAssignment", resourceId: assignment.id, propertyId: property.id, metadata: { unitLabel: assignment.unitLabel, expiresAt: assignment.expiresAt } });
+      return assignment;
+    }),
+    endAssignment: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["ended", "revoked"]) })).mutation(async ({ ctx, input }) => {
+      const assignment = await db.getPropertyTenantAssignmentById(input.id);
+      if (!assignment || assignment.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      const updated = await db.endPropertyTenantAssignment(assignment.id, input.status);
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "tenant_assignment.end", resourceType: "propertyTenantAssignment", resourceId: assignment.id, propertyId: assignment.propertyId, metadata: { status: input.status } });
+      return { success: true };
+    }),
+    linkOperation: protectedProcedure.input(z.object({ operationId: z.number().int().positive(), tenantUserId: z.number().int().positive().nullable() })).mutation(async ({ ctx, input }) => {
+      const record = await db.getPropertyOperationRecordById(input.operationId);
+      if (!record || record.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (input.tenantUserId && !(await db.hasActiveTenantAssignment(record.propertyId, input.tenantUserId))) throw new TRPCError({ code: "BAD_REQUEST", message: "Tenant must hold an active assignment for this property." });
+      const updated = await db.updatePropertyOperationRecord(record.id, { tenantUserId: input.tenantUserId });
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "tenant_assignment.link_operation", resourceType: "propertyOperation", resourceId: record.id, propertyId: record.propertyId, metadata: { tenantUserId: input.tenantUserId } });
+      return { success: true };
+    }),
+    claimInvitation: protectedProcedure.input(z.object({ invitationCode: z.string().trim().toUpperCase().regex(/^N360-T-[A-Z0-9]{8}$/) })).mutation(async ({ ctx, input }) => {
+      const assignment = await db.getPropertyTenantAssignmentByInvitation(input.invitationCode);
+      if (!assignment || assignment.status !== "pending" || assignment.tenantUserId || (assignment.expiresAt && assignment.expiresAt < new Date())) throw new TRPCError({ code: "BAD_REQUEST", message: "This tenant invitation is unavailable." });
+      if (assignment.ownerUserId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "An owner cannot accept their own tenant invitation." });
+      const activated = await db.activatePropertyTenantAssignment(assignment.id, ctx.user.id);
+      if (!activated) throw new TRPCError({ code: "CONFLICT", message: "This tenant invitation has already been claimed." });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "tenant_assignment.claim", resourceType: "propertyTenantAssignment", resourceId: assignment.id, propertyId: assignment.propertyId, metadata: {} });
+      return { success: true };
+    }),
+    dashboard: protectedProcedure.query(async ({ ctx }) => db.getTenantDashboard(ctx.user.id)),
   }),
 });
 

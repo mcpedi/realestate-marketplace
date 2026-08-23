@@ -451,6 +451,7 @@ export const propertyOperationRecords = mysqlTable("propertyOperationRecords", {
   priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
   participantName: varchar("participantName", { length: 160 }),
   participantContact: varchar("participantContact", { length: 160 }),
+  tenantUserId: int("tenantUserId"),
   amount: decimal("amount", { precision: 14, scale: 2 }),
   dueDate: timestamp("dueDate"),
   completedAt: timestamp("completedAt"),
@@ -460,10 +461,33 @@ export const propertyOperationRecords = mysqlTable("propertyOperationRecords", {
 }, (table) => [
   index("operation_property_type_idx").on(table.propertyId, table.type),
   index("operation_owner_status_idx").on(table.ownerUserId, table.status),
+  index("operation_tenant_status_idx").on(table.tenantUserId, table.status),
   index("operation_due_date_idx").on(table.dueDate),
 ]);
 export type PropertyOperationRecord = typeof propertyOperationRecords.$inferSelect;
 export type InsertPropertyOperationRecord = typeof propertyOperationRecords.$inferInsert;
+
+// ─── Explicit tenant identity: claimable owner-created property assignments ─────
+export const propertyTenantAssignments = mysqlTable("propertyTenantAssignments", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  ownerUserId: int("ownerUserId").notNull(),
+  tenantUserId: int("tenantUserId"),
+  invitationCode: varchar("invitationCode", { length: 32 }).notNull().unique(),
+  status: mysqlEnum("status", ["pending", "active", "ended", "revoked"]).default("pending").notNull(),
+  unitLabel: varchar("unitLabel", { length: 120 }),
+  expiresAt: timestamp("expiresAt"),
+  acceptedAt: timestamp("acceptedAt"),
+  endedAt: timestamp("endedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("tenant_assignment_owner_property_idx").on(table.ownerUserId, table.propertyId),
+  index("tenant_assignment_tenant_status_idx").on(table.tenantUserId, table.status),
+  index("tenant_assignment_property_status_idx").on(table.propertyId, table.status),
+]);
+export type PropertyTenantAssignment = typeof propertyTenantAssignments.$inferSelect;
+export type InsertPropertyTenantAssignment = typeof propertyTenantAssignments.$inferInsert;
 
 // ─── Agent Operations: CRM, reusable listing templates, and transaction workspaces ──
 export const agentContacts = mysqlTable("agentContacts", {

@@ -35,6 +35,7 @@ import PropertyIdentity from "./pages/PropertyIdentity";
 import Rewards from "./pages/Rewards";
 import PropertyShareHub from "./pages/PropertyShareHub";
 import PublicPropertyShare from "./pages/PublicPropertyShare";
+import TenantAccess from "./pages/TenantAccess";
 
 function Router() {
   return (
@@ -69,6 +70,7 @@ function Router() {
       <Route path="/rewards" component={Rewards} />
       <Route path="/property-sharing" component={PropertyShareHub} />
       <Route path="/share/:identifier" component={PublicPropertyShare} />
+      <Route path="/tenant-access" component={TenantAccess} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

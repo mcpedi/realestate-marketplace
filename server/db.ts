@@ -70,6 +70,8 @@ import {
   type InsertReferralProfile,
   type InsertReferralClaim,
   type InsertRewardLedgerEntry,
+  propertyTenantAssignments,
+  type InsertPropertyTenantAssignment,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1389,7 +1391,7 @@ export async function getPropertyOperationRecordById(id: number) {
   return rows[0];
 }
 
-export async function updatePropertyOperationRecord(id: number, data: Partial<Pick<InsertPropertyOperationRecord, "status" | "priority" | "dueDate" | "completedAt" | "details" | "amount">>) {
+export async function updatePropertyOperationRecord(id: number, data: Partial<Pick<InsertPropertyOperationRecord, "status" | "priority" | "dueDate" | "completedAt" | "details" | "amount" | "tenantUserId">>) {
   const db = await getDb();
   if (!db) return false;
   const result = await db.update(propertyOperationRecords).set(data).where(eq(propertyOperationRecords.id, id));
@@ -1401,6 +1403,75 @@ export async function getOwnerPropertyOperationSummary(ownerUserId: number) {
   const open = records.filter((record) => !["completed", "closed", "paid", "resolved"].includes(record.status)).length;
   const dueSoon = records.filter((record) => record.dueDate && record.dueDate.getTime() <= Date.now() + 7 * 24 * 60 * 60 * 1000 && !["completed", "closed", "paid", "resolved"].includes(record.status)).length;
   return { total: records.length, open, dueSoon, byType: { lease: records.filter((record) => record.type === "lease").length, inspection: records.filter((record) => record.type === "inspection").length, maintenance: records.filter((record) => record.type === "maintenance").length, rent: records.filter((record) => record.type === "rent").length, vacancy: records.filter((record) => record.type === "vacancy").length } };
+}
+
+// ─── Tenant identity: explicit, revocable, authenticated-user assignments ──────
+
+export async function createPropertyTenantAssignment(data: Omit<InsertPropertyTenantAssignment, "id" | "createdAt" | "updatedAt" | "tenantUserId" | "acceptedAt" | "endedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(propertyTenantAssignments).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(propertyTenantAssignments).where(eq(propertyTenantAssignments.id, result.id)).limit(1))[0];
+}
+
+export async function getPropertyTenantAssignmentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(propertyTenantAssignments).where(eq(propertyTenantAssignments.id, id)).limit(1))[0];
+}
+
+export async function getPropertyTenantAssignmentByInvitation(invitationCode: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(propertyTenantAssignments).where(eq(propertyTenantAssignments.invitationCode, invitationCode)).limit(1))[0];
+}
+
+export async function getOwnerPropertyTenantAssignments(ownerUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(propertyTenantAssignments).where(eq(propertyTenantAssignments.ownerUserId, ownerUserId)).orderBy(desc(propertyTenantAssignments.updatedAt));
+}
+
+export async function getActiveTenantAssignments(tenantUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(propertyTenantAssignments).where(and(eq(propertyTenantAssignments.tenantUserId, tenantUserId), eq(propertyTenantAssignments.status, "active"))).orderBy(desc(propertyTenantAssignments.updatedAt));
+}
+
+export async function hasActiveTenantAssignment(propertyId: number, tenantUserId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const rows = await db.select({ id: propertyTenantAssignments.id }).from(propertyTenantAssignments).where(and(eq(propertyTenantAssignments.propertyId, propertyId), eq(propertyTenantAssignments.tenantUserId, tenantUserId), eq(propertyTenantAssignments.status, "active"))).limit(1);
+  return Boolean(rows[0]);
+}
+
+export async function activatePropertyTenantAssignment(id: number, tenantUserId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(propertyTenantAssignments).set({ tenantUserId, status: "active", acceptedAt: new Date() }).where(and(eq(propertyTenantAssignments.id, id), eq(propertyTenantAssignments.status, "pending"), isNull(propertyTenantAssignments.tenantUserId)));
+  return result[0].affectedRows > 0;
+}
+
+export async function endPropertyTenantAssignment(id: number, status: "ended" | "revoked") {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(propertyTenantAssignments).set({ status, endedAt: new Date() }).where(eq(propertyTenantAssignments.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function getTenantDashboard(tenantUserId: number) {
+  const db = await getDb();
+  if (!db) return { assignments: [], properties: [], records: [], documents: [] };
+  const assignments = await getActiveTenantAssignments(tenantUserId);
+  const propertyIds = assignments.map((assignment) => assignment.propertyId);
+  if (!propertyIds.length) return { assignments, properties: [], records: [], documents: [] };
+  const [assignedProperties, records, documents] = await Promise.all([
+    db.select().from(properties).where(inArray(properties.id, propertyIds)),
+    db.select().from(propertyOperationRecords).where(and(eq(propertyOperationRecords.tenantUserId, tenantUserId), inArray(propertyOperationRecords.propertyId, propertyIds))).orderBy(desc(propertyOperationRecords.updatedAt)),
+    db.select({ document: propertyDocuments, access: propertyDocumentAccess }).from(propertyDocumentAccess).innerJoin(propertyDocuments, eq(propertyDocumentAccess.documentId, propertyDocuments.id)).where(and(eq(propertyDocumentAccess.userId, tenantUserId), isNull(propertyDocuments.deletedAt), inArray(propertyDocuments.propertyId, propertyIds))).orderBy(desc(propertyDocuments.updatedAt)),
+  ]);
+  return { assignments, properties: assignedProperties, records, documents };
 }
 
 // ─── Agent Operations: CRM, activity, templates, and transaction workspace ────

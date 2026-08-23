@@ -255,4 +255,11 @@
 - [x] Add protected owner/admin sharing controls and public QR-resolution endpoints that never reveal drafts, documents, or owner-private data
 - [x] Build responsive QR preview, print-ready, and social-sharing surfaces for approved property listings
 - [x] Add authorization/privacy tests, generate and apply migrations, and verify responsive behavior (130 tests passing; production build plus desktop and mobile owner and public-sharing views verified)
-- [ ] Checkpoint and publish Advanced release 7 — QR and Public Property Sharing
+- [x] Checkpoint and publish Advanced release 7 — QR and Public Property Sharing
+
+## Advanced release 8 — Tenant Identity and Dashboard
+- [x] Add explicit owner-created tenant-to-property assignments linked to authenticated user identities, without inferring access from names, email addresses, or phone numbers
+- [x] Add owner-only assignment controls and protected tenant dashboard APIs for assigned property operations and document access
+- [x] Build responsive owner assignment and tenant dashboard interfaces with empty, pending, and revoked-access states
+- [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (134 tests passing; production build plus desktop and mobile tenant workspace views verified)
+- [ ] Checkpoint and publish Advanced release 8 — Tenant Identity and Dashboard
