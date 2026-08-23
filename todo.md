@@ -212,3 +212,12 @@
 - [x] Checkpoint and publish Advanced release 1 — Planning Studio
 - [x] Add user-scoped Planning Studio router behavior tests for save, list, delete, and owned-property linking
 - [x] Add server-side validation coverage for invalid Planning Studio percentage inputs
+
+## Advanced release 2 — Property Operations
+- [x] Define property-operations data model, access grants, module audit events, and dashboard boundaries
+- [x] Build secure property document vault uploads, metadata, property linking, access checks, and activity logging (104 tests passing; mobile and desktop vault layouts reviewed)
+- [x] Add lease, inspection, maintenance, rent, and vacancy records with ownership-scoped workflows
+- [x] Build an owner-side Property Operations dashboard with role-safe summaries, workflow status controls, and mobile-first responsive layouts
+- [ ] Add tenant-linked dashboards only after an explicit tenant identity and property-access relationship model is introduced (deferred scope; do not infer tenant access from contact data)
+- [x] Add behavior coverage, database migration, and responsive checks (108 tests passing; production build, desktop, and mobile Operations views verified)
+- [ ] Checkpoint and publish Advanced release 2 — Property Operations

@@ -10,6 +10,7 @@ import {
   json,
   tinyint,
   index,
+  decimal,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -386,3 +387,79 @@ export const planningAnalyses = mysqlTable("planningAnalyses", {
 ]);
 export type PlanningAnalysis = typeof planningAnalyses.$inferSelect;
 export type InsertPlanningAnalysis = typeof planningAnalyses.$inferInsert;
+
+// ─── Property Operations: secure documents and audit trail ────────────────────
+export const propertyDocuments = mysqlTable("propertyDocuments", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  uploadedByUserId: int("uploadedByUserId").notNull(),
+  name: varchar("name", { length: 255 }).notNull(),
+  category: mysqlEnum("category", ["ownership", "lease", "sale", "receipt", "inspection", "certificate", "other"]).default("other").notNull(),
+  fileKey: varchar("fileKey", { length: 512 }).notNull(),
+  mimeType: varchar("mimeType", { length: 128 }).notNull(),
+  sizeBytes: int("sizeBytes").notNull(),
+  deletedAt: timestamp("deletedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("property_document_property_idx").on(table.propertyId, table.createdAt),
+  index("property_document_uploader_idx").on(table.uploadedByUserId, table.createdAt),
+]);
+export type PropertyDocument = typeof propertyDocuments.$inferSelect;
+export type InsertPropertyDocument = typeof propertyDocuments.$inferInsert;
+
+export const propertyDocumentAccess = mysqlTable("propertyDocumentAccess", {
+  id: int("id").autoincrement().primaryKey(),
+  documentId: int("documentId").notNull(),
+  userId: int("userId").notNull(),
+  permission: mysqlEnum("permission", ["view", "download"]).default("view").notNull(),
+  grantedByUserId: int("grantedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("document_access_document_idx").on(table.documentId),
+  index("document_access_user_idx").on(table.userId),
+]);
+export type PropertyDocumentAccess = typeof propertyDocumentAccess.$inferSelect;
+export type InsertPropertyDocumentAccess = typeof propertyDocumentAccess.$inferInsert;
+
+export const moduleAuditLogs = mysqlTable("moduleAuditLogs", {
+  id: int("id").autoincrement().primaryKey(),
+  actorUserId: int("actorUserId").notNull(),
+  action: varchar("action", { length: 128 }).notNull(),
+  resourceType: varchar("resourceType", { length: 64 }).notNull(),
+  resourceId: int("resourceId").notNull(),
+  propertyId: int("propertyId"),
+  metadata: json("metadata"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("module_audit_resource_idx").on(table.resourceType, table.resourceId),
+  index("module_audit_property_idx").on(table.propertyId, table.createdAt),
+  index("module_audit_actor_idx").on(table.actorUserId, table.createdAt),
+]);
+export type ModuleAuditLog = typeof moduleAuditLogs.$inferSelect;
+export type InsertModuleAuditLog = typeof moduleAuditLogs.$inferInsert;
+
+// ─── Property Operations: typed workflow records ──────────────────────────────
+export const propertyOperationRecords = mysqlTable("propertyOperationRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  ownerUserId: int("ownerUserId").notNull(),
+  type: mysqlEnum("type", ["lease", "inspection", "maintenance", "rent", "vacancy"]).notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  status: varchar("status", { length: 64 }).notNull(),
+  priority: mysqlEnum("priority", ["low", "normal", "high", "urgent"]).default("normal").notNull(),
+  participantName: varchar("participantName", { length: 160 }),
+  participantContact: varchar("participantContact", { length: 160 }),
+  amount: decimal("amount", { precision: 14, scale: 2 }),
+  dueDate: timestamp("dueDate"),
+  completedAt: timestamp("completedAt"),
+  details: json("details"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("operation_property_type_idx").on(table.propertyId, table.type),
+  index("operation_owner_status_idx").on(table.ownerUserId, table.status),
+  index("operation_due_date_idx").on(table.dueDate),
+]);
+export type PropertyOperationRecord = typeof propertyOperationRecords.$inferSelect;
+export type InsertPropertyOperationRecord = typeof propertyOperationRecords.$inferInsert;

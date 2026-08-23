@@ -41,6 +41,13 @@ import {
   type InsertPropertyActivity,
   planningAnalyses,
   type InsertPlanningAnalysis,
+  propertyDocuments,
+  propertyDocumentAccess,
+  moduleAuditLogs,
+  type InsertPropertyDocument,
+  type InsertModuleAuditLog,
+  propertyOperationRecords,
+  type InsertPropertyOperationRecord,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1269,4 +1276,106 @@ export async function deletePlanningAnalysis(id: number, userId: number) {
   if (!db) return false;
   const result = await db.delete(planningAnalyses).where(and(eq(planningAnalyses.id, id), eq(planningAnalyses.userId, userId)));
   return result[0].affectedRows > 0;
+}
+
+// ─── Property Operations: Documents and audit logs ────────────────────────────
+
+export async function createPropertyDocument(data: Omit<InsertPropertyDocument, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(propertyDocuments).values(data).$returningId();
+  if (!result) return undefined;
+  const rows = await db.select().from(propertyDocuments).where(eq(propertyDocuments.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function getPropertyDocuments(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(propertyDocuments).where(and(eq(propertyDocuments.propertyId, propertyId), isNull(propertyDocuments.deletedAt))).orderBy(desc(propertyDocuments.createdAt));
+}
+
+export async function getPropertyDocumentById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(propertyDocuments).where(and(eq(propertyDocuments.id, id), isNull(propertyDocuments.deletedAt))).limit(1);
+  return rows[0];
+}
+
+export async function getDocumentAccess(documentId: number, userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(propertyDocumentAccess).where(and(eq(propertyDocumentAccess.documentId, documentId), eq(propertyDocumentAccess.userId, userId))).limit(1);
+  return rows[0];
+}
+
+export async function grantDocumentAccess(documentId: number, userId: number, permission: "view" | "download", grantedByUserId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const existing = await getDocumentAccess(documentId, userId);
+  if (existing) {
+    await db.update(propertyDocumentAccess).set({ permission, grantedByUserId }).where(eq(propertyDocumentAccess.id, existing.id));
+    return existing.id;
+  }
+  const [result] = await db.insert(propertyDocumentAccess).values({ documentId, userId, permission, grantedByUserId }).$returningId();
+  return result?.id;
+}
+
+export async function softDeletePropertyDocument(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(propertyDocuments).set({ deletedAt: new Date() }).where(and(eq(propertyDocuments.id, id), isNull(propertyDocuments.deletedAt)));
+  return result[0].affectedRows > 0;
+}
+
+export async function createModuleAuditLog(data: Omit<InsertModuleAuditLog, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const [result] = await db.insert(moduleAuditLogs).values(data).$returningId();
+  return result?.id;
+}
+
+export async function getPropertyAuditLogs(propertyId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(moduleAuditLogs).where(eq(moduleAuditLogs.propertyId, propertyId)).orderBy(desc(moduleAuditLogs.createdAt)).limit(50);
+}
+
+export async function createPropertyOperationRecord(data: Omit<InsertPropertyOperationRecord, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(propertyOperationRecords).values(data).$returningId();
+  if (!result) return undefined;
+  const rows = await db.select().from(propertyOperationRecords).where(eq(propertyOperationRecords.id, result.id)).limit(1);
+  return rows[0];
+}
+
+export async function getOwnerPropertyOperationRecords(ownerUserId: number, filters?: { propertyId?: number; type?: "lease" | "inspection" | "maintenance" | "rent" | "vacancy" }) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [eq(propertyOperationRecords.ownerUserId, ownerUserId)];
+  if (filters?.propertyId) conditions.push(eq(propertyOperationRecords.propertyId, filters.propertyId));
+  if (filters?.type) conditions.push(eq(propertyOperationRecords.type, filters.type));
+  return db.select().from(propertyOperationRecords).where(and(...conditions)).orderBy(desc(propertyOperationRecords.updatedAt)).limit(100);
+}
+
+export async function getPropertyOperationRecordById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const rows = await db.select().from(propertyOperationRecords).where(eq(propertyOperationRecords.id, id)).limit(1);
+  return rows[0];
+}
+
+export async function updatePropertyOperationRecord(id: number, data: Partial<Pick<InsertPropertyOperationRecord, "status" | "priority" | "dueDate" | "completedAt" | "details" | "amount">>) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(propertyOperationRecords).set(data).where(eq(propertyOperationRecords.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function getOwnerPropertyOperationSummary(ownerUserId: number) {
+  const records = await getOwnerPropertyOperationRecords(ownerUserId);
+  const open = records.filter((record) => !["completed", "closed", "paid", "resolved"].includes(record.status)).length;
+  const dueSoon = records.filter((record) => record.dueDate && record.dueDate.getTime() <= Date.now() + 7 * 24 * 60 * 60 * 1000 && !["completed", "closed", "paid", "resolved"].includes(record.status)).length;
+  return { total: records.length, open, dueSoon, byType: { lease: records.filter((record) => record.type === "lease").length, inspection: records.filter((record) => record.type === "inspection").length, maintenance: records.filter((record) => record.type === "maintenance").length, rent: records.filter((record) => record.type === "rent").length, vacancy: records.filter((record) => record.type === "vacancy").length } };
 }

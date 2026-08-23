@@ -28,6 +28,7 @@ import Alerts from "./pages/Alerts";
 import MyBookings from "./pages/MyBookings";
 import AIAssistant from "./pages/AIAssistant";
 import PlanningStudio from "./pages/PlanningStudio";
+import PropertyOperations from "./pages/PropertyOperations";
 
 function Router() {
   return (
@@ -56,6 +57,7 @@ function Router() {
       <Route path="/bookings" component={MyBookings} />
       <Route path="/assistant" component={AIAssistant} />
       <Route path="/planning" component={PlanningStudio} />
+      <Route path="/operations" component={PropertyOperations} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

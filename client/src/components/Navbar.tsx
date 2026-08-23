@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Crown,
   FileText,
+  FolderLock,
   GitCompareArrows,
   Heart,
   Home,
@@ -54,6 +55,7 @@ const menuLinks = [
   { href: "/map", label: "Map Discovery", icon: MapIcon },
   { href: "/assistant", label: "AI Property Assistant", icon: Sparkles },
   { href: "/planning", label: "Planning Studio", icon: Calculator },
+  { href: "/operations", label: "Property Operations", icon: FolderLock },
   { href: "/discover", label: "Swipe Discovery", icon: Sparkles },
   { href: "/compare", label: "Compare Properties", icon: GitCompareArrows },
   { href: "/alerts", label: "Property Alerts", icon: Bell },
@@ -210,6 +212,7 @@ export function Navbar() {
                     <DropdownMenuItem asChild><Link href="/seller"><PlusCircle className="mr-2 h-4 w-4" /> Seller Dashboard</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/premium"><Crown className="mr-2 h-4 w-4 text-amber-500" /> Premium Plans</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/planning"><Calculator className="mr-2 h-4 w-4 text-emerald-600" /> Planning Studio</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/operations"><FolderLock className="mr-2 h-4 w-4 text-emerald-600" /> Property Operations</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/favorites"><Heart className="mr-2 h-4 w-4" /> Saved Properties</Link></DropdownMenuItem>
                     {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>}
                     <DropdownMenuSeparator />

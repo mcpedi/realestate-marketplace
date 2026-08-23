@@ -3,7 +3,7 @@ import { TRPCError } from "@trpc/server";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { notifyOwner } from "./_core/notification";
 import { sendInquiryNotification, sendApprovalNotification, sendRejectionNotification } from "./notifications";
-import { storagePut } from "./storage";
+import { storageGetSignedUrl, storagePut } from "./storage";
 import { systemRouter } from "./_core/systemRouter";
 import { invokeLLM } from "./_core/llm";
 import {
@@ -1521,6 +1521,108 @@ export const appRouter = router({
         if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
         return { success: true };
       }),
+  }),
+  // ─── Property Operations: access-controlled document vault ──────────────────
+  operations: router({
+    documents: router({
+      list: protectedProcedure.input(z.object({ propertyId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || (property.userId !== ctx.user.id && ctx.user.role !== "admin")) throw new TRPCError({ code: "FORBIDDEN" });
+        return db.getPropertyDocuments(input.propertyId);
+      }),
+      upload: protectedProcedure.input(z.object({
+        propertyId: z.number().int().positive(),
+        name: z.string().trim().min(1).max(255),
+        category: z.enum(["ownership", "lease", "sale", "receipt", "inspection", "certificate", "other"]),
+        mimeType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
+        data: z.string().min(1).max(7_000_000),
+      })).mutation(async ({ ctx, input }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Only the property owner can upload documents." });
+        const base64 = input.data.includes(",") ? input.data.split(",").pop()! : input.data;
+        const bytes = Buffer.from(base64, "base64");
+        if (!bytes.length || bytes.length > 5 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "Documents must be between 1 byte and 5 MB." });
+        const extension = input.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "file";
+        const { key } = await storagePut(`property-documents/${ctx.user.id}/${input.propertyId}/${Date.now()}.${extension}`, bytes, input.mimeType);
+        const document = await db.createPropertyDocument({ propertyId: input.propertyId, uploadedByUserId: ctx.user.id, name: input.name, category: input.category, fileKey: key, mimeType: input.mimeType, sizeBytes: bytes.length });
+        if (!document) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Document metadata could not be saved." });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "document.upload", resourceType: "propertyDocument", resourceId: document.id, propertyId: input.propertyId, metadata: { category: input.category, mimeType: input.mimeType, sizeBytes: bytes.length } });
+        return document;
+      }),
+      download: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const document = await db.getPropertyDocumentById(input.id);
+        if (!document) throw new TRPCError({ code: "NOT_FOUND" });
+        const property = await db.getPropertyById(document.propertyId);
+        const isOwner = property?.userId === ctx.user.id;
+        const isUploader = document.uploadedByUserId === ctx.user.id;
+        const grant = !isOwner && !isUploader && ctx.user.role !== "admin" ? await db.getDocumentAccess(document.id, ctx.user.id) : undefined;
+        if (!isOwner && !isUploader && ctx.user.role !== "admin" && (!grant || grant.permission !== "download")) throw new TRPCError({ code: "FORBIDDEN" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "document.download", resourceType: "propertyDocument", resourceId: document.id, propertyId: document.propertyId, metadata: { via: grant ? "access-grant" : "owner-or-uploader" } });
+        return { url: await storageGetSignedUrl(document.fileKey), name: document.name };
+      }),
+      grantAccess: protectedProcedure.input(z.object({ id: z.number().int().positive(), userId: z.number().int().positive(), permission: z.enum(["view", "download"]) })).mutation(async ({ ctx, input }) => {
+        const document = await db.getPropertyDocumentById(input.id);
+        const property = document ? await db.getPropertyById(document.propertyId) : undefined;
+        if (!document) throw new TRPCError({ code: "NOT_FOUND" });
+        if (property?.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const grantId = await db.grantDocumentAccess(document.id, input.userId, input.permission, ctx.user.id);
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "document.access_grant", resourceType: "propertyDocument", resourceId: document.id, propertyId: document.propertyId, metadata: { recipientUserId: input.userId, permission: input.permission } });
+        return { id: grantId };
+      }),
+      remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const document = await db.getPropertyDocumentById(input.id);
+        const property = document ? await db.getPropertyById(document.propertyId) : undefined;
+        if (!document) throw new TRPCError({ code: "NOT_FOUND" });
+        if (property?.userId !== ctx.user.id && document.uploadedByUserId !== ctx.user.id && ctx.user.role !== "admin") throw new TRPCError({ code: "FORBIDDEN" });
+        const deleted = await db.softDeletePropertyDocument(document.id);
+        if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "document.delete", resourceType: "propertyDocument", resourceId: document.id, propertyId: document.propertyId, metadata: { category: document.category } });
+        return { success: true };
+      }),
+      activity: protectedProcedure.input(z.object({ propertyId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || (property.userId !== ctx.user.id && ctx.user.role !== "admin")) throw new TRPCError({ code: "FORBIDDEN" });
+        return db.getPropertyAuditLogs(input.propertyId);
+      }),
+    }),
+    records: router({
+      list: protectedProcedure.input(z.object({ propertyId: z.number().int().positive().optional(), type: z.enum(["lease", "inspection", "maintenance", "rent", "vacancy"]).optional() }).optional()).query(async ({ ctx, input }) => {
+        if (input?.propertyId) {
+          const property = await db.getPropertyById(input.propertyId);
+          if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        }
+        return db.getOwnerPropertyOperationRecords(ctx.user.id, input);
+      }),
+      summary: protectedProcedure.query(async ({ ctx }) => db.getOwnerPropertyOperationSummary(ctx.user.id)),
+      create: protectedProcedure.input(z.object({
+        propertyId: z.number().int().positive(),
+        type: z.enum(["lease", "inspection", "maintenance", "rent", "vacancy"]),
+        title: z.string().trim().min(3).max(255),
+        status: z.string().trim().min(2).max(64),
+        priority: z.enum(["low", "normal", "high", "urgent"]).default("normal"),
+        participantName: z.string().trim().max(160).optional(),
+        participantContact: z.string().trim().max(160).optional(),
+        amount: z.number().finite().min(0).optional(),
+        dueDate: z.date().optional(),
+        details: z.string().trim().max(1500).optional(),
+      })).mutation(async ({ ctx, input }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const record = await db.createPropertyOperationRecord({ ...input, ownerUserId: ctx.user.id, amount: input.amount !== undefined ? String(input.amount) : null, details: input.details ? { notes: input.details } : null });
+        if (!record) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: `operations.${input.type}.create`, resourceType: "propertyOperation", resourceId: record.id, propertyId: input.propertyId, metadata: { status: input.status, priority: input.priority } });
+        return record;
+      }),
+      updateStatus: protectedProcedure.input(z.object({ id: z.number().int().positive(), status: z.string().trim().min(2).max(64) })).mutation(async ({ ctx, input }) => {
+        const record = await db.getPropertyOperationRecordById(input.id);
+        if (!record || record.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const completed = ["completed", "closed", "paid", "resolved"].includes(input.status) ? new Date() : null;
+        const updated = await db.updatePropertyOperationRecord(record.id, { status: input.status, completedAt: completed });
+        if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: `operations.${record.type}.status_update`, resourceType: "propertyOperation", resourceId: record.id, propertyId: record.propertyId, metadata: { previousStatus: record.status, nextStatus: input.status } });
+        return { success: true };
+      }),
+    }),
   }),
 });
 
