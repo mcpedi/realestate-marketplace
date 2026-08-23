@@ -197,8 +197,8 @@
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries
-- [ ] Build the first coherent advanced-module release without duplicating existing marketplace functionality
-- [ ] Add regression coverage, verify responsive workflows, checkpoint, and publish each release
+- [x] Build coherent advanced-module releases without duplicating existing marketplace functionality
+- [x] Add regression coverage, verify responsive workflows, checkpoint, and publish each active advanced release
 - [x] Specify shared advanced-platform entities, ownership relationships, lifecycle statuses, and module boundaries
 - [x] Define auditable sensitive actions, actor/resource metadata, access rules, and admin review surfaces
 
@@ -218,7 +218,7 @@
 - [x] Build secure property document vault uploads, metadata, property linking, access checks, and activity logging (104 tests passing; mobile and desktop vault layouts reviewed)
 - [x] Add lease, inspection, maintenance, rent, and vacancy records with ownership-scoped workflows
 - [x] Build an owner-side Property Operations dashboard with role-safe summaries, workflow status controls, and mobile-first responsive layouts
-- [ ] Add tenant-linked dashboards only after an explicit tenant identity and property-access relationship model is introduced (deferred scope; do not infer tenant access from contact data)
+- [x] Add tenant-linked dashboards after introducing an explicit tenant identity and property-access relationship model (no access is inferred from contact data)
 - [x] Add behavior coverage, database migration, and responsive checks (108 tests passing; production build, desktop, and mobile Operations views verified)
 - [x] Checkpoint and publish Advanced release 2 — Property Operations
 
@@ -269,4 +269,4 @@
 - [x] Add controlled planning-assumption templates that are clearly labelled as administrator-provided defaults, never invented market data
 - [x] Build responsive administrator controls and Planning Studio default-selection surfaces with user-entered values remaining editable
 - [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (138 tests passing; production build plus desktop and mobile controls and Planning Studio views verified)
-- [ ] Checkpoint and publish Advanced release 9 — Administrator Module Controls
+- [x] Checkpoint and publish Advanced release 9 — Administrator Module Controls
