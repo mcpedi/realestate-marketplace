@@ -72,6 +72,9 @@ import {
   type InsertRewardLedgerEntry,
   propertyTenantAssignments,
   type InsertPropertyTenantAssignment,
+  platformModuleSettings,
+  planningAssumptionTemplates,
+  type InsertPlanningAssumptionTemplate,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1472,6 +1475,56 @@ export async function getTenantDashboard(tenantUserId: number) {
     db.select({ document: propertyDocuments, access: propertyDocumentAccess }).from(propertyDocumentAccess).innerJoin(propertyDocuments, eq(propertyDocumentAccess.documentId, propertyDocuments.id)).where(and(eq(propertyDocumentAccess.userId, tenantUserId), isNull(propertyDocuments.deletedAt), inArray(propertyDocuments.propertyId, propertyIds))).orderBy(desc(propertyDocuments.updatedAt)),
   ]);
   return { assignments, properties: assignedProperties, records, documents };
+}
+
+// ─── Administrator controls: module state and explicit planning defaults ────────
+
+export async function getPlatformModuleSetting(moduleKey: "planning") {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(platformModuleSettings).where(eq(platformModuleSettings.moduleKey, moduleKey)).limit(1))[0];
+}
+
+export async function isPlatformModuleEnabled(moduleKey: "planning") {
+  const setting = await getPlatformModuleSetting(moduleKey);
+  return setting?.enabled ?? true;
+}
+
+export async function setPlatformModuleEnabled(moduleKey: "planning", enabled: boolean, updatedByUserId: number) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  await db.insert(platformModuleSettings).values({ moduleKey, enabled, updatedByUserId }).onDuplicateKeyUpdate({ set: { enabled, updatedByUserId } });
+  return getPlatformModuleSetting(moduleKey);
+}
+
+export async function getPlanningAssumptionTemplates(kind?: "roi" | "rental_yield" | "construction" | "development", activeOnly = false) {
+  const db = await getDb();
+  if (!db) return [];
+  const conditions = [];
+  if (kind) conditions.push(eq(planningAssumptionTemplates.kind, kind));
+  if (activeOnly) conditions.push(eq(planningAssumptionTemplates.active, true));
+  return db.select().from(planningAssumptionTemplates).where(conditions.length ? and(...conditions) : undefined).orderBy(desc(planningAssumptionTemplates.updatedAt));
+}
+
+export async function getPlanningAssumptionTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(planningAssumptionTemplates).where(eq(planningAssumptionTemplates.id, id)).limit(1))[0];
+}
+
+export async function createPlanningAssumptionTemplate(data: Omit<InsertPlanningAssumptionTemplate, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(planningAssumptionTemplates).values(data).$returningId();
+  if (!result) return undefined;
+  return getPlanningAssumptionTemplateById(result.id);
+}
+
+export async function updatePlanningAssumptionTemplate(id: number, data: Partial<Pick<InsertPlanningAssumptionTemplate, "name" | "description" | "inputs" | "active" | "updatedByUserId">>) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(planningAssumptionTemplates).set(data).where(eq(planningAssumptionTemplates.id, id));
+  return result[0].affectedRows > 0;
 }
 
 // ─── Agent Operations: CRM, activity, templates, and transaction workspace ────

@@ -489,6 +489,36 @@ export const propertyTenantAssignments = mysqlTable("propertyTenantAssignments",
 export type PropertyTenantAssignment = typeof propertyTenantAssignments.$inferSelect;
 export type InsertPropertyTenantAssignment = typeof propertyTenantAssignments.$inferInsert;
 
+// ─── Administrator controls: planning defaults are explicit, editable, and auditable ──
+export const platformModuleSettings = mysqlTable("platformModuleSettings", {
+  id: int("id").autoincrement().primaryKey(),
+  moduleKey: mysqlEnum("moduleKey", ["planning"]).notNull().unique(),
+  enabled: boolean("enabled").default(true).notNull(),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type PlatformModuleSetting = typeof platformModuleSettings.$inferSelect;
+export type InsertPlatformModuleSetting = typeof platformModuleSettings.$inferInsert;
+
+export const planningAssumptionTemplates = mysqlTable("planningAssumptionTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 160 }).notNull(),
+  description: varchar("description", { length: 400 }),
+  kind: mysqlEnum("kind", ["roi", "rental_yield", "construction", "development"]).notNull(),
+  inputs: json("inputs").notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  updatedByUserId: int("updatedByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("planning_template_kind_active_idx").on(table.kind, table.active, table.updatedAt),
+  index("planning_template_creator_idx").on(table.createdByUserId, table.createdAt),
+]);
+export type PlanningAssumptionTemplate = typeof planningAssumptionTemplates.$inferSelect;
+export type InsertPlanningAssumptionTemplate = typeof planningAssumptionTemplates.$inferInsert;
+
 // ─── Agent Operations: CRM, reusable listing templates, and transaction workspaces ──
 export const agentContacts = mysqlTable("agentContacts", {
   id: int("id").autoincrement().primaryKey(),

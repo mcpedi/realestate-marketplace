@@ -262,4 +262,11 @@
 - [x] Add owner-only assignment controls and protected tenant dashboard APIs for assigned property operations and document access
 - [x] Build responsive owner assignment and tenant dashboard interfaces with empty, pending, and revoked-access states
 - [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (134 tests passing; production build plus desktop and mobile tenant workspace views verified)
-- [ ] Checkpoint and publish Advanced release 8 — Tenant Identity and Dashboard
+- [x] Checkpoint and publish Advanced release 8 — Tenant Identity and Dashboard
+
+## Advanced release 9 — Administrator Module Controls
+- [x] Add administrator-owned module settings with audited enablement controls and no exposure of admin actions to normal users
+- [x] Add controlled planning-assumption templates that are clearly labelled as administrator-provided defaults, never invented market data
+- [x] Build responsive administrator controls and Planning Studio default-selection surfaces with user-entered values remaining editable
+- [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (138 tests passing; production build plus desktop and mobile controls and Planning Studio views verified)
+- [ ] Checkpoint and publish Advanced release 9 — Administrator Module Controls

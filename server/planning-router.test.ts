@@ -6,6 +6,7 @@ const mocks = vi.hoisted(() => ({
   getUserPlanningAnalyses: vi.fn(),
   deletePlanningAnalysis: vi.fn(),
   getPropertyById: vi.fn(),
+  isPlatformModuleEnabled: vi.fn(),
 }));
 
 vi.mock("./db", () => mocks);
@@ -32,7 +33,7 @@ function context(userId = 7): TrpcContext {
 const roiInputs = { purchasePrice: 10_000_000, monthlyRent: 100_000, monthlyExpenses: 10_000, annualExpenses: 60_000, vacancyRate: 5, additionalCosts: 500_000 };
 
 describe("planning router", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => { vi.clearAllMocks(); mocks.isPlatformModuleEnabled.mockResolvedValue(true); });
 
   it("saves a user-owned scenario after confirming its linked property belongs to the caller", async () => {
     mocks.getPropertyById.mockResolvedValue({ id: 11, userId: 7 });

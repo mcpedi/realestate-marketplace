@@ -1,6 +1,6 @@
 import { useMemo, useState } from "react";
 import { Redirect } from "wouter";
-import { BarChart3, Building2, Calculator, ChartNoAxesCombined, ClipboardList, Construction, Landmark, Loader2, Save, Trash2, TrendingUp } from "lucide-react";
+import { BarChart3, Building2, Calculator, ChartNoAxesCombined, ClipboardList, Construction, Landmark, Layers3, Loader2, Save, Trash2, TrendingUp } from "lucide-react";
 import { Cell, Pie, PieChart, ResponsiveContainer, Tooltip } from "recharts";
 import { toast } from "sonner";
 import { Navbar } from "@/components/Navbar";
@@ -70,6 +70,7 @@ export default function PlanningStudio() {
   const [propertyId, setPropertyId] = useState("none");
   const utils = trpc.useUtils();
   const scenarios = trpc.planning.list.useQuery(undefined, { enabled: !!user, retry: false });
+  const assumptionTemplates = trpc.planning.assumptionTemplates.useQuery({ kind }, { enabled: !!user, retry: false });
   const properties = trpc.property.myProperties.useQuery(undefined, { enabled: !!user, retry: false });
   const active = CALCULATORS.find((calculator) => calculator.kind === kind) ?? CALCULATORS[0];
   const result = useMemo(() => calculatePlanningAnalysis(kind, inputs), [kind, inputs]);
@@ -121,6 +122,8 @@ export default function PlanningStudio() {
               </button>;
             })}
           </div>
+
+          {assumptionTemplates.data?.length ? <section className="mt-5 rounded-3xl border border-sky-100 bg-sky-50/60 p-4 md:p-5"><div className="flex items-start gap-3"><div className="grid h-10 w-10 place-items-center rounded-xl bg-white text-sky-700 shadow-sm"><Layers3 className="h-5 w-5" /></div><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-sky-700">Administrator-provided defaults</p><p className="mt-1 text-sm leading-6 text-sky-900">Select a template only if it suits your plan. Its values remain fully editable and are not market data or advice.</p></div></div><div className="mt-4 flex flex-wrap gap-2">{assumptionTemplates.data.map((template) => <Button key={template.id} variant="outline" onClick={() => setInputs(template.inputs as PlanningInputs)} className="h-auto rounded-xl border-sky-200 bg-white px-3 py-2 text-left text-xs font-bold text-sky-900 hover:bg-sky-100"><span>{template.name}</span><span className="ml-2 font-normal text-sky-600">Apply</span></Button>)}</div></section> : null}
 
           <div className="mt-6 grid gap-6 xl:grid-cols-[minmax(0,0.92fr)_minmax(22rem,1.08fr)]">
             <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-7">

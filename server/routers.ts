@@ -1659,8 +1659,18 @@ export const appRouter = router({
           }
         }),
       }))
-      .mutation(({ input }) => ({ result: calculatePlanningAnalysis(input.kind, input.inputs) })),
-    list: protectedProcedure.query(async ({ ctx }) => db.getUserPlanningAnalyses(ctx.user.id)),
+      .mutation(async ({ input }) => {
+        if ((await db.isPlatformModuleEnabled("planning")) === false) throw new TRPCError({ code: "FORBIDDEN", message: "Planning Studio is temporarily unavailable." });
+        return { result: calculatePlanningAnalysis(input.kind, input.inputs) };
+      }),
+    list: protectedProcedure.query(async ({ ctx }) => {
+      if ((await db.isPlatformModuleEnabled("planning")) === false) throw new TRPCError({ code: "FORBIDDEN", message: "Planning Studio is temporarily unavailable." });
+      return db.getUserPlanningAnalyses(ctx.user.id);
+    }),
+    assumptionTemplates: protectedProcedure.input(z.object({ kind: z.enum(planningAnalysisKinds).optional() }).optional()).query(async ({ input }) => {
+      if ((await db.isPlatformModuleEnabled("planning")) === false) throw new TRPCError({ code: "FORBIDDEN", message: "Planning Studio is temporarily unavailable." });
+      return db.getPlanningAssumptionTemplates(input?.kind, true);
+    }),
     save: protectedProcedure
       .input(z.object({
         kind: z.enum(planningAnalysisKinds),
@@ -1673,6 +1683,7 @@ export const appRouter = router({
         }),
       }))
       .mutation(async ({ ctx, input }) => {
+        if ((await db.isPlatformModuleEnabled("planning")) === false) throw new TRPCError({ code: "FORBIDDEN", message: "Planning Studio is temporarily unavailable." });
         if (input.propertyId) {
           const property = await db.getPropertyById(input.propertyId);
           if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You can only link a scenario to your own property." });
@@ -1684,9 +1695,40 @@ export const appRouter = router({
     delete: protectedProcedure
       .input(z.object({ id: z.number().int().positive() }))
       .mutation(async ({ ctx, input }) => {
+        if ((await db.isPlatformModuleEnabled("planning")) === false) throw new TRPCError({ code: "FORBIDDEN", message: "Planning Studio is temporarily unavailable." });
         const deleted = await db.deletePlanningAnalysis(input.id, ctx.user.id);
         if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
         return { success: true };
+    }),
+  }),
+  // ─── Administrator controls: only admin users can govern the planning module ──
+  adminModuleControls: router({
+    planning: adminProcedure.query(async () => ({ setting: await db.getPlatformModuleSetting("planning"), templates: await db.getPlanningAssumptionTemplates() })),
+    setPlanningEnabled: adminProcedure.input(z.object({ enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+      const setting = await db.setPlatformModuleEnabled("planning", input.enabled, ctx.user.id);
+      if (!setting) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "module_setting.planning", resourceType: "platformModuleSetting", resourceId: setting.id, propertyId: null, metadata: { enabled: input.enabled } });
+      return setting;
+    }),
+    createPlanningTemplate: adminProcedure.input(z.object({
+      name: z.string().trim().min(2).max(160), description: z.string().trim().max(400).optional(), kind: z.enum(planningAnalysisKinds), active: z.boolean().default(true),
+      inputs: z.record(z.string(), z.number().finite().min(0)).superRefine((inputs, validation) => { for (const [key, value] of Object.entries(inputs)) if (key.endsWith("Rate") && value > 100) validation.addIssue({ code: "custom", message: `${key} cannot exceed 100%` }); }),
+    })).mutation(async ({ ctx, input }) => {
+      const template = await db.createPlanningAssumptionTemplate({ ...input, inputs: input.inputs, createdByUserId: ctx.user.id, updatedByUserId: ctx.user.id });
+      if (!template) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "planning_template.create", resourceType: "planningAssumptionTemplate", resourceId: template.id, propertyId: null, metadata: { kind: template.kind, active: template.active } });
+      return template;
+    }),
+    updatePlanningTemplate: adminProcedure.input(z.object({
+      id: z.number().int().positive(), name: z.string().trim().min(2).max(160).optional(), description: z.string().trim().max(400).nullable().optional(), active: z.boolean().optional(),
+      inputs: z.record(z.string(), z.number().finite().min(0)).optional(),
+    })).mutation(async ({ ctx, input }) => {
+      const template = await db.getPlanningAssumptionTemplateById(input.id);
+      if (!template) throw new TRPCError({ code: "NOT_FOUND" });
+      const updated = await db.updatePlanningAssumptionTemplate(template.id, { ...(input.name !== undefined ? { name: input.name } : {}), ...(input.description !== undefined ? { description: input.description } : {}), ...(input.active !== undefined ? { active: input.active } : {}), ...(input.inputs !== undefined ? { inputs: input.inputs } : {}), updatedByUserId: ctx.user.id });
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "planning_template.update", resourceType: "planningAssumptionTemplate", resourceId: template.id, propertyId: null, metadata: { active: input.active ?? template.active } });
+      return { success: true };
     }),
   }),
   // ─── Agent Operations: agent-owned CRM and transaction workspaces ───────────

@@ -24,6 +24,7 @@ import {
   Gift,
   QrCode,
   UsersRound,
+  Settings2,
   FolderLock,
   GitCompareArrows,
   Heart,
@@ -214,6 +215,7 @@ export function Navbar() {
                     <DropdownMenuItem asChild><Link href="/rewards"><Gift className="mr-2 h-4 w-4 text-amber-600" /> Referrals & Rewards</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/property-sharing"><QrCode className="mr-2 h-4 w-4 text-emerald-600" /> QR & Sharing</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/tenant-access"><UsersRound className="mr-2 h-4 w-4 text-sky-600" /> Tenant Access</Link></DropdownMenuItem>
+                    {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin/modules"><Settings2 className="mr-2 h-4 w-4 text-amber-600" /> Module Controls</Link></DropdownMenuItem>}
                     <DropdownMenuItem asChild><Link href="/favorites"><Heart className="mr-2 h-4 w-4" /> Saved Properties</Link></DropdownMenuItem>
                     {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>}
                     <DropdownMenuSeparator />

@@ -36,6 +36,7 @@ import Rewards from "./pages/Rewards";
 import PropertyShareHub from "./pages/PropertyShareHub";
 import PublicPropertyShare from "./pages/PublicPropertyShare";
 import TenantAccess from "./pages/TenantAccess";
+import AdminModuleControls from "./pages/AdminModuleControls";
 
 function Router() {
   return (
@@ -71,6 +72,7 @@ function Router() {
       <Route path="/property-sharing" component={PropertyShareHub} />
       <Route path="/share/:identifier" component={PublicPropertyShare} />
       <Route path="/tenant-access" component={TenantAccess} />
+      <Route path="/admin/modules" component={AdminModuleControls} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
