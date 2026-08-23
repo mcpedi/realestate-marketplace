@@ -23,6 +23,8 @@ export type ListingFormDraft = {
 };
 
 type StorageLike = Pick<Storage, "getItem" | "removeItem" | "setItem">;
+type StoredListingDraft = { version: 2; savedAt: number; form: ListingFormDraft };
+export type ListingDraftMetadata = { savedAt: number | null; mode: "offline" | "local" | "none" };
 
 export const LISTING_FORM_STEPS = [
   { label: "Basics", description: "The property essentials" },
@@ -64,11 +66,12 @@ export function saveListingDraft(storage: StorageLike, userId: number, form: Lis
     storage.removeItem(listingDraftKey(userId));
     return false;
   }
-  const serializableForm = {
+  const serializableForm: ListingFormDraft = {
     ...form,
     photos: form.photos.map(({ fileKey, url, is360 }) => ({ fileKey, url, preview: url, is360 })),
   };
-  storage.setItem(listingDraftKey(userId), JSON.stringify(serializableForm));
+  const envelope: StoredListingDraft = { version: 2, savedAt: Date.now(), form: serializableForm };
+  storage.setItem(listingDraftKey(userId), JSON.stringify(envelope));
   return true;
 }
 
@@ -76,7 +79,8 @@ export function loadListingDraft(storage: StorageLike, userId: number): ListingF
   const stored = storage.getItem(listingDraftKey(userId));
   if (!stored) return null;
   try {
-    const parsed = JSON.parse(stored) as Partial<ListingFormDraft>;
+    const raw = JSON.parse(stored) as Partial<ListingFormDraft> | Partial<StoredListingDraft>;
+    const parsed: Partial<ListingFormDraft> = "form" in raw && raw.form ? raw.form : raw as Partial<ListingFormDraft>;
     return {
       ...createEmptyListingForm(),
       ...parsed,
@@ -90,6 +94,17 @@ export function loadListingDraft(storage: StorageLike, userId: number): ListingF
   } catch {
     storage.removeItem(listingDraftKey(userId));
     return null;
+  }
+}
+
+export function getListingDraftMetadata(storage: StorageLike, userId: number, online: boolean): ListingDraftMetadata {
+  const stored = storage.getItem(listingDraftKey(userId));
+  if (!stored) return { savedAt: null, mode: "none" };
+  try {
+    const raw = JSON.parse(stored) as Partial<StoredListingDraft>;
+    return { savedAt: typeof raw.savedAt === "number" ? raw.savedAt : null, mode: online ? "local" : "offline" };
+  } catch {
+    return { savedAt: null, mode: "none" };
   }
 }
 

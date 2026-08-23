@@ -234,4 +234,11 @@
 - [x] Add permanent, human-readable property identifiers with owner/admin creation and public approved-listing lookup only
 - [x] Build protected APIs and responsive collection/identity interfaces with loading, empty, and error states
 - [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (119 tests passing; production build plus desktop and mobile views verified)
-- [ ] Checkpoint and publish Advanced release 4 — Engagement and Property Identity
+- [x] Checkpoint and publish Advanced release 4 — Engagement and Property Identity
+
+## Advanced release 5 — Platform Foundations
+- [x] Add English/Kiswahili translation infrastructure and a persisted language control for shared navigation and new workflow status copy
+- [x] Strengthen local listing drafts with offline-aware metadata, safe restoration, and visible connectivity/save status without overwriting server listings
+- [x] Add a safe service-worker registration and offline application-shell fallback while preserving the existing manifest and normal online behavior
+- [x] Add focused tests and verify responsive behavior and production shell build (122 tests passing; production build plus desktop shared navigation and seller workspace views verified)
+- [ ] Checkpoint and publish Advanced release 5 — Platform Foundations

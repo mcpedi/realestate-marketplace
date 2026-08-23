@@ -31,6 +31,7 @@ import {
   LISTING_FORM_STEPS,
   listingStepError,
   loadListingDraft,
+  getListingDraftMetadata,
   MIN_LISTING_DESCRIPTION_LENGTH,
   saveListingDraft,
 } from "@/lib/listingDraft";
@@ -60,6 +61,7 @@ import {
   ChevronLeft,
   ChevronRight,
   MapPin,
+  WifiOff,
 } from "lucide-react";
 
 const PROPERTY_TYPES = ["house", "apartment", "villa", "land", "commercial", "townhouse", "studio", "penthouse"];
@@ -120,8 +122,18 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   const [showAiTools, setShowAiTools] = useState(false);
   const [listingStep, setListingStep] = useState(0);
   const [draftStatus, setDraftStatus] = useState<"idle" | "saved" | "restored">("idle");
+  const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   const { data: myProperties, isLoading, refetch } = trpc.property.myProperties.useQuery();
+  const draftMetadata = getListingDraftMetadata(window.localStorage, user.id, isOnline);
+
+  useEffect(() => {
+    const online = () => setIsOnline(true);
+    const offline = () => setIsOnline(false);
+    window.addEventListener("online", online);
+    window.addEventListener("offline", offline);
+    return () => { window.removeEventListener("online", online); window.removeEventListener("offline", offline); };
+  }, []);
 
   // Premium membership state
   const { data: premiumInfo } = trpc.subscription.isPremium.useQuery();
@@ -421,7 +433,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   </div>
                 </DialogHeader>
                 <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
-                  {!editingProperty && draftStatus !== "idle" && <div className="flex items-center gap-2 rounded-xl border border-emerald-100 bg-emerald-50 px-3 py-2 text-xs font-semibold text-emerald-800"><Check className="h-3.5 w-3.5" />{draftStatus === "restored" ? "Your saved draft was restored." : "Draft saved automatically."}</div>}
+                  {!editingProperty && (draftStatus !== "idle" || !isOnline) && <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${isOnline ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>{isOnline ? <Check className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}{!isOnline ? "Offline — changes stay safely on this device until you reconnect." : draftStatus === "restored" ? "Your saved local draft was restored." : draftMetadata.savedAt ? `Draft saved locally at ${new Date(draftMetadata.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "Draft saved automatically."}</div>}
                   {listingStep === 0 && <>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Title *</label>

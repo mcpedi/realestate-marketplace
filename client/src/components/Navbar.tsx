@@ -25,6 +25,7 @@ import {
   GitCompareArrows,
   Heart,
   Home,
+  Languages,
   Map as MapIcon,
   Menu,
   MessageSquare,
@@ -42,43 +43,26 @@ import {
   X,
 } from "lucide-react";
 import { useTheme } from "@/contexts/ThemeContext";
+import { useLanguage } from "@/contexts/LanguageContext";
 
 const SITE_NAME = "Nyumba 360";
 
-const desktopLinks = [
-  { href: "/", label: "Home" },
-  { href: "/properties", label: "Explore" },
-  { href: "/map", label: "Map Search" },
-  { href: "/assistant", label: "AI Assistant" },
+const desktopLinks = (t: (key: any) => string) => [
+  { href: "/", label: t("nav.home") }, { href: "/properties", label: t("nav.explore") }, { href: "/map", label: t("nav.map") }, { href: "/assistant", label: t("nav.assistant") },
 ];
 
-const menuLinks = [
-  { href: "/properties", label: "Browse Properties", icon: Search },
-  { href: "/map", label: "Map Discovery", icon: MapIcon },
-  { href: "/assistant", label: "AI Property Assistant", icon: Sparkles },
-  { href: "/planning", label: "Planning Studio", icon: Calculator },
-  { href: "/operations", label: "Property Operations", icon: FolderLock },
-  { href: "/agent-operations", label: "Agent Operations", icon: Target },
-  { href: "/property-identity", label: "Property IDs", icon: Fingerprint },
-  { href: "/discover", label: "Swipe Discovery", icon: Sparkles },
-  { href: "/compare", label: "Compare Properties", icon: GitCompareArrows },
-  { href: "/alerts", label: "Property Alerts", icon: Bell },
-  { href: "/bookings", label: "My Viewings", icon: CalendarDays },
-  { href: "/about", label: "About Us", icon: FileText },
-  { href: "/blog", label: "Property Guides", icon: PenTool },
+const menuLinks = (t: (key: any) => string) => [
+  { href: "/properties", label: t("nav.browse"), icon: Search }, { href: "/map", label: t("nav.mapDiscovery"), icon: MapIcon }, { href: "/assistant", label: t("nav.assistant"), icon: Sparkles }, { href: "/planning", label: t("nav.planning"), icon: Calculator }, { href: "/operations", label: t("nav.operations"), icon: FolderLock }, { href: "/agent-operations", label: t("nav.agentOperations"), icon: Target }, { href: "/property-identity", label: t("nav.propertyIds"), icon: Fingerprint }, { href: "/discover", label: t("nav.swipe"), icon: Sparkles }, { href: "/compare", label: t("nav.compare"), icon: GitCompareArrows }, { href: "/alerts", label: t("nav.alerts"), icon: Bell }, { href: "/bookings", label: t("nav.viewings"), icon: CalendarDays }, { href: "/about", label: t("nav.about"), icon: FileText }, { href: "/blog", label: t("nav.guides"), icon: PenTool },
 ];
 
-const bottomTabs = [
-  { href: "/", label: "Home", icon: Home },
-  { href: "/properties", label: "Explore", icon: Search },
-  { href: sellerDashboardHref(true), label: "Add Property", icon: Plus, elevated: true },
-  { href: "/favorites", label: "Saved", icon: Heart },
-  { href: "/profile", label: "Profile", icon: User },
+const bottomTabs = (t: (key: any) => string) => [
+  { href: "/", label: t("nav.home"), icon: Home }, { href: "/properties", label: t("nav.explore"), icon: Search }, { href: sellerDashboardHref(true), label: t("nav.addProperty"), icon: Plus, elevated: true }, { href: "/favorites", label: t("nav.saved"), icon: Heart }, { href: "/profile", label: t("nav.profile"), icon: User },
 ];
 
 export function Navbar() {
   const { user, isAuthenticated, logout } = useAuth();
   const { theme, toggleTheme, switchable } = useTheme();
+  const { language, setLanguage, t } = useLanguage();
   const [location, setLocation] = useLocation();
   const [mobileOpen, setMobileOpen] = useState(false);
   const utils = trpc.useUtils();
@@ -117,6 +101,9 @@ export function Navbar() {
   ) : null;
 
   const isActive = (href: string) => href === "/" ? location === "/" : location === href || location.startsWith(`${href}/`);
+  const localizedDesktopLinks = desktopLinks(t);
+  const localizedMenuLinks = menuLinks(t);
+  const localizedBottomTabs = bottomTabs(t);
 
   return (
     <>
@@ -137,7 +124,7 @@ export function Navbar() {
                   </SheetTitle>
                 </SheetHeader>
                 <nav className="space-y-1 px-3 py-4">
-                  {menuLinks.map(({ href, label, icon: Icon }) => (
+                  {localizedMenuLinks.map(({ href, label, icon: Icon }) => (
                     <Link href={href} key={href} onClick={() => setMobileOpen(false)}>
                       <span className={cn("flex items-center gap-3 rounded-xl px-3 py-3 text-sm font-semibold transition-colors", isActive(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-900")}>
                         <Icon className="h-4.5 w-4.5" /> {label}
@@ -154,7 +141,8 @@ export function Navbar() {
                       <Button variant="outline" className="mt-2 w-full" onClick={logout}>Sign out</Button>
                     </div>
                   ) : <Button className="w-full bg-emerald-600 font-bold hover:bg-emerald-500" onClick={() => { startLogin(); setMobileOpen(false); }}>Sign in to your account</Button>}
-                  {switchable && <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"><span className="text-xs font-semibold text-slate-600">Appearance</span>{themeButton}</div>}
+                  <div className="mt-4 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"><span className="text-xs font-semibold text-slate-600">{t("language.label")}</span><button aria-label="Switch language" onClick={() => setLanguage(language === "en" ? "sw" : "en")} className="rounded-lg bg-white px-2 py-1 text-xs font-extrabold text-emerald-700 shadow-sm">{language === "en" ? "EN" : "SW"}</button></div>
+                  {switchable && <div className="mt-2 flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2"><span className="text-xs font-semibold text-slate-600">Appearance</span>{themeButton}</div>}
                 </div>
               </SheetContent>
             </Sheet>
@@ -166,7 +154,7 @@ export function Navbar() {
           </div>
 
           <nav className="hidden items-center gap-1 lg:flex">
-            {desktopLinks.map(({ href, label }) => <Link href={href} key={href}><span className={cn("rounded-lg px-3 py-2 text-sm font-semibold transition-colors", isActive(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950")}>{label}</span></Link>)}
+            {localizedDesktopLinks.map(({ href, label }) => <Link href={href} key={href}><span className={cn("rounded-lg px-3 py-2 text-sm font-semibold transition-colors", isActive(href) ? "bg-emerald-50 text-emerald-700" : "text-slate-600 hover:bg-slate-50 hover:text-slate-950")}>{label}</span></Link>)}
           </nav>
 
           <div className="flex items-center gap-1.5 md:gap-3">
@@ -207,6 +195,7 @@ export function Navbar() {
               <Link href="/alerts" className="grid h-10 w-10 place-items-center rounded-xl text-slate-700 transition-colors hover:bg-slate-100" aria-label="Property alerts"><Bell className="h-5 w-5" /></Link>
             )}
             <div className="hidden lg:block">{themeButton}</div>
+            <button aria-label="Switch language" onClick={() => setLanguage(language === "en" ? "sw" : "en")} className="hidden h-9 items-center gap-1 rounded-lg border border-slate-200 px-2 text-xs font-extrabold text-slate-600 hover:bg-slate-50 lg:flex"><Languages className="h-3.5 w-3.5" />{language === "en" ? "EN" : "SW"}</button>
             <div className="hidden lg:block">
               {isAuthenticated ? (
                 <DropdownMenu>
@@ -233,7 +222,7 @@ export function Navbar() {
 
       <nav className="fixed inset-x-0 bottom-0 z-50 border-t border-slate-100 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-8px_30px_rgba(15,23,42,0.08)] backdrop-blur-xl md:hidden" aria-label="Primary mobile navigation">
         <div className="mx-auto flex max-w-md items-end justify-between">
-          {bottomTabs.map(({ href, label, icon: Icon, elevated }) => (
+          {localizedBottomTabs.map(({ href, label, icon: Icon, elevated }) => (
             <Link href={href} key={href} className="relative flex w-[20%] flex-col items-center gap-1 text-center">
               {elevated ? <span className="-mt-7 grid h-14 w-14 place-items-center rounded-full bg-emerald-600 text-white shadow-[0_8px_18px_rgba(5,150,105,0.38)] ring-4 ring-white"><Icon className="h-7 w-7" /></span> : <Icon className={cn("h-6 w-6", isActive(href) ? "text-emerald-600" : "text-slate-500")} />}
               <span className={cn("text-[10px] font-semibold", isActive(href) ? "text-emerald-700" : "text-slate-500")}>{label}</span>
