@@ -36,6 +36,7 @@ import {
   Shield,
   Sparkles,
   Sun,
+  Target,
   User,
   X,
 } from "lucide-react";
@@ -56,6 +57,7 @@ const menuLinks = [
   { href: "/assistant", label: "AI Property Assistant", icon: Sparkles },
   { href: "/planning", label: "Planning Studio", icon: Calculator },
   { href: "/operations", label: "Property Operations", icon: FolderLock },
+  { href: "/agent-operations", label: "Agent Operations", icon: Target },
   { href: "/discover", label: "Swipe Discovery", icon: Sparkles },
   { href: "/compare", label: "Compare Properties", icon: GitCompareArrows },
   { href: "/alerts", label: "Property Alerts", icon: Bell },
@@ -213,6 +215,7 @@ export function Navbar() {
                     <DropdownMenuItem asChild><Link href="/premium"><Crown className="mr-2 h-4 w-4 text-amber-500" /> Premium Plans</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/planning"><Calculator className="mr-2 h-4 w-4 text-emerald-600" /> Planning Studio</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/operations"><FolderLock className="mr-2 h-4 w-4 text-emerald-600" /> Property Operations</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/agent-operations"><Target className="mr-2 h-4 w-4 text-emerald-600" /> Agent Operations</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/favorites"><Heart className="mr-2 h-4 w-4" /> Saved Properties</Link></DropdownMenuItem>
                     {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>}
                     <DropdownMenuSeparator />

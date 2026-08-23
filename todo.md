@@ -220,4 +220,11 @@
 - [x] Build an owner-side Property Operations dashboard with role-safe summaries, workflow status controls, and mobile-first responsive layouts
 - [ ] Add tenant-linked dashboards only after an explicit tenant identity and property-access relationship model is introduced (deferred scope; do not infer tenant access from contact data)
 - [x] Add behavior coverage, database migration, and responsive checks (108 tests passing; production build, desktop, and mobile Operations views verified)
-- [ ] Checkpoint and publish Advanced release 2 — Property Operations
+- [x] Checkpoint and publish Advanced release 2 — Property Operations
+
+## Advanced release 3 — Agent Operations
+- [x] Add agent-owned CRM contacts, activity timeline, listing template, and property transaction records without replacing existing marketplace inquiries or payments
+- [x] Build protected, ownership-scoped Agent Operations APIs with server-side validation and audit events
+- [x] Create a responsive agent workspace for CRM pipeline, performance metrics, activity notes, templates, and transaction timelines
+- [x] Add focused router tests, generate and apply migrations, and verify responsive behavior (114 tests passing; production build plus desktop and mobile workspace views verified)
+- [ ] Checkpoint and publish Advanced release 3 — Agent Operations

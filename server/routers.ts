@@ -1520,7 +1520,91 @@ export const appRouter = router({
         const deleted = await db.deletePlanningAnalysis(input.id, ctx.user.id);
         if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
         return { success: true };
+    }),
+  }),
+  // ─── Agent Operations: agent-owned CRM and transaction workspaces ───────────
+  agentOperations: router({
+    summary: protectedProcedure.query(async ({ ctx }) => db.getAgentOperationsSummary(ctx.user.id)),
+    contacts: router({
+      list: protectedProcedure.input(z.object({ stage: z.enum(["new", "contacted", "qualified", "viewing", "negotiating", "won", "lost"]).optional() }).optional()).query(async ({ ctx, input }) => db.getAgentContacts(ctx.user.id, input?.stage)),
+      create: protectedProcedure.input(z.object({
+        propertyId: z.number().int().positive().optional(),
+        name: z.string().trim().min(2).max(160),
+        email: z.string().trim().email().max(320).optional(),
+        phone: z.string().trim().max(48).optional(),
+        source: z.enum(["marketplace", "inquiry", "manual", "referral"]).default("manual"),
+        notes: z.string().trim().max(2000).optional(),
+        nextFollowUpAt: z.date().optional(),
+      })).mutation(async ({ ctx, input }) => {
+        if (input.propertyId) {
+          const property = await db.getPropertyById(input.propertyId);
+          if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You can only link CRM contacts to your own property." });
+        }
+        const contact = await db.createAgentContact({ ...input, ownerUserId: ctx.user.id, stage: "new" });
+        if (!contact) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "agent_contact.create", resourceType: "agentContact", resourceId: contact.id, propertyId: contact.propertyId, metadata: { source: contact.source } });
+        return contact;
       }),
+      updateStage: protectedProcedure.input(z.object({ id: z.number().int().positive(), stage: z.enum(["new", "contacted", "qualified", "viewing", "negotiating", "won", "lost"]), nextFollowUpAt: z.date().nullable().optional() })).mutation(async ({ ctx, input }) => {
+        const contact = await db.getAgentContactById(input.id);
+        if (!contact || contact.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const updated = await db.updateAgentContact(contact.id, { stage: input.stage, ...(input.nextFollowUpAt !== undefined ? { nextFollowUpAt: input.nextFollowUpAt } : {}) });
+        if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+        await db.createLeadActivity({ contactId: contact.id, agentUserId: ctx.user.id, type: "stage_change", body: `Pipeline moved from ${contact.stage} to ${input.stage}.`, fromStage: contact.stage, toStage: input.stage, activityAt: new Date() });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "agent_contact.stage_update", resourceType: "agentContact", resourceId: contact.id, propertyId: contact.propertyId, metadata: { previousStage: contact.stage, nextStage: input.stage } });
+        return { success: true };
+      }),
+      activities: protectedProcedure.input(z.object({ contactId: z.number().int().positive() })).query(async ({ ctx, input }) => {
+        const contact = await db.getAgentContactById(input.contactId);
+        if (!contact || contact.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        return db.getLeadActivities(contact.id);
+      }),
+      addActivity: protectedProcedure.input(z.object({ contactId: z.number().int().positive(), type: z.enum(["note", "call", "email", "whatsapp", "viewing"]), body: z.string().trim().min(2).max(2000), activityAt: z.date().optional() })).mutation(async ({ ctx, input }) => {
+        const contact = await db.getAgentContactById(input.contactId);
+        if (!contact || contact.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const activity = await db.createLeadActivity({ ...input, agentUserId: ctx.user.id, activityAt: input.activityAt ?? new Date(), fromStage: null, toStage: null });
+        if (!activity) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "agent_contact.activity_create", resourceType: "leadActivity", resourceId: activity.id, propertyId: contact.propertyId, metadata: { type: input.type, contactId: contact.id } });
+        return activity;
+      }),
+    }),
+    templates: router({
+      list: protectedProcedure.query(async ({ ctx }) => db.getListingTemplates(ctx.user.id)),
+      create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(160), category: z.enum(["sale", "rent", "general"]).default("general"), templateData: z.object({ title: z.string().trim().max(160).optional(), description: z.string().trim().max(3000).optional(), amenities: z.array(z.string().trim().min(1).max(80)).max(30).optional() }) })).mutation(async ({ ctx, input }) => {
+        const template = await db.createListingTemplate({ ...input, ownerUserId: ctx.user.id, active: true });
+        if (!template) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "listing_template.create", resourceType: "listingTemplate", resourceId: template.id, propertyId: null, metadata: { category: template.category } });
+        return template;
+      }),
+      remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+        const template = await db.getListingTemplateById(input.id);
+        if (!template || template.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const deleted = await db.deleteListingTemplate(template.id);
+        if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "listing_template.delete", resourceType: "listingTemplate", resourceId: template.id, propertyId: null, metadata: { category: template.category } });
+        return { success: true };
+      }),
+    }),
+    transactions: router({
+      list: protectedProcedure.query(async ({ ctx }) => db.getAgentTransactions(ctx.user.id)),
+      create: protectedProcedure.input(z.object({ propertyId: z.number().int().positive(), title: z.string().trim().min(3).max(255), counterpartyName: z.string().trim().max(160).optional(), counterpartyContact: z.string().trim().max(160).optional(), amount: z.number().finite().min(0).optional(), notes: z.string().trim().max(2000).optional() })).mutation(async ({ ctx, input }) => {
+        const property = await db.getPropertyById(input.propertyId);
+        if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "You can only create a transaction for your own property." });
+        const transaction = await db.createAgentTransaction({ ...input, ownerUserId: ctx.user.id, amount: input.amount !== undefined ? String(input.amount) : null, stage: "intake", status: "active" });
+        if (!transaction) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "property_transaction.create", resourceType: "propertyTransaction", resourceId: transaction.id, propertyId: transaction.propertyId, metadata: { stage: transaction.stage } });
+        return transaction;
+      }),
+      updateStage: protectedProcedure.input(z.object({ id: z.number().int().positive(), stage: z.enum(["intake", "listing", "viewing", "offer", "negotiation", "contract", "completed", "cancelled"]), status: z.enum(["active", "on_hold", "completed", "cancelled"]) })).mutation(async ({ ctx, input }) => {
+        const transaction = await db.getAgentTransactionById(input.id);
+        if (!transaction || transaction.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+        const completedAt = input.status === "completed" || input.stage === "completed" ? new Date() : null;
+        const updated = await db.updateAgentTransaction(transaction.id, { stage: input.stage, status: input.status, completedAt });
+        if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "property_transaction.stage_update", resourceType: "propertyTransaction", resourceId: transaction.id, propertyId: transaction.propertyId, metadata: { previousStage: transaction.stage, nextStage: input.stage, previousStatus: transaction.status, nextStatus: input.status } });
+        return { success: true };
+      }),
+    }),
   }),
   // ─── Property Operations: access-controlled document vault ──────────────────
   operations: router({

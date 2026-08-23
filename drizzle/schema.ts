@@ -463,3 +463,80 @@ export const propertyOperationRecords = mysqlTable("propertyOperationRecords", {
 ]);
 export type PropertyOperationRecord = typeof propertyOperationRecords.$inferSelect;
 export type InsertPropertyOperationRecord = typeof propertyOperationRecords.$inferInsert;
+
+// ─── Agent Operations: CRM, reusable listing templates, and transaction workspaces ──
+export const agentContacts = mysqlTable("agentContacts", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerUserId: int("ownerUserId").notNull(),
+  inquiryId: int("inquiryId"),
+  propertyId: int("propertyId"),
+  name: varchar("name", { length: 160 }).notNull(),
+  email: varchar("email", { length: 320 }),
+  phone: varchar("phone", { length: 48 }),
+  stage: mysqlEnum("stage", ["new", "contacted", "qualified", "viewing", "negotiating", "won", "lost"]).default("new").notNull(),
+  source: mysqlEnum("source", ["marketplace", "inquiry", "manual", "referral"]).default("manual").notNull(),
+  notes: text("notes"),
+  nextFollowUpAt: timestamp("nextFollowUpAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("agent_contact_owner_stage_idx").on(table.ownerUserId, table.stage),
+  index("agent_contact_owner_followup_idx").on(table.ownerUserId, table.nextFollowUpAt),
+  index("agent_contact_inquiry_idx").on(table.inquiryId),
+]);
+export type AgentContact = typeof agentContacts.$inferSelect;
+export type InsertAgentContact = typeof agentContacts.$inferInsert;
+
+export const leadActivities = mysqlTable("leadActivities", {
+  id: int("id").autoincrement().primaryKey(),
+  contactId: int("contactId").notNull(),
+  agentUserId: int("agentUserId").notNull(),
+  type: mysqlEnum("type", ["note", "call", "email", "whatsapp", "viewing", "stage_change"]).default("note").notNull(),
+  body: text("body").notNull(),
+  fromStage: varchar("fromStage", { length: 32 }),
+  toStage: varchar("toStage", { length: 32 }),
+  activityAt: timestamp("activityAt").defaultNow().notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("lead_activity_contact_idx").on(table.contactId, table.activityAt),
+  index("lead_activity_agent_idx").on(table.agentUserId, table.activityAt),
+]);
+export type LeadActivity = typeof leadActivities.$inferSelect;
+export type InsertLeadActivity = typeof leadActivities.$inferInsert;
+
+export const listingTemplates = mysqlTable("listingTemplates", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerUserId: int("ownerUserId").notNull(),
+  name: varchar("name", { length: 160 }).notNull(),
+  category: mysqlEnum("category", ["sale", "rent", "general"]).default("general").notNull(),
+  templateData: json("templateData").notNull(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("listing_template_owner_active_idx").on(table.ownerUserId, table.active),
+]);
+export type ListingTemplate = typeof listingTemplates.$inferSelect;
+export type InsertListingTemplate = typeof listingTemplates.$inferInsert;
+
+export const propertyTransactions = mysqlTable("propertyTransactions", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull(),
+  ownerUserId: int("ownerUserId").notNull(),
+  title: varchar("title", { length: 255 }).notNull(),
+  stage: mysqlEnum("stage", ["intake", "listing", "viewing", "offer", "negotiation", "contract", "completed", "cancelled"]).default("intake").notNull(),
+  status: mysqlEnum("status", ["active", "on_hold", "completed", "cancelled"]).default("active").notNull(),
+  counterpartyName: varchar("counterpartyName", { length: 160 }),
+  counterpartyContact: varchar("counterpartyContact", { length: 160 }),
+  amount: decimal("amount", { precision: 14, scale: 2 }),
+  notes: text("notes"),
+  startedAt: timestamp("startedAt").defaultNow().notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("property_transaction_owner_stage_idx").on(table.ownerUserId, table.stage),
+  index("property_transaction_property_idx").on(table.propertyId, table.createdAt),
+]);
+export type PropertyTransaction = typeof propertyTransactions.$inferSelect;
+export type InsertPropertyTransaction = typeof propertyTransactions.$inferInsert;

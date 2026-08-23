@@ -48,6 +48,14 @@ import {
   type InsertModuleAuditLog,
   propertyOperationRecords,
   type InsertPropertyOperationRecord,
+  agentContacts,
+  leadActivities,
+  listingTemplates,
+  propertyTransactions,
+  type InsertAgentContact,
+  type InsertLeadActivity,
+  type InsertListingTemplate,
+  type InsertPropertyTransaction,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1378,4 +1386,115 @@ export async function getOwnerPropertyOperationSummary(ownerUserId: number) {
   const open = records.filter((record) => !["completed", "closed", "paid", "resolved"].includes(record.status)).length;
   const dueSoon = records.filter((record) => record.dueDate && record.dueDate.getTime() <= Date.now() + 7 * 24 * 60 * 60 * 1000 && !["completed", "closed", "paid", "resolved"].includes(record.status)).length;
   return { total: records.length, open, dueSoon, byType: { lease: records.filter((record) => record.type === "lease").length, inspection: records.filter((record) => record.type === "inspection").length, maintenance: records.filter((record) => record.type === "maintenance").length, rent: records.filter((record) => record.type === "rent").length, vacancy: records.filter((record) => record.type === "vacancy").length } };
+}
+
+// ─── Agent Operations: CRM, activity, templates, and transaction workspace ────
+
+export async function createAgentContact(data: Omit<InsertAgentContact, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(agentContacts).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(agentContacts).where(eq(agentContacts.id, result.id)).limit(1))[0];
+}
+
+export async function getAgentContacts(ownerUserId: number, stage?: "new" | "contacted" | "qualified" | "viewing" | "negotiating" | "won" | "lost") {
+  const db = await getDb();
+  if (!db) return [];
+  const condition = stage ? and(eq(agentContacts.ownerUserId, ownerUserId), eq(agentContacts.stage, stage)) : eq(agentContacts.ownerUserId, ownerUserId);
+  return db.select().from(agentContacts).where(condition).orderBy(asc(agentContacts.nextFollowUpAt), desc(agentContacts.updatedAt)).limit(150);
+}
+
+export async function getAgentContactById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(agentContacts).where(eq(agentContacts.id, id)).limit(1))[0];
+}
+
+export async function updateAgentContact(id: number, data: Partial<Pick<InsertAgentContact, "stage" | "notes" | "nextFollowUpAt">>) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(agentContacts).set(data).where(eq(agentContacts.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function createLeadActivity(data: Omit<InsertLeadActivity, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(leadActivities).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(leadActivities).where(eq(leadActivities.id, result.id)).limit(1))[0];
+}
+
+export async function getLeadActivities(contactId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(leadActivities).where(eq(leadActivities.contactId, contactId)).orderBy(desc(leadActivities.activityAt)).limit(75);
+}
+
+export async function getAgentOperationsSummary(ownerUserId: number) {
+  const [contacts, transactions, marketplaceLeads] = await Promise.all([getAgentContacts(ownerUserId), getAgentTransactions(ownerUserId), getSellerLeads(ownerUserId)]);
+  const followUpsDue = contacts.filter((contact) => contact.nextFollowUpAt && contact.nextFollowUpAt.getTime() <= Date.now() + 24 * 60 * 60 * 1000 && !["won", "lost"].includes(contact.stage)).length;
+  return {
+    totalContacts: contacts.length,
+    activeContacts: contacts.filter((contact) => !["won", "lost"].includes(contact.stage)).length,
+    followUpsDue,
+    openTransactions: transactions.filter((transaction) => transaction.status === "active").length,
+    marketplaceLeads: marketplaceLeads.length,
+    byStage: { new: contacts.filter((contact) => contact.stage === "new").length, contacted: contacts.filter((contact) => contact.stage === "contacted").length, qualified: contacts.filter((contact) => contact.stage === "qualified").length, viewing: contacts.filter((contact) => contact.stage === "viewing").length, negotiating: contacts.filter((contact) => contact.stage === "negotiating").length, won: contacts.filter((contact) => contact.stage === "won").length, lost: contacts.filter((contact) => contact.stage === "lost").length },
+  };
+}
+
+export async function createListingTemplate(data: Omit<InsertListingTemplate, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(listingTemplates).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(listingTemplates).where(eq(listingTemplates.id, result.id)).limit(1))[0];
+}
+
+export async function getListingTemplates(ownerUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(listingTemplates).where(eq(listingTemplates.ownerUserId, ownerUserId)).orderBy(desc(listingTemplates.updatedAt)).limit(50);
+}
+
+export async function deleteListingTemplate(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(listingTemplates).where(eq(listingTemplates.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function getListingTemplateById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(listingTemplates).where(eq(listingTemplates.id, id)).limit(1))[0];
+}
+
+export async function createAgentTransaction(data: Omit<InsertPropertyTransaction, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(propertyTransactions).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(propertyTransactions).where(eq(propertyTransactions.id, result.id)).limit(1))[0];
+}
+
+export async function getAgentTransactions(ownerUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(propertyTransactions).where(eq(propertyTransactions.ownerUserId, ownerUserId)).orderBy(desc(propertyTransactions.updatedAt)).limit(100);
+}
+
+export async function getAgentTransactionById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(propertyTransactions).where(eq(propertyTransactions.id, id)).limit(1))[0];
+}
+
+export async function updateAgentTransaction(id: number, data: Partial<Pick<InsertPropertyTransaction, "stage" | "status" | "completedAt">>) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(propertyTransactions).set(data).where(eq(propertyTransactions.id, id));
+  return result[0].affectedRows > 0;
 }

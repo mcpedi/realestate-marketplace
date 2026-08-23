@@ -29,6 +29,7 @@ import MyBookings from "./pages/MyBookings";
 import AIAssistant from "./pages/AIAssistant";
 import PlanningStudio from "./pages/PlanningStudio";
 import PropertyOperations from "./pages/PropertyOperations";
+import AgentOperations from "./pages/AgentOperations";
 
 function Router() {
   return (
@@ -58,6 +59,7 @@ function Router() {
       <Route path="/assistant" component={AIAssistant} />
       <Route path="/planning" component={PlanningStudio} />
       <Route path="/operations" component={PropertyOperations} />
+      <Route path="/agent-operations" component={AgentOperations} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
