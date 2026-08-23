@@ -20,6 +20,7 @@ import {
   ChevronDown,
   Crown,
   FileText,
+  Fingerprint,
   FolderLock,
   GitCompareArrows,
   Heart,
@@ -58,6 +59,7 @@ const menuLinks = [
   { href: "/planning", label: "Planning Studio", icon: Calculator },
   { href: "/operations", label: "Property Operations", icon: FolderLock },
   { href: "/agent-operations", label: "Agent Operations", icon: Target },
+  { href: "/property-identity", label: "Property IDs", icon: Fingerprint },
   { href: "/discover", label: "Swipe Discovery", icon: Sparkles },
   { href: "/compare", label: "Compare Properties", icon: GitCompareArrows },
   { href: "/alerts", label: "Property Alerts", icon: Bell },
@@ -216,6 +218,7 @@ export function Navbar() {
                     <DropdownMenuItem asChild><Link href="/planning"><Calculator className="mr-2 h-4 w-4 text-emerald-600" /> Planning Studio</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/operations"><FolderLock className="mr-2 h-4 w-4 text-emerald-600" /> Property Operations</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/agent-operations"><Target className="mr-2 h-4 w-4 text-emerald-600" /> Agent Operations</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/property-identity"><Fingerprint className="mr-2 h-4 w-4 text-amber-600" /> Property IDs</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/favorites"><Heart className="mr-2 h-4 w-4" /> Saved Properties</Link></DropdownMenuItem>
                     {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>}
                     <DropdownMenuSeparator />

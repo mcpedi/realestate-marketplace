@@ -56,6 +56,12 @@ import {
   type InsertLeadActivity,
   type InsertListingTemplate,
   type InsertPropertyTransaction,
+  wishlistCollections,
+  wishlistCollectionItems,
+  propertyIdentifiers,
+  type InsertWishlistCollection,
+  type InsertWishlistCollectionItem,
+  type InsertPropertyIdentifier,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -384,6 +390,7 @@ export async function toggleFavorite(userId: number, propertyId: number) {
   const existing = await db.select().from(favorites).where(and(eq(favorites.userId, userId), eq(favorites.propertyId, propertyId))).limit(1);
   if (existing.length > 0) {
     await db.delete(favorites).where(eq(favorites.id, existing[0].id));
+    await db.delete(wishlistCollectionItems).where(eq(wishlistCollectionItems.propertyId, propertyId));
     return { isFavorite: false };
   }
   await db.insert(favorites).values({ userId, propertyId });
@@ -1497,4 +1504,92 @@ export async function updateAgentTransaction(id: number, data: Partial<Pick<Inse
   if (!db) return false;
   const result = await db.update(propertyTransactions).set(data).where(eq(propertyTransactions.id, id));
   return result[0].affectedRows > 0;
+}
+
+// ─── Engagement and identity: collections extend favourites, IDs stay permanent ──
+
+export async function createWishlistCollection(data: Omit<InsertWishlistCollection, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(wishlistCollections).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(wishlistCollections).where(eq(wishlistCollections.id, result.id)).limit(1))[0];
+}
+
+export async function getWishlistCollections(ownerUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  const collections = await db.select().from(wishlistCollections).where(eq(wishlistCollections.ownerUserId, ownerUserId)).orderBy(desc(wishlistCollections.updatedAt));
+  if (!collections.length) return [];
+  const items = await db.select().from(wishlistCollectionItems).where(inArray(wishlistCollectionItems.collectionId, collections.map((collection) => collection.id)));
+  const byCollection = new Map<number, number[]>();
+  for (const item of items) byCollection.set(item.collectionId, [...(byCollection.get(item.collectionId) ?? []), item.propertyId]);
+  return collections.map((collection) => ({ ...collection, propertyIds: byCollection.get(collection.id) ?? [] }));
+}
+
+export async function getWishlistCollectionById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(wishlistCollections).where(eq(wishlistCollections.id, id)).limit(1))[0];
+}
+
+export async function updateWishlistCollection(id: number, data: Partial<Pick<InsertWishlistCollection, "name" | "description">>) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(wishlistCollections).set(data).where(eq(wishlistCollections.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function deleteWishlistCollection(id: number) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.delete(wishlistCollectionItems).where(eq(wishlistCollectionItems.collectionId, id));
+  const result = await db.delete(wishlistCollections).where(eq(wishlistCollections.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function addWishlistCollectionItem(data: Omit<InsertWishlistCollectionItem, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) return false;
+  const existing = await db.select().from(wishlistCollectionItems).where(and(eq(wishlistCollectionItems.collectionId, data.collectionId), eq(wishlistCollectionItems.propertyId, data.propertyId))).limit(1);
+  if (existing.length) return true;
+  await db.insert(wishlistCollectionItems).values(data);
+  return true;
+}
+
+export async function removeWishlistCollectionItem(collectionId: number, propertyId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.delete(wishlistCollectionItems).where(and(eq(wishlistCollectionItems.collectionId, collectionId), eq(wishlistCollectionItems.propertyId, propertyId)));
+  return result[0].affectedRows > 0;
+}
+
+export async function getPropertyIdentifierByPropertyId(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(propertyIdentifiers).where(eq(propertyIdentifiers.propertyId, propertyId)).limit(1))[0];
+}
+
+export async function getPropertyIdentifiersByPropertyIds(propertyIds: number[]) {
+  const db = await getDb();
+  if (!db || !propertyIds.length) return [];
+  return db.select().from(propertyIdentifiers).where(inArray(propertyIdentifiers.propertyId, propertyIds));
+}
+
+export async function createPropertyIdentifier(data: Omit<InsertPropertyIdentifier, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(propertyIdentifiers).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(propertyIdentifiers).where(eq(propertyIdentifiers.id, result.id)).limit(1))[0];
+}
+
+export async function getPublicPropertyByIdentifier(identifier: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const record = (await db.select().from(propertyIdentifiers).where(eq(propertyIdentifiers.identifier, identifier)).limit(1))[0];
+  if (!record) return undefined;
+  const property = await getPropertyById(record.propertyId);
+  if (!property || property.status !== "approved") return undefined;
+  return { identifier: record.identifier, property };
 }

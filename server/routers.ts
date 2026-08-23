@@ -992,7 +992,77 @@ export const appRouter = router({
       .input(z.number())
       .query(async ({ ctx, input }) => {
         return db.isFavorite(ctx.user.id, input);
-      }),
+    }),
+  }),
+
+  // ─── Engagement: collections reference existing favourites only ─────────────
+  collections: router({
+    list: protectedProcedure.query(async ({ ctx }) => db.getWishlistCollections(ctx.user.id)),
+    create: protectedProcedure.input(z.object({ name: z.string().trim().min(2).max(120), description: z.string().trim().max(280).optional() })).mutation(async ({ ctx, input }) => {
+      const collection = await db.createWishlistCollection({ ownerUserId: ctx.user.id, name: input.name, description: input.description || null });
+      if (!collection) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "wishlist_collection.create", resourceType: "wishlistCollection", resourceId: collection.id, propertyId: null, metadata: {} });
+      return collection;
+    }),
+    update: protectedProcedure.input(z.object({ id: z.number().int().positive(), name: z.string().trim().min(2).max(120), description: z.string().trim().max(280).nullable().optional() })).mutation(async ({ ctx, input }) => {
+      const collection = await db.getWishlistCollectionById(input.id);
+      if (!collection || collection.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      const updated = await db.updateWishlistCollection(collection.id, { name: input.name, ...(input.description !== undefined ? { description: input.description } : {}) });
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "wishlist_collection.update", resourceType: "wishlistCollection", resourceId: collection.id, propertyId: null, metadata: {} });
+      return { success: true };
+    }),
+    remove: protectedProcedure.input(z.object({ id: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const collection = await db.getWishlistCollectionById(input.id);
+      if (!collection || collection.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      const deleted = await db.deleteWishlistCollection(collection.id);
+      if (!deleted) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "wishlist_collection.delete", resourceType: "wishlistCollection", resourceId: collection.id, propertyId: null, metadata: {} });
+      return { success: true };
+    }),
+    addProperty: protectedProcedure.input(z.object({ collectionId: z.number().int().positive(), propertyId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const collection = await db.getWishlistCollectionById(input.collectionId);
+      if (!collection || collection.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      if (!(await db.isFavorite(ctx.user.id, input.propertyId))) throw new TRPCError({ code: "BAD_REQUEST", message: "Only properties already saved to your favourites can be added to a collection." });
+      await db.addWishlistCollectionItem({ collectionId: collection.id, propertyId: input.propertyId });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "wishlist_collection.add_property", resourceType: "wishlistCollection", resourceId: collection.id, propertyId: input.propertyId, metadata: {} });
+      return { success: true };
+    }),
+    removeProperty: protectedProcedure.input(z.object({ collectionId: z.number().int().positive(), propertyId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const collection = await db.getWishlistCollectionById(input.collectionId);
+      if (!collection || collection.ownerUserId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN" });
+      await db.removeWishlistCollectionItem(collection.id, input.propertyId);
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "wishlist_collection.remove_property", resourceType: "wishlistCollection", resourceId: collection.id, propertyId: input.propertyId, metadata: {} });
+      return { success: true };
+    }),
+  }),
+
+  // ─── Property identity: immutable ID, public resolution only for approved listings ──
+  propertyIdentity: router({
+    owned: protectedProcedure.query(async ({ ctx }) => {
+      const properties = await db.getUserProperties(ctx.user.id);
+      const identifiers = await db.getPropertyIdentifiersByPropertyIds(properties.map((property) => property.id));
+      const byPropertyId = new Map(identifiers.map((identifier) => [identifier.propertyId, identifier]));
+      return properties.map((property) => ({ property, identifier: byPropertyId.get(property.id) ?? null }));
+    }),
+    ensure: protectedProcedure.input(z.object({ propertyId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || (property.userId !== ctx.user.id && ctx.user.role !== "admin")) throw new TRPCError({ code: "FORBIDDEN" });
+      const existing = await db.getPropertyIdentifierByPropertyId(property.id);
+      if (existing) return existing;
+      const locationToken = property.location?.match(/[A-Za-z]+/)?.[0]?.slice(0, 3).toUpperCase() || "KEN";
+      const identifier = `N360-${locationToken}-${String(property.id).padStart(6, "0")}`;
+      const record = await db.createPropertyIdentifier({ propertyId: property.id, identifier, createdByUserId: ctx.user.id });
+      if (!record) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "property_identifier.create", resourceType: "propertyIdentifier", resourceId: record.id, propertyId: property.id, metadata: { identifier: record.identifier } });
+      return record;
+    }),
+    lookup: publicProcedure.input(z.object({ identifier: z.string().trim().regex(/^N360-[A-Z]{3}-\d{6}$/) })).query(async ({ input }) => {
+      const found = await db.getPublicPropertyByIdentifier(input.identifier);
+      if (!found) throw new TRPCError({ code: "NOT_FOUND" });
+      const { userId: _userId, ...publicProperty } = found.property;
+      return { identifier: found.identifier, property: publicProperty };
+    }),
   }),
 
   // ─── File Upload ─────────────────────────────────────────────────────────

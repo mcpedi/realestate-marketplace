@@ -227,4 +227,11 @@
 - [x] Build protected, ownership-scoped Agent Operations APIs with server-side validation and audit events
 - [x] Create a responsive agent workspace for CRM pipeline, performance metrics, activity notes, templates, and transaction timelines
 - [x] Add focused router tests, generate and apply migrations, and verify responsive behavior (114 tests passing; production build plus desktop and mobile workspace views verified)
-- [ ] Checkpoint and publish Advanced release 3 — Agent Operations
+- [x] Checkpoint and publish Advanced release 3 — Agent Operations
+
+## Advanced release 4 — Engagement and Property Identity
+- [x] Add user-owned wishlist collections that reuse existing favourites rather than duplicating saved-property records
+- [x] Add permanent, human-readable property identifiers with owner/admin creation and public approved-listing lookup only
+- [x] Build protected APIs and responsive collection/identity interfaces with loading, empty, and error states
+- [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (119 tests passing; production build plus desktop and mobile views verified)
+- [ ] Checkpoint and publish Advanced release 4 — Engagement and Property Identity

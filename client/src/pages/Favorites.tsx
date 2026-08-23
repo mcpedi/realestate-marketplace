@@ -1,99 +1,48 @@
+import { useEffect, useMemo, useState } from "react";
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
 import { PropertyCard } from "@/components/PropertyCard";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Spinner } from "@/components/ui/spinner";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { Link } from "wouter";
-import { Heart, Home as HomeIcon } from "lucide-react";
+import { FolderHeart, Heart, Home as HomeIcon, Plus, Trash2 } from "lucide-react";
+import { toast } from "sonner";
 
 export default function Favorites() {
   const { isAuthenticated, loading } = useAuth();
-  const { data: favorites, isLoading } = trpc.favorite.list.useQuery(undefined, {
-    enabled: !!isAuthenticated,
-  });
+  const utils = trpc.useUtils();
+  const { data: favorites, isLoading } = trpc.favorite.list.useQuery(undefined, { enabled: !!isAuthenticated });
+  const collections = trpc.collections.list.useQuery(undefined, { enabled: !!isAuthenticated, retry: false });
+  const [newCollectionName, setNewCollectionName] = useState("");
+  const [selectedCollectionId, setSelectedCollectionId] = useState("");
+  const [selectedFavoriteId, setSelectedFavoriteId] = useState("");
+  const [activeCollectionId, setActiveCollectionId] = useState<string>("all");
+  const selectedCollection = collections.data?.find((collection) => collection.id === Number(selectedCollectionId));
 
-  if (loading) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center">
-          <div className="animate-spin w-8 h-8 border-2 border-[oklch(0.45_0.18_260)] border-t-transparent rounded-full" />
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  useEffect(() => { if (!selectedCollectionId && collections.data?.[0]) setSelectedCollectionId(String(collections.data[0].id)); }, [collections.data, selectedCollectionId]);
+  useEffect(() => { if (!selectedFavoriteId && favorites?.[0]) setSelectedFavoriteId(String(favorites[0].id)); }, [favorites, selectedFavoriteId]);
 
-  if (!isAuthenticated) {
-    return (
-      <div className="min-h-screen flex flex-col">
-        <Navbar />
-        <div className="flex-1 flex items-center justify-center py-16">
-          <div className="text-center">
-            <Heart className="w-16 h-16 mx-auto mb-4 opacity-30" />
-            <h2 className="text-2xl font-bold mb-2">Sign In Required</h2>
-            <p className="text-muted-foreground mb-6">Please sign in to view your saved properties</p>
-            <Button onClick={() => startLogin()}>Sign In</Button>
-          </div>
-        </div>
-        <Footer />
-      </div>
-    );
-  }
+  const createCollection = trpc.collections.create.useMutation({ onSuccess: (collection) => { utils.collections.list.invalidate(); setNewCollectionName(""); setSelectedCollectionId(String(collection.id)); toast.success("Collection created"); }, onError: (error) => toast.error(error.message) });
+  const addToCollection = trpc.collections.addProperty.useMutation({ onSuccess: () => { utils.collections.list.invalidate(); toast.success("Saved property added to collection"); }, onError: (error) => toast.error(error.message) });
+  const removeFromCollection = trpc.collections.removeProperty.useMutation({ onSuccess: () => { utils.collections.list.invalidate(); toast.success("Property removed from collection"); }, onError: (error) => toast.error(error.message) });
+  const removeCollection = trpc.collections.remove.useMutation({ onSuccess: () => { utils.collections.list.invalidate(); setActiveCollectionId("all"); toast.success("Collection removed"); }, onError: (error) => toast.error(error.message) });
 
-  return (
-    <div className="min-h-screen flex flex-col">
-      <Navbar />
+  const activeFavoriteIds = useMemo(() => activeCollectionId === "all" ? null : new Set(collections.data?.find((collection) => collection.id === Number(activeCollectionId))?.propertyIds ?? []), [activeCollectionId, collections.data]);
+  const displayedFavorites = activeFavoriteIds ? (favorites ?? []).filter((property) => activeFavoriteIds.has(property.id)) : favorites ?? [];
 
-      <section className="bg-secondary/30 border-b border-border/50">
-        <div className="container py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3" style={{ fontFamily: "'Playfair Display', serif" }}>
-            <Heart className="w-7 h-7 text-red-500" />
-            My Favorites
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">
-            {favorites?.length ? `${favorites.length} saved properties` : "No saved properties yet"}
-          </p>
-        </div>
+  if (loading) return <div className="grid min-h-screen place-items-center"><Spinner className="h-8 w-8" /></div>;
+  if (!isAuthenticated) return <div className="min-h-screen flex flex-col"><Navbar /><div className="flex-1 grid place-items-center py-16"><div className="text-center"><Heart className="w-16 h-16 mx-auto mb-4 opacity-30" /><h2 className="text-2xl font-bold mb-2">Sign In Required</h2><p className="text-muted-foreground mb-6">Please sign in to view your saved properties.</p><Button onClick={() => startLogin()}>Sign In</Button></div></div><Footer /></div>;
+
+  return <div className="min-h-screen bg-slate-50 text-slate-900"><Navbar />
+    <main><section className="border-b border-slate-100 bg-[radial-gradient(circle_at_80%_0,_#fecdd3_0,_transparent_26%),linear-gradient(120deg,_#0f172a,_#075985)] text-white"><div className="container py-9 md:py-12"><div className="max-w-3xl"><div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.15em] text-rose-100"><FolderHeart className="h-3.5 w-3.5" /> Saved spaces</div><h1 className="mt-4 text-3xl font-extrabold tracking-[-0.04em] md:text-5xl">Keep the properties that matter together.</h1><p className="mt-3 text-base leading-7 text-white/80">Your existing saved properties stay private. Add them to your own collections for homes to visit, investments to compare, or future rentals.</p></div></div></section>
+      <section className="container py-7 md:py-10"><div className="grid gap-6 xl:grid-cols-[minmax(17rem,0.7fr)_minmax(0,1.3fr)]"><aside className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm"><div className="flex items-center gap-2"><FolderHeart className="h-5 w-5 text-rose-500" /><div><p className="text-xs font-bold uppercase tracking-[0.13em] text-rose-600">Collections</p><h2 className="font-extrabold">Organise your favourites</h2></div></div><div className="mt-5 flex gap-2"><Input value={newCollectionName} onChange={(event) => setNewCollectionName(event.target.value)} placeholder="e.g. Homes to visit" className="h-10 rounded-xl" /><Button disabled={newCollectionName.trim().length < 2 || createCollection.isPending} onClick={() => createCollection.mutate({ name: newCollectionName.trim() })} className="h-10 shrink-0 rounded-xl bg-rose-500 px-3 hover:bg-rose-400"><Plus className="h-4 w-4" /></Button></div><button onClick={() => setActiveCollectionId("all")} className={`mt-5 flex w-full items-center justify-between rounded-xl p-3 text-left text-sm font-bold ${activeCollectionId === "all" ? "bg-rose-50 text-rose-700" : "hover:bg-slate-50"}`}><span>All saved properties</span><span>{favorites?.length ?? 0}</span></button><div className="mt-2 space-y-2">{collections.data?.map((collection) => <div key={collection.id} className={`group flex items-center gap-2 rounded-xl p-3 ${activeCollectionId === String(collection.id) ? "bg-rose-50" : "hover:bg-slate-50"}`}><button onClick={() => setActiveCollectionId(String(collection.id))} className="min-w-0 flex-1 text-left"><p className="truncate text-sm font-bold">{collection.name}</p><p className="mt-0.5 text-xs text-slate-500">{collection.propertyIds.length} saved {collection.propertyIds.length === 1 ? "property" : "properties"}</p></button><button aria-label={`Remove ${collection.name}`} onClick={() => removeCollection.mutate({ id: collection.id })} className="rounded-lg p-1 text-slate-300 opacity-100 hover:bg-rose-100 hover:text-rose-600 md:opacity-0 md:group-hover:opacity-100"><Trash2 className="h-4 w-4" /></button></div>)}</div>{!collections.data?.length && <p className="mt-5 rounded-xl bg-slate-50 p-4 text-sm leading-6 text-slate-500">Create a collection to group the properties you already saved. It never creates duplicate saved-property records.</p>}<div className="mt-6 border-t border-slate-100 pt-5"><p className="text-xs font-bold uppercase tracking-[0.13em] text-slate-500">Add to a collection</p><div className="mt-3 grid gap-2"><Select value={selectedFavoriteId} onValueChange={setSelectedFavoriteId}><SelectTrigger className="h-10 rounded-xl"><SelectValue placeholder="Choose a saved property" /></SelectTrigger><SelectContent>{(favorites ?? []).map((property) => <SelectItem key={property.id} value={String(property.id)}>{property.title}</SelectItem>)}</SelectContent></Select><Select value={selectedCollectionId} onValueChange={setSelectedCollectionId}><SelectTrigger className="h-10 rounded-xl"><SelectValue placeholder="Choose a collection" /></SelectTrigger><SelectContent>{(collections.data ?? []).map((collection) => <SelectItem key={collection.id} value={String(collection.id)}>{collection.name}</SelectItem>)}</SelectContent></Select><Button disabled={!selectedFavoriteId || !selectedCollection || addToCollection.isPending} onClick={() => addToCollection.mutate({ collectionId: Number(selectedCollectionId), propertyId: Number(selectedFavoriteId) })} className="h-10 rounded-xl bg-slate-900 font-bold hover:bg-slate-700">Add saved property</Button></div></div></aside>
+        <section><div className="flex flex-wrap items-end justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.13em] text-rose-600">Your saved properties</p><h2 className="mt-1 text-2xl font-extrabold tracking-[-0.03em]">{activeCollectionId === "all" ? "All favourites" : collections.data?.find((collection) => collection.id === Number(activeCollectionId))?.name}</h2></div><p className="text-sm text-slate-500">{displayedFavorites.length} saved</p></div>{isLoading ? <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-2">{Array.from({ length: 4 }).map((_, index) => <div key={index} className="h-72 animate-pulse rounded-2xl bg-white" />)}</div> : displayedFavorites.length ? <div className="mt-5 grid grid-cols-1 gap-5 md:grid-cols-2">{displayedFavorites.map((property) => <div key={property.id} className="relative">{activeCollectionId !== "all" && <button aria-label={`Remove ${property.title} from collection`} onClick={() => removeFromCollection.mutate({ collectionId: Number(activeCollectionId), propertyId: property.id })} className="absolute right-3 top-3 z-10 rounded-full bg-white/95 p-2 text-rose-600 shadow-sm hover:bg-rose-50"><Trash2 className="h-4 w-4" /></button>}<PropertyCard property={property} /></div>)}</div> : <div className="mt-5 grid min-h-80 place-items-center rounded-3xl border border-dashed border-slate-200 bg-white text-center"><div><HomeIcon className="mx-auto h-9 w-9 text-slate-300" /><h3 className="mt-4 text-lg font-extrabold">{favorites?.length ? "This collection is empty" : "No saved properties yet"}</h3><p className="mt-2 max-w-sm text-sm leading-6 text-slate-500">{favorites?.length ? "Use the collection controls to add one of your saved properties." : "Browse properties and save the ones you love; you can organise them here afterwards."}</p>{!favorites?.length && <Link href="/properties"><Button className="mt-5 rounded-xl bg-rose-500 font-bold hover:bg-rose-400">Browse properties</Button></Link>}</div></div>}</section></div>
       </section>
-
-      <section className="flex-1">
-        <div className="container py-6">
-          {isLoading ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from({ length: 6 }).map((_, i) => (
-                <div key={i} className="bg-white rounded-xl border border-border/50 animate-pulse">
-                  <div className="aspect-[4/3] bg-muted rounded-t-xl" />
-                  <div className="p-4 space-y-3">
-                    <div className="h-5 bg-muted rounded w-3/4" />
-                    <div className="h-4 bg-muted rounded w-1/2" />
-                    <div className="h-4 bg-muted rounded w-1/3" />
-                  </div>
-                </div>
-              ))}
-            </div>
-          ) : favorites && favorites.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {favorites.map((p) => (
-                <PropertyCard key={p.id} property={p} />
-              ))}
-            </div>
-          ) : (
-            <div className="text-center py-16">
-              <HomeIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
-              <h3 className="text-xl font-semibold mb-2">No Saved Properties</h3>
-              <p className="text-muted-foreground mb-6">Start browsing and save properties you love</p>
-              <Link href="/properties">
-                <Button>Browse Properties</Button>
-              </Link>
-            </div>
-          )}
-        </div>
-      </section>
-
-      <Footer />
-    </div>
-  );
+    </main><Footer /></div>;
 }

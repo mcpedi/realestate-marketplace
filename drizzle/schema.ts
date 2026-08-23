@@ -11,6 +11,7 @@ import {
   tinyint,
   index,
   decimal,
+  uniqueIndex,
 } from "drizzle-orm/mysql-core";
 
 export const users = mysqlTable("users", {
@@ -540,3 +541,41 @@ export const propertyTransactions = mysqlTable("propertyTransactions", {
 ]);
 export type PropertyTransaction = typeof propertyTransactions.$inferSelect;
 export type InsertPropertyTransaction = typeof propertyTransactions.$inferInsert;
+
+// ─── Engagement and identity: collections extend favourites; IDs identify listings ──
+export const wishlistCollections = mysqlTable("wishlistCollections", {
+  id: int("id").autoincrement().primaryKey(),
+  ownerUserId: int("ownerUserId").notNull(),
+  name: varchar("name", { length: 120 }).notNull(),
+  description: varchar("description", { length: 280 }),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("wishlist_collection_owner_updated_idx").on(table.ownerUserId, table.updatedAt),
+]);
+export type WishlistCollection = typeof wishlistCollections.$inferSelect;
+export type InsertWishlistCollection = typeof wishlistCollections.$inferInsert;
+
+export const wishlistCollectionItems = mysqlTable("wishlistCollectionItems", {
+  id: int("id").autoincrement().primaryKey(),
+  collectionId: int("collectionId").notNull(),
+  propertyId: int("propertyId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  uniqueIndex("wishlist_collection_property_unique").on(table.collectionId, table.propertyId),
+  index("wishlist_item_property_idx").on(table.propertyId),
+]);
+export type WishlistCollectionItem = typeof wishlistCollectionItems.$inferSelect;
+export type InsertWishlistCollectionItem = typeof wishlistCollectionItems.$inferInsert;
+
+export const propertyIdentifiers = mysqlTable("propertyIdentifiers", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull().unique(),
+  identifier: varchar("identifier", { length: 48 }).notNull().unique(),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("property_identifier_creator_idx").on(table.createdByUserId, table.createdAt),
+]);
+export type PropertyIdentifier = typeof propertyIdentifiers.$inferSelect;
+export type InsertPropertyIdentifier = typeof propertyIdentifiers.$inferInsert;
