@@ -62,6 +62,12 @@ import {
   type InsertWishlistCollection,
   type InsertWishlistCollectionItem,
   type InsertPropertyIdentifier,
+  referralProfiles,
+  referralClaims,
+  rewardLedger,
+  type InsertReferralProfile,
+  type InsertReferralClaim,
+  type InsertRewardLedgerEntry,
 } from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
@@ -1592,4 +1598,81 @@ export async function getPublicPropertyByIdentifier(identifier: string) {
   const property = await getPropertyById(record.propertyId);
   if (!property || property.status !== "approved") return undefined;
   return { identifier: record.identifier, property };
+}
+
+// ─── Referrals and rewards: explicit claims and an append-only point ledger ───
+
+export async function getReferralProfile(userId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(referralProfiles).where(eq(referralProfiles.userId, userId)).limit(1))[0];
+}
+
+export async function getReferralProfileByCode(referralCode: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(referralProfiles).where(eq(referralProfiles.referralCode, referralCode)).limit(1))[0];
+}
+
+export async function createReferralProfile(userId: number, referralCode: string) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(referralProfiles).values({ userId, referralCode, active: true } satisfies Omit<InsertReferralProfile, "id" | "createdAt" | "updatedAt">).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(referralProfiles).where(eq(referralProfiles.id, result.id)).limit(1))[0];
+}
+
+export async function getReferralClaimByReferredUserId(referredUserId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(referralClaims).where(eq(referralClaims.referredUserId, referredUserId)).limit(1))[0];
+}
+
+export async function getReferralClaimById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(referralClaims).where(eq(referralClaims.id, id)).limit(1))[0];
+}
+
+export async function getReferralClaims(status?: "pending" | "qualified" | "rewarded" | "rejected") {
+  const db = await getDb();
+  if (!db) return [];
+  return db.select().from(referralClaims).where(status ? eq(referralClaims.status, status) : undefined).orderBy(desc(referralClaims.createdAt));
+}
+
+export async function createReferralClaim(data: Omit<InsertReferralClaim, "id" | "createdAt" | "updatedAt" | "reviewedAt" | "reviewedByUserId">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(referralClaims).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(referralClaims).where(eq(referralClaims.id, result.id)).limit(1))[0];
+}
+
+export async function reviewReferralClaim(id: number, status: "qualified" | "rewarded" | "rejected", reviewedByUserId: number) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(referralClaims).set({ status, reviewedByUserId, reviewedAt: new Date() }).where(eq(referralClaims.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function createRewardLedgerEntry(data: Omit<InsertRewardLedgerEntry, "id" | "createdAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(rewardLedger).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(rewardLedger).where(eq(rewardLedger.id, result.id)).limit(1))[0];
+}
+
+export async function getReferralRewardsDashboard(userId: number) {
+  const db = await getDb();
+  if (!db) return { profile: undefined, claims: [], claimedReferral: undefined, ledger: [], balance: 0, earned: 0, spent: 0 };
+  const profile = await getReferralProfile(userId);
+  const [claims, claimedReferral, ledger] = await Promise.all([
+    db.select().from(referralClaims).where(eq(referralClaims.referrerUserId, userId)).orderBy(desc(referralClaims.createdAt)),
+    getReferralClaimByReferredUserId(userId),
+    db.select().from(rewardLedger).where(eq(rewardLedger.userId, userId)).orderBy(desc(rewardLedger.createdAt)),
+  ]);
+  const earned = ledger.filter((entry) => entry.status === "earned").reduce((total, entry) => total + entry.points, 0);
+  const spent = ledger.filter((entry) => entry.status === "spent").reduce((total, entry) => total + Math.abs(entry.points), 0);
+  return { profile, claims, claimedReferral, ledger, balance: earned - spent, earned, spent };
 }

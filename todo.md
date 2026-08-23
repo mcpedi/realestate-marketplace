@@ -241,4 +241,11 @@
 - [x] Strengthen local listing drafts with offline-aware metadata, safe restoration, and visible connectivity/save status without overwriting server listings
 - [x] Add a safe service-worker registration and offline application-shell fallback while preserving the existing manifest and normal online behavior
 - [x] Add focused tests and verify responsive behavior and production shell build (122 tests passing; production build plus desktop shared navigation and seller workspace views verified)
-- [ ] Checkpoint and publish Advanced release 5 — Platform Foundations
+- [x] Checkpoint and publish Advanced release 5 — Platform Foundations
+
+## Advanced release 6 — Referrals and Rewards
+- [x] Add private referral-code profiles, explicit one-time referral claims, and status history without inferring attribution from contact data
+- [x] Add append-only rewards ledger records, calculated balances, and admin-only point adjustments without fabricating earned points or replacing payments
+- [x] Build a responsive account dashboard for sharing referral codes, viewing status history, and reviewing reward-ledger activity
+- [x] Add authorization and validation tests, generate and apply migrations, and verify responsive behavior (126 tests passing; production build plus desktop and mobile rewards workspace views verified)
+- [ ] Checkpoint and publish Advanced release 6 — Referrals and Rewards

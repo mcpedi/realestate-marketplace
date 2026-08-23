@@ -579,3 +579,49 @@ export const propertyIdentifiers = mysqlTable("propertyIdentifiers", {
 ]);
 export type PropertyIdentifier = typeof propertyIdentifiers.$inferSelect;
 export type InsertPropertyIdentifier = typeof propertyIdentifiers.$inferInsert;
+
+// ─── Referrals and rewards: explicit attribution, no inferred or fabricated credit ──
+export const referralProfiles = mysqlTable("referralProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  referralCode: varchar("referralCode", { length: 32 }).notNull().unique(),
+  active: boolean("active").default(true).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+export type ReferralProfile = typeof referralProfiles.$inferSelect;
+export type InsertReferralProfile = typeof referralProfiles.$inferInsert;
+
+export const referralClaims = mysqlTable("referralClaims", {
+  id: int("id").autoincrement().primaryKey(),
+  referralProfileId: int("referralProfileId").notNull(),
+  referrerUserId: int("referrerUserId").notNull(),
+  referredUserId: int("referredUserId").notNull().unique(),
+  status: mysqlEnum("status", ["pending", "qualified", "rewarded", "rejected"]).default("pending").notNull(),
+  reviewedByUserId: int("reviewedByUserId"),
+  reviewedAt: timestamp("reviewedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("referral_claim_referrer_status_idx").on(table.referrerUserId, table.status),
+  index("referral_claim_profile_created_idx").on(table.referralProfileId, table.createdAt),
+]);
+export type ReferralClaim = typeof referralClaims.$inferSelect;
+export type InsertReferralClaim = typeof referralClaims.$inferInsert;
+
+export const rewardLedger = mysqlTable("rewardLedger", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  referralClaimId: int("referralClaimId"),
+  points: int("points").notNull(),
+  type: mysqlEnum("type", ["referral", "admin_adjustment", "redemption", "reversal"]).notNull(),
+  status: mysqlEnum("status", ["pending", "earned", "spent", "reversed"]).default("pending").notNull(),
+  note: varchar("note", { length: 280 }),
+  createdByUserId: int("createdByUserId"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+}, (table) => [
+  index("reward_ledger_user_status_created_idx").on(table.userId, table.status, table.createdAt),
+  index("reward_ledger_referral_idx").on(table.referralClaimId),
+]);
+export type RewardLedgerEntry = typeof rewardLedger.$inferSelect;
+export type InsertRewardLedgerEntry = typeof rewardLedger.$inferInsert;

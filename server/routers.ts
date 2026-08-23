@@ -17,6 +17,7 @@ import * as db from "./db";
 import { users as usersTable } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { calculatePlanningAnalysis, planningAnalysisKinds } from "../shared/planning";
+import { randomUUID } from "node:crypto";
 
 // ─── Modern Features (AI assistant, recommendations, alerts, bookings, scores) ──
 
@@ -1062,6 +1063,56 @@ export const appRouter = router({
       if (!found) throw new TRPCError({ code: "NOT_FOUND" });
       const { userId: _userId, ...publicProperty } = found.property;
       return { identifier: found.identifier, property: publicProperty };
+    }),
+  }),
+
+  // ─── Referrals and rewards: explicit claims; earned points require an audit trail ──
+  referralRewards: router({
+    dashboard: protectedProcedure.query(async ({ ctx }) => {
+      let profile = await db.getReferralProfile(ctx.user.id);
+      if (!profile) {
+        for (let attempt = 0; attempt < 3 && !profile; attempt += 1) {
+          const code = `N360-${randomUUID().replace(/-/g, "").slice(0, 8).toUpperCase()}`;
+          try { profile = await db.createReferralProfile(ctx.user.id, code); } catch { /* retry a statistically unique code */ }
+        }
+        if (!profile) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Could not create a referral code." });
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "referral_profile.create", resourceType: "referralProfile", resourceId: profile.id, propertyId: null, metadata: {} });
+      }
+      return db.getReferralRewardsDashboard(ctx.user.id);
+    }),
+    claim: protectedProcedure.input(z.object({ referralCode: z.string().trim().toUpperCase().regex(/^N360-[A-Z0-9]{8}$/) })).mutation(async ({ ctx, input }) => {
+      const existing = await db.getReferralClaimByReferredUserId(ctx.user.id);
+      if (existing) throw new TRPCError({ code: "CONFLICT", message: "A referral code has already been claimed for this account." });
+      const profile = await db.getReferralProfileByCode(input.referralCode);
+      if (!profile || !profile.active || profile.userId === ctx.user.id) throw new TRPCError({ code: "BAD_REQUEST", message: "This referral code cannot be applied." });
+      const claim = await db.createReferralClaim({ referralProfileId: profile.id, referrerUserId: profile.userId, referredUserId: ctx.user.id, status: "pending" });
+      if (!claim) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "referral_claim.create", resourceType: "referralClaim", resourceId: claim.id, propertyId: null, metadata: { referrerUserId: profile.userId } });
+      return claim;
+    }),
+  }),
+
+  adminRewards: router({
+    claims: adminProcedure.input(z.object({ status: z.enum(["pending", "qualified", "rewarded", "rejected"]).optional() }).optional()).query(async ({ input }) => db.getReferralClaims(input?.status)),
+    reviewClaim: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["qualified", "rewarded", "rejected"]) })).mutation(async ({ ctx, input }) => {
+      const claim = await db.getReferralClaimById(input.id);
+      if (!claim) throw new TRPCError({ code: "NOT_FOUND" });
+      const updated = await db.reviewReferralClaim(claim.id, input.status, ctx.user.id);
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "referral_claim.review", resourceType: "referralClaim", resourceId: claim.id, propertyId: null, metadata: { status: input.status } });
+      return { success: true };
+    }),
+    addPoints: adminProcedure.input(z.object({ userId: z.number().int().positive(), points: z.number().int().min(-100000).max(100000).refine((value) => value !== 0), status: z.enum(["pending", "earned"]), note: z.string().trim().min(3).max(280), referralClaimId: z.number().int().positive().optional() })).mutation(async ({ ctx, input }) => {
+      const targetUser = await db.getUserById(input.userId);
+      if (!targetUser) throw new TRPCError({ code: "NOT_FOUND", message: "Reward recipient not found." });
+      if (input.referralClaimId) {
+        const claim = await db.getReferralClaimById(input.referralClaimId);
+        if (!claim || claim.referrerUserId !== input.userId) throw new TRPCError({ code: "BAD_REQUEST", message: "Referral reward recipient must match the referral claim." });
+      }
+      const entry = await db.createRewardLedgerEntry({ userId: input.userId, referralClaimId: input.referralClaimId ?? null, points: input.points, type: input.referralClaimId ? "referral" : "admin_adjustment", status: input.status, note: input.note, createdByUserId: ctx.user.id });
+      if (!entry) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "reward_ledger.create", resourceType: "rewardLedger", resourceId: entry.id, propertyId: null, metadata: { userId: input.userId, points: input.points, status: input.status } });
+      return entry;
     }),
   }),
 

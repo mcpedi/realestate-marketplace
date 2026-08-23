@@ -21,6 +21,7 @@ import {
   Crown,
   FileText,
   Fingerprint,
+  Gift,
   FolderLock,
   GitCompareArrows,
   Heart,
@@ -208,6 +209,7 @@ export function Navbar() {
                     <DropdownMenuItem asChild><Link href="/operations"><FolderLock className="mr-2 h-4 w-4 text-emerald-600" /> Property Operations</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/agent-operations"><Target className="mr-2 h-4 w-4 text-emerald-600" /> Agent Operations</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/property-identity"><Fingerprint className="mr-2 h-4 w-4 text-amber-600" /> Property IDs</Link></DropdownMenuItem>
+                    <DropdownMenuItem asChild><Link href="/rewards"><Gift className="mr-2 h-4 w-4 text-amber-600" /> Referrals & Rewards</Link></DropdownMenuItem>
                     <DropdownMenuItem asChild><Link href="/favorites"><Heart className="mr-2 h-4 w-4" /> Saved Properties</Link></DropdownMenuItem>
                     {user?.role === "admin" && <DropdownMenuItem asChild><Link href="/admin"><Shield className="mr-2 h-4 w-4" /> Admin Dashboard</Link></DropdownMenuItem>}
                     <DropdownMenuSeparator />

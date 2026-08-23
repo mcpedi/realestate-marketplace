@@ -32,6 +32,7 @@ import PlanningStudio from "./pages/PlanningStudio";
 import PropertyOperations from "./pages/PropertyOperations";
 import AgentOperations from "./pages/AgentOperations";
 import PropertyIdentity from "./pages/PropertyIdentity";
+import Rewards from "./pages/Rewards";
 
 function Router() {
   return (
@@ -63,6 +64,7 @@ function Router() {
       <Route path="/operations" component={PropertyOperations} />
       <Route path="/agent-operations" component={AgentOperations} />
       <Route path="/property-identity" component={PropertyIdentity} />
+      <Route path="/rewards" component={Rewards} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>
