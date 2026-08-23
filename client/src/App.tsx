@@ -33,6 +33,8 @@ import PropertyOperations from "./pages/PropertyOperations";
 import AgentOperations from "./pages/AgentOperations";
 import PropertyIdentity from "./pages/PropertyIdentity";
 import Rewards from "./pages/Rewards";
+import PropertyShareHub from "./pages/PropertyShareHub";
+import PublicPropertyShare from "./pages/PublicPropertyShare";
 
 function Router() {
   return (
@@ -65,6 +67,8 @@ function Router() {
       <Route path="/agent-operations" component={AgentOperations} />
       <Route path="/property-identity" component={PropertyIdentity} />
       <Route path="/rewards" component={Rewards} />
+      <Route path="/property-sharing" component={PropertyShareHub} />
+      <Route path="/share/:identifier" component={PublicPropertyShare} />
       <Route path="/404" component={NotFound} />
       <Route component={NotFound} />
     </Switch>

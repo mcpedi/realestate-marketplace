@@ -1092,6 +1092,52 @@ export const appRouter = router({
     }),
   }),
 
+  // ─── Property sharing: public QR resolution is gated by an enabled record + approval ──
+  propertySharing: router({
+    owned: protectedProcedure.query(async ({ ctx }) => {
+      const properties = await db.getUserProperties(ctx.user.id);
+      const [identifiers, shares] = await Promise.all([
+        db.getPropertyIdentifiersByPropertyIds(properties.map((property) => property.id)),
+        db.getPropertyShareRecordsByPropertyIds(properties.map((property) => property.id)),
+      ]);
+      const identifiersByPropertyId = new Map(identifiers.map((identifier) => [identifier.propertyId, identifier]));
+      const sharesByPropertyId = new Map(shares.map((share) => [share.propertyId, share]));
+      return properties.map((property) => ({ property, identifier: identifiersByPropertyId.get(property.id) ?? null, share: sharesByPropertyId.get(property.id) ?? null }));
+    }),
+    ensure: protectedProcedure.input(z.object({ propertyId: z.number().int().positive() })).mutation(async ({ ctx, input }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || (property.userId !== ctx.user.id && ctx.user.role !== "admin")) throw new TRPCError({ code: "FORBIDDEN" });
+      if (property.status !== "approved") throw new TRPCError({ code: "BAD_REQUEST", message: "Only approved listings can have public QR sharing." });
+      let identifier = await db.getPropertyIdentifierByPropertyId(property.id);
+      if (!identifier) {
+        const locationToken = property.location?.match(/[A-Za-z]+/)?.[0]?.slice(0, 3).toUpperCase() || "KEN";
+        identifier = await db.createPropertyIdentifier({ propertyId: property.id, identifier: `N360-${locationToken}-${String(property.id).padStart(6, "0")}`, createdByUserId: ctx.user.id });
+      }
+      if (!identifier) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      const existing = await db.getPropertyShareRecordByPropertyId(property.id);
+      if (existing) return { share: existing, identifier: identifier.identifier };
+      const share = await db.createPropertyShareRecord({ propertyId: property.id, propertyIdentifierId: identifier.id, enabled: true, createdByUserId: ctx.user.id });
+      if (!share) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "property_share.create", resourceType: "propertyShareRecord", resourceId: share.id, propertyId: property.id, metadata: { identifier: identifier.identifier } });
+      return { share, identifier: identifier.identifier };
+    }),
+    setEnabled: protectedProcedure.input(z.object({ propertyId: z.number().int().positive(), enabled: z.boolean() })).mutation(async ({ ctx, input }) => {
+      const property = await db.getPropertyById(input.propertyId);
+      if (!property || (property.userId !== ctx.user.id && ctx.user.role !== "admin")) throw new TRPCError({ code: "FORBIDDEN" });
+      const share = await db.getPropertyShareRecordByPropertyId(property.id);
+      if (!share) throw new TRPCError({ code: "NOT_FOUND" });
+      const updated = await db.setPropertyShareEnabled(share.id, input.enabled);
+      if (!updated) throw new TRPCError({ code: "NOT_FOUND" });
+      await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "property_share.set_enabled", resourceType: "propertyShareRecord", resourceId: share.id, propertyId: property.id, metadata: { enabled: input.enabled } });
+      return { success: true };
+    }),
+    publicLookup: publicProcedure.input(z.object({ identifier: z.string().trim().regex(/^N360-[A-Z]{3}-\d{6}$/) })).query(async ({ input }) => {
+      const share = await db.getPublicPropertyShare(input.identifier);
+      if (!share) throw new TRPCError({ code: "NOT_FOUND" });
+      return share;
+    }),
+  }),
+
   adminRewards: router({
     claims: adminProcedure.input(z.object({ status: z.enum(["pending", "qualified", "rewarded", "rejected"]).optional() }).optional()).query(async ({ input }) => db.getReferralClaims(input?.status)),
     reviewClaim: adminProcedure.input(z.object({ id: z.number().int().positive(), status: z.enum(["qualified", "rewarded", "rejected"]) })).mutation(async ({ ctx, input }) => {

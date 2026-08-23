@@ -62,6 +62,8 @@ import {
   type InsertWishlistCollection,
   type InsertWishlistCollectionItem,
   type InsertPropertyIdentifier,
+  propertyShareRecords,
+  type InsertPropertyShareRecord,
   referralProfiles,
   referralClaims,
   rewardLedger,
@@ -1598,6 +1600,47 @@ export async function getPublicPropertyByIdentifier(identifier: string) {
   const property = await getPropertyById(record.propertyId);
   if (!property || property.status !== "approved") return undefined;
   return { identifier: record.identifier, property };
+}
+
+export async function getPropertyShareRecordByPropertyId(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  return (await db.select().from(propertyShareRecords).where(eq(propertyShareRecords.propertyId, propertyId)).limit(1))[0];
+}
+
+export async function getPropertyShareRecordsByPropertyIds(propertyIds: number[]) {
+  const db = await getDb();
+  if (!db || !propertyIds.length) return [];
+  return db.select().from(propertyShareRecords).where(inArray(propertyShareRecords.propertyId, propertyIds));
+}
+
+export async function createPropertyShareRecord(data: Omit<InsertPropertyShareRecord, "id" | "createdAt" | "updatedAt">) {
+  const db = await getDb();
+  if (!db) throw new Error("Database unavailable");
+  const [result] = await db.insert(propertyShareRecords).values(data).$returningId();
+  if (!result) return undefined;
+  return (await db.select().from(propertyShareRecords).where(eq(propertyShareRecords.id, result.id)).limit(1))[0];
+}
+
+export async function setPropertyShareEnabled(id: number, enabled: boolean) {
+  const db = await getDb();
+  if (!db) return false;
+  const result = await db.update(propertyShareRecords).set({ enabled }).where(eq(propertyShareRecords.id, id));
+  return result[0].affectedRows > 0;
+}
+
+export async function getPublicPropertyShare(identifier: string) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const propertyIdentifier = (await db.select().from(propertyIdentifiers).where(eq(propertyIdentifiers.identifier, identifier)).limit(1))[0];
+  if (!propertyIdentifier) return undefined;
+  const share = (await db.select().from(propertyShareRecords).where(and(eq(propertyShareRecords.propertyId, propertyIdentifier.propertyId), eq(propertyShareRecords.propertyIdentifierId, propertyIdentifier.id), eq(propertyShareRecords.enabled, true))).limit(1))[0];
+  if (!share) return undefined;
+  const property = await getPropertyById(propertyIdentifier.propertyId);
+  if (!property || property.status !== "approved") return undefined;
+  const photos = await getPropertyPhotos(property.id);
+  const { userId: _userId, latitude: _latitude, longitude: _longitude, ...publicProperty } = property;
+  return { identifier: propertyIdentifier.identifier, shareId: share.id, property: publicProperty, photos: photos.slice(0, 1).map((photo) => ({ url: photo.url })) };
 }
 
 // ─── Referrals and rewards: explicit claims and an append-only point ledger ───

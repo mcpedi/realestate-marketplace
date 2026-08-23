@@ -248,4 +248,11 @@
 - [x] Add append-only rewards ledger records, calculated balances, and admin-only point adjustments without fabricating earned points or replacing payments
 - [x] Build a responsive account dashboard for sharing referral codes, viewing status history, and reviewing reward-ledger activity
 - [x] Add authorization and validation tests, generate and apply migrations, and verify responsive behavior (126 tests passing; production build plus desktop and mobile rewards workspace views verified)
-- [ ] Checkpoint and publish Advanced release 6 — Referrals and Rewards
+- [x] Checkpoint and publish Advanced release 6 — Referrals and Rewards
+
+## Advanced release 7 — QR and Public Property Sharing
+- [x] Add public-share records derived only from permanent property identifiers and approved listing data
+- [x] Add protected owner/admin sharing controls and public QR-resolution endpoints that never reveal drafts, documents, or owner-private data
+- [x] Build responsive QR preview, print-ready, and social-sharing surfaces for approved property listings
+- [x] Add authorization/privacy tests, generate and apply migrations, and verify responsive behavior (130 tests passing; production build plus desktop and mobile owner and public-sharing views verified)
+- [ ] Checkpoint and publish Advanced release 7 — QR and Public Property Sharing

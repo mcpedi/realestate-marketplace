@@ -580,6 +580,22 @@ export const propertyIdentifiers = mysqlTable("propertyIdentifiers", {
 export type PropertyIdentifier = typeof propertyIdentifiers.$inferSelect;
 export type InsertPropertyIdentifier = typeof propertyIdentifiers.$inferInsert;
 
+// ─── Public sharing: QR and social surfaces derive only from approved listings ──
+export const propertyShareRecords = mysqlTable("propertyShareRecords", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull().unique(),
+  propertyIdentifierId: int("propertyIdentifierId").notNull().unique(),
+  enabled: boolean("enabled").default(true).notNull(),
+  createdByUserId: int("createdByUserId").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("property_share_enabled_idx").on(table.enabled, table.updatedAt),
+  index("property_share_creator_idx").on(table.createdByUserId, table.createdAt),
+]);
+export type PropertyShareRecord = typeof propertyShareRecords.$inferSelect;
+export type InsertPropertyShareRecord = typeof propertyShareRecords.$inferInsert;
+
 // ─── Referrals and rewards: explicit attribution, no inferred or fabricated credit ──
 export const referralProfiles = mysqlTable("referralProfiles", {
   id: int("id").autoincrement().primaryKey(),
