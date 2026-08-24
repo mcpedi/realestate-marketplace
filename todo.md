@@ -194,6 +194,11 @@
 - [ ] Update premium checkout status feedback and payment history for live transactions
 - [ ] Test with authorized provider credentials, verify the webhook, checkpoint, and publish
 
+## Publishing reliability
+- [ ] Reproduce the reported publishing failure with the current version and capture the build or deployment error output
+- [ ] Apply the smallest safe fix if a concrete publishing blocker is identified, then rerun verification
+- [ ] Republish the latest Nyumba 360 version and confirm the live domain serves that published version
+
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries
