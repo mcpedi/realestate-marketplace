@@ -199,6 +199,13 @@
 - [ ] Apply the smallest safe fix if a concrete publishing blocker is identified, then rerun verification
 - [ ] Republish the latest Nyumba 360 version and confirm the live domain serves that published version
 
+## Administrator dashboard redesign
+- [x] Add an administrator-only live dashboard overview for factual metrics, daily property/user trends, recent listings, and safe recent activity
+- [x] Rebuild the `/admin` landing experience with the approved mobile-first operational hierarchy, Nyumba 360 visual language, responsive navigation, and no fabricated data
+- [x] Preserve and reorganize functional moderation, users, premium, content, and module-control workflows without weakening authorization
+- [x] Add focused authorization/overview tests and complete responsive verification (140 tests passing; production build plus desktop and mobile dashboard views verified)
+- [ ] Checkpoint and publish the administrator dashboard redesign
+
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries

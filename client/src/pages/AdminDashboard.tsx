@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { Link } from "wouter";
+import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Shield,
   CheckCircle,
@@ -58,6 +59,16 @@ import {
   Banknote,
   Sparkles,
   BadgeCheck,
+  Activity,
+  ArrowUpRight,
+  Bell,
+  CalendarDays,
+  ClipboardCheck,
+  LayoutDashboard,
+  MoreHorizontal,
+  PanelLeft,
+  ReceiptText,
+  TrendingUp,
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -113,6 +124,9 @@ export default function AdminDashboard() {
 }
 
 function AdminContent() {
+  const { user } = useAuth();
+  const [activeTab, setActiveTab] = useState("overview");
+  const [overviewRange, setOverviewRange] = useState<7 | 30>(7);
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -121,6 +135,7 @@ function AdminContent() {
   const [categoryData, setCategoryData] = useState({ name: "", slug: "", description: "" });
   const [editPlan, setEditPlan] = useState<any>(null);
 
+  const overview = trpc.admin.dashboardOverview.useQuery({ range: overviewRange });
   const { data: stats } = trpc.admin.stats.useQuery();
   const { data: pendingProps, refetch: refetchPending } = trpc.admin.pendingProperties.useQuery();
   const { data: allProps } = trpc.admin.allProperties.useQuery({ page: 1, limit: 20 });
@@ -195,32 +210,24 @@ function AdminContent() {
 
   return (
     <div className="min-h-screen flex flex-col">
-      <Navbar />
+      <header className="sticky top-0 z-40 border-b border-slate-200 bg-white/95 backdrop-blur">
+        <div className="container flex h-16 items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><button type="button" className="grid h-10 w-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100 md:hidden" aria-label="Administrator navigation"><PanelLeft className="h-5 w-5" /></button><Link href="/admin" className="flex min-w-0 items-center gap-2"><div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-600 text-white shadow-sm"><Shield className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[-0.03em] text-slate-950">Nyumba 360</p><p className="hidden text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700 sm:block">Admin console</p></div></Link></div><div className="flex items-center gap-2"><Button variant="ghost" size="icon" className="rounded-xl text-slate-600" aria-label="Platform alerts"><Bell className="h-5 w-5" /></Button><Link href="/admin/modules" className="hidden rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 sm:block">Module controls</Link><div className="grid h-9 w-9 place-items-center rounded-full bg-slate-950 text-xs font-extrabold text-white" title={user?.name ?? "Administrator"}>{user?.name?.slice(0, 1).toUpperCase() ?? "A"}</div></div></div>
+      </header>
 
-      <section className="bg-secondary/30 border-b border-border/50">
-        <div className="container py-6">
-          <h1 className="text-2xl md:text-3xl font-bold text-foreground flex items-center gap-3" style={{ fontFamily: "'Playfair Display', serif" }}>
-            <Shield className="w-7 h-7 text-[oklch(0.45_0.18_260)]" />
-            Admin Dashboard
-          </h1>
-          <p className="text-muted-foreground text-sm mt-1">Manage content, listings, and users</p>
-        </div>
-      </section>
-
-      <section className="flex-1">
-        <div className="container py-6">
-          {/* Stats */}
-          <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4 mb-8">
-            <StatCard icon={Building} label="Total Properties" value={stats?.totalProperties || 0} color="text-blue-600" />
-            <StatCard icon={Clock} label="Pending Review" value={stats?.pendingProperties || 0} color="text-yellow-600" />
-            <StatCard icon={CheckCircle} label="Approved" value={stats?.approvedProperties || 0} color="text-green-600" />
-            <StatCard icon={Users} label="Total Users" value={stats?.totalUsers || 0} color="text-purple-600" />
-            <StatCard icon={MessageSquare} label="Inquiries" value={stats?.totalInquiries || 0} color="text-orange-600" />
-            <StatCard icon={Star} label="Testimonials" value={stats?.totalTestimonials || 0} color="text-pink-600" />
+      <main className="flex-1 bg-slate-50 pb-24 md:pb-10">
+        <section className="border-b border-slate-200 bg-[radial-gradient(circle_at_78%_0,_#d9f99d_0,_transparent_30%),linear-gradient(120deg,_#062b2c,_#075b42_52%,_#0f766e)] text-white">
+          <div className="container py-7 md:py-10">
+            <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
+              <div><div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em] text-emerald-100"><Shield className="h-3.5 w-3.5" /> Nyumba 360 control centre</div><h1 className="mt-4 text-3xl font-extrabold tracking-[-0.045em] md:text-5xl">Welcome back, Admin.</h1><p className="mt-2 max-w-xl text-sm leading-6 text-white/80 md:text-base">Here is a live view of listings, users, moderation, subscriptions, and platform activity.</p></div>
+              <Select value={String(overviewRange)} onValueChange={(value) => setOverviewRange(Number(value) as 7 | 30)}><SelectTrigger className="h-11 w-40 rounded-xl border-white/20 bg-white/10 font-bold text-white hover:bg-white/15"><CalendarDays className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="7">Last 7 days</SelectItem><SelectItem value="30">Last 30 days</SelectItem></SelectContent></Select>
+            </div>
           </div>
+        </section>
 
-          <Tabs defaultValue="pending" className="space-y-6">
-            <TabsList className="flex-wrap h-auto gap-1">
+        <div className="container py-6 md:py-8">
+          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+            <TabsList className="hidden h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm md:flex">
+              <TabsTrigger value="overview" className="gap-1.5 rounded-xl px-4"><LayoutDashboard className="h-4 w-4" /> Overview</TabsTrigger>
               <TabsTrigger value="pending" className="gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> Pending ({pendingProps?.length || 0})
               </TabsTrigger>
@@ -233,6 +240,24 @@ function AdminContent() {
               <TabsTrigger value="blog">Blog</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
             </TabsList>
+
+            <TabsContent value="overview" className="space-y-6 focus-visible:outline-none">
+              <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6">
+                <OverviewMetric icon={Building} label="Total properties" value={overview.data?.stats.totalProperties ?? stats?.totalProperties ?? 0} tone="emerald" change={overview.data?.changes.properties} />
+                <OverviewMetric icon={CheckCircle} label="Active listings" value={overview.data?.stats.approvedProperties ?? stats?.approvedProperties ?? 0} tone="blue" />
+                <OverviewMetric icon={Users} label="Total users" value={overview.data?.stats.totalUsers ?? stats?.totalUsers ?? 0} tone="violet" change={overview.data?.changes.users} />
+                <OverviewMetric icon={ClipboardCheck} label="Pending review" value={overview.data?.stats.pendingProperties ?? stats?.pendingProperties ?? 0} tone="amber" />
+                <OverviewMetric icon={Crown} label="Active premium" value={overview.data?.stats.activeSubscriptions ?? 0} tone="rose" />
+                <OverviewMetric icon={Banknote} label="Subscription revenue" value={`KSh ${Math.round(overview.data?.stats.recordedSubscriptionRevenue ?? 0).toLocaleString()}`} tone="gold" caption="Recorded completed payments" />
+              </div>
+
+              <div className="grid gap-6 xl:grid-cols-[minmax(0,1.5fr)_minmax(20rem,0.85fr)]">
+                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"><div className="flex flex-wrap items-start justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Platform overview</p><h2 className="mt-1 text-xl font-extrabold tracking-[-0.03em]">New properties and users</h2><p className="mt-1 text-sm text-slate-500">Actual registrations and listing submissions in the selected period.</p></div><span className="rounded-xl bg-emerald-50 px-3 py-2 text-xs font-bold text-emerald-700">{overviewRange} days</span></div><div className="mt-5 h-72">{overview.isLoading ? <OverviewLoading /> : overview.data?.series.some((point) => point.properties || point.users) ? <ResponsiveContainer width="100%" height="100%"><LineChart data={overview.data.series} margin={{ top: 10, right: 6, left: -16, bottom: 0 }}><CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#e2e8f0" /><XAxis dataKey="date" tickFormatter={(date) => new Date(`${date}T00:00:00Z`).toLocaleDateString(undefined, { month: "short", day: "numeric" })} tickLine={false} axisLine={false} fontSize={11} /><YAxis allowDecimals={false} tickLine={false} axisLine={false} fontSize={11} /><Tooltip labelFormatter={(date) => new Date(`${date}T00:00:00Z`).toLocaleDateString()} contentStyle={{ borderRadius: 16, borderColor: "#e2e8f0" }} /><Line type="monotone" dataKey="properties" name="Properties" stroke="#059669" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} /><Line type="monotone" dataKey="users" name="Users" stroke="#2563eb" strokeWidth={3} dot={{ r: 3 }} activeDot={{ r: 5 }} /></LineChart></ResponsiveContainer> : <OverviewEmpty icon={Activity} title="No activity in this period" description="New property submissions and user registrations will appear here when they occur." />}</div></section>
+                <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"><div className="flex items-center justify-between"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Recent activity</p><h2 className="mt-1 text-xl font-extrabold tracking-[-0.03em]">Operational timeline</h2></div><Activity className="h-5 w-5 text-emerald-600" /></div><div className="mt-5 space-y-4">{overview.isLoading ? <OverviewLoading /> : overview.data?.recentActivity.length ? overview.data.recentActivity.map((activity) => <div key={activity.id} className="flex gap-3"><div className="mt-0.5 grid h-9 w-9 shrink-0 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Activity className="h-4 w-4" /></div><div className="min-w-0"><p className="text-sm font-bold text-slate-800">{formatAdminActivity(activity.action, activity.resourceType)}</p><p className="mt-0.5 text-xs text-slate-500">{new Date(activity.createdAt).toLocaleString()}</p></div></div>) : <OverviewEmpty icon={Activity} title="No recent admin events" description="Reviewed and audited platform activity will appear here." />}</div></section>
+              </div>
+
+              <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm md:p-6"><div className="flex items-center justify-between gap-4"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Latest inventory</p><h2 className="mt-1 text-xl font-extrabold tracking-[-0.03em]">Recent properties</h2></div><Button variant="ghost" className="rounded-xl font-bold text-emerald-700" onClick={() => setActiveTab("properties")}>View all <ArrowUpRight className="ml-1.5 h-4 w-4" /></Button></div><div className="mt-5 grid gap-3">{overview.isLoading ? <OverviewLoading /> : overview.data?.recentProperties.length ? overview.data.recentProperties.map((property) => <Link key={property.id} href={`/property/${property.id}`} className="group flex items-center gap-3 rounded-2xl border border-slate-100 p-3 transition hover:border-emerald-200 hover:bg-emerald-50/40"><div className="h-16 w-20 shrink-0 overflow-hidden rounded-xl bg-slate-100">{property.imageUrl ? <img src={property.imageUrl} alt="" className="h-full w-full object-cover" /> : <Building className="m-5 h-6 w-6 text-slate-300" />}</div><div className="min-w-0 flex-1"><p className="truncate font-bold text-slate-900">{property.title}</p><p className="mt-1 truncate text-xs text-slate-500">{property.location}</p><p className="mt-1 text-sm font-extrabold text-emerald-700">KSh {property.price.toLocaleString()}</p></div><Badge variant={property.status === "approved" ? "default" : property.status === "pending" ? "outline" : "destructive"} className="shrink-0 capitalize">{property.status}</Badge></Link>) : <OverviewEmpty icon={Building} title="No properties yet" description="New listings will appear here after they are submitted." />}</div></section>
+            </TabsContent>
 
             {/* Pending Approvals */}
             <TabsContent value="pending">
@@ -642,11 +667,39 @@ function AdminContent() {
             </TabsContent>
           </Tabs>
         </div>
-      </section>
+      </main>
 
-      <Footer />
+      <nav aria-label="Administrator dashboard sections" className="fixed inset-x-0 bottom-0 z-40 border-t border-slate-200 bg-white/95 px-2 pb-[max(0.5rem,env(safe-area-inset-bottom))] pt-2 shadow-[0_-10px_30px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+        <div className="grid grid-cols-5 gap-1">{[
+          { value: "overview", label: "Dashboard", icon: LayoutDashboard },
+          { value: "properties", label: "Listings", icon: Building },
+          { value: "pending", label: "Reviews", icon: ClipboardCheck },
+          { value: "users", label: "Users", icon: Users },
+          { value: "premium", label: "More", icon: MoreHorizontal },
+        ].map((item) => { const Icon = item.icon; const active = activeTab === item.value; return <button key={item.value} onClick={() => setActiveTab(item.value)} className={`flex min-h-14 flex-col items-center justify-center gap-1 rounded-xl text-[10px] font-bold transition ${active ? "bg-emerald-50 text-emerald-700" : "text-slate-500"}`}><Icon className="h-5 w-5" /><span>{item.label}</span></button>; })}</div>
+      </nav>
+
     </div>
   );
+}
+
+function OverviewMetric({ icon: Icon, label, value, tone, change, caption }: { icon: any; label: string; value: number | string; tone: "emerald" | "blue" | "violet" | "amber" | "rose" | "gold"; change?: number | null; caption?: string }) {
+  const tones = { emerald: "bg-emerald-50 text-emerald-700", blue: "bg-blue-50 text-blue-700", violet: "bg-violet-50 text-violet-700", amber: "bg-amber-50 text-amber-700", rose: "bg-rose-50 text-rose-700", gold: "bg-yellow-50 text-yellow-700" };
+  return <article className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"><div className="flex items-start justify-between gap-2"><div className={`grid h-10 w-10 place-items-center rounded-xl ${tones[tone]}`}><Icon className="h-5 w-5" /></div>{typeof change === "number" ? <span className={`inline-flex items-center gap-1 text-xs font-bold ${change >= 0 ? "text-emerald-700" : "text-rose-600"}`}><TrendingUp className={`h-3.5 w-3.5 ${change < 0 ? "rotate-180" : ""}`} />{change >= 0 ? "+" : ""}{change.toFixed(1)}%</span> : null}</div><p className="mt-4 text-2xl font-extrabold tracking-[-0.04em] text-slate-900">{value}</p><p className="mt-1 text-xs font-semibold text-slate-500">{label}</p>{caption ? <p className="mt-2 text-[10px] leading-4 text-slate-400">{caption}</p> : <p className="mt-2 text-[10px] leading-4 text-slate-400">{typeof change === "number" ? "vs previous period" : "Live platform total"}</p>}</article>;
+}
+
+function OverviewLoading() {
+  return <div className="grid h-full min-h-28 place-items-center"><div className="h-7 w-7 animate-spin rounded-full border-2 border-emerald-600 border-t-transparent" /></div>;
+}
+
+function OverviewEmpty({ icon: Icon, title, description }: { icon: any; title: string; description: string }) {
+  return <div className="grid h-full min-h-28 place-items-center rounded-2xl border border-dashed border-slate-200 px-6 text-center"><div><Icon className="mx-auto h-6 w-6 text-slate-300" /><p className="mt-3 text-sm font-bold text-slate-700">{title}</p><p className="mt-1 text-xs leading-5 text-slate-500">{description}</p></div></div>;
+}
+
+function formatAdminActivity(action: string, resourceType: string) {
+  const readableAction = action.replace(/[._]/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
+  const readableType = resourceType.replace(/[._]/g, " ");
+  return `${readableAction} · ${readableType}`;
 }
 
 function StatCard({ icon: Icon, label, value, color }: { icon: any; label: string; value: number; color: string }) {

@@ -745,6 +745,10 @@ export const appRouter = router({
       return db.getDashboardStats();
     }),
 
+    dashboardOverview: adminProcedure
+      .input(z.object({ range: z.union([z.literal(7), z.literal(30)]).default(7) }).optional())
+      .query(async ({ input }) => db.getAdminDashboardOverview(input?.range ?? 7)),
+
     pendingProperties: adminProcedure.query(async () => {
       const props = await db.getPendingProperties();
       return Promise.all(

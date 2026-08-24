@@ -1,4 +1,4 @@
-import { eq, desc, asc, and, like, sql, count, inArray, gt, isNull } from "drizzle-orm";
+import { eq, desc, asc, and, like, sql, count, inArray, gt, lt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -568,6 +568,71 @@ export async function getDashboardStats() {
     totalUsers: totalUsers?.count || 0,
     totalInquiries: totalInq?.count || 0,
     totalTestimonials: totalTest?.count || 0,
+  };
+}
+
+type AdminDashboardRange = 7 | 30;
+
+export async function getAdminDashboardOverview(range: AdminDashboardRange) {
+  const db = await getDb();
+  const emptySeries = Array.from({ length: range }, (_, offset) => {
+    const date = new Date();
+    date.setUTCHours(0, 0, 0, 0);
+    date.setUTCDate(date.getUTCDate() - (range - 1 - offset));
+    return { date: date.toISOString().slice(0, 10), properties: 0, users: 0 };
+  });
+  if (!db) return {
+    stats: { totalProperties: 0, pendingProperties: 0, approvedProperties: 0, totalUsers: 0, totalInquiries: 0, totalTestimonials: 0, activeSubscriptions: 0, recordedSubscriptionRevenue: 0 },
+    changes: { properties: null, users: null }, series: emptySeries, recentProperties: [], recentActivity: [],
+  };
+
+  const now = new Date();
+  const periodStart = new Date(now);
+  periodStart.setUTCDate(periodStart.getUTCDate() - (range - 1));
+  periodStart.setUTCHours(0, 0, 0, 0);
+  const previousStart = new Date(periodStart);
+  previousStart.setUTCDate(previousStart.getUTCDate() - range);
+  const propertyDay = sql<string>`DATE(${properties.createdAt})`;
+  const userDay = sql<string>`DATE(${users.createdAt})`;
+
+  const [baseStats, activeSubscriptionRows, revenueRows, currentPropertyRows, previousPropertyRows, currentUserRows, previousUserRows, propertyDailyRows, userDailyRows, recentProperties, recentActivity] = await Promise.all([
+    getDashboardStats(),
+    db.select({ count: count() }).from(subscriptions).where(eq(subscriptions.status, "active")),
+    db.select({ total: sql<number>`COALESCE(SUM(${payments.amount}), 0)` }).from(payments).where(and(eq(payments.status, "completed"), eq(payments.type, "subscription"))),
+    db.select({ count: count() }).from(properties).where(gt(properties.createdAt, periodStart)),
+    db.select({ count: count() }).from(properties).where(and(gt(properties.createdAt, previousStart), lt(properties.createdAt, periodStart))),
+    db.select({ count: count() }).from(users).where(gt(users.createdAt, periodStart)),
+    db.select({ count: count() }).from(users).where(and(gt(users.createdAt, previousStart), lt(users.createdAt, periodStart))),
+    db.select({ date: propertyDay, count: count() }).from(properties).where(gt(properties.createdAt, periodStart)).groupBy(sql`1`),
+    db.select({ date: userDay, count: count() }).from(users).where(gt(users.createdAt, periodStart)).groupBy(sql`1`),
+    db.select().from(properties).orderBy(desc(properties.createdAt)).limit(5),
+    db.select({ id: moduleAuditLogs.id, action: moduleAuditLogs.action, resourceType: moduleAuditLogs.resourceType, resourceId: moduleAuditLogs.resourceId, propertyId: moduleAuditLogs.propertyId, createdAt: moduleAuditLogs.createdAt }).from(moduleAuditLogs).orderBy(desc(moduleAuditLogs.createdAt)).limit(8),
+  ]);
+
+  const propertyPhotosById = new Map<number, string>();
+  if (recentProperties.length) {
+    const photos = await db.select({ propertyId: propertyPhotos.propertyId, url: propertyPhotos.url, sortOrder: propertyPhotos.sortOrder }).from(propertyPhotos).where(inArray(propertyPhotos.propertyId, recentProperties.map((property) => property.id))).orderBy(asc(propertyPhotos.sortOrder));
+    for (const photo of photos) if (!propertyPhotosById.has(photo.propertyId)) propertyPhotosById.set(photo.propertyId, photo.url);
+  }
+
+  const propertyCounts = new Map(propertyDailyRows.map((row) => [String(row.date), Number(row.count)]));
+  const userCounts = new Map(userDailyRows.map((row) => [String(row.date), Number(row.count)]));
+  const series = emptySeries.map((day) => ({ ...day, properties: propertyCounts.get(day.date) ?? 0, users: userCounts.get(day.date) ?? 0 }));
+  const percentChange = (current: number, previous: number) => previous > 0 ? ((current - previous) / previous) * 100 : null;
+
+  return {
+    stats: {
+      ...baseStats,
+      activeSubscriptions: Number(activeSubscriptionRows[0]?.count ?? 0),
+      recordedSubscriptionRevenue: Number(revenueRows[0]?.total ?? 0),
+    },
+    changes: {
+      properties: percentChange(Number(currentPropertyRows[0]?.count ?? 0), Number(previousPropertyRows[0]?.count ?? 0)),
+      users: percentChange(Number(currentUserRows[0]?.count ?? 0), Number(previousUserRows[0]?.count ?? 0)),
+    },
+    series,
+    recentProperties: recentProperties.map((property) => ({ ...property, imageUrl: propertyPhotosById.get(property.id) ?? null })),
+    recentActivity,
   };
 }
 
