@@ -211,7 +211,12 @@
 - [x] Use the signed-in client name only for personalised greetings and optional wellbeing check-ins without exposing private profile details
 - [x] Refresh the assistant UI with a name-aware welcome, check-in starters, everyday question suggestions, and preserved property-search prompts
 - [x] Add focused prompt/context tests and verify responsive behavior (143 tests passing; production build plus desktop and mobile assistant views verified)
-- [ ] Checkpoint and publish the expanded Nyumba 360 general AI assistant
+- [x] Checkpoint and publish the expanded Nyumba 360 general AI assistant
+
+## AI chat typing indicator
+- [x] Replace the generic AI response loader with an accessible, motion-aware typing-indicator animation
+- [x] Verify the typing indicator on responsive assistant layouts and add coverage (144 tests passing; production build verified)
+- [ ] Checkpoint and publish the AI typing-indicator refinement
 
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens

@@ -190,9 +190,14 @@ export default function AIAssistant() {
             </div>
           ))}
           {busy && (
-            <div className="flex justify-start">
-              <div className="rounded-2xl rounded-bl-sm px-4 py-3 border border-border bg-card">
-                <Spinner />
+            <div className="flex justify-start" role="status" aria-live="polite" aria-label="Nyumba 360 AI is typing">
+              <div className="flex items-center gap-2.5 rounded-2xl rounded-bl-sm border border-border bg-card px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-1" aria-hidden="true">
+                  {[0, 1, 2].map((dot) => (
+                    <span key={dot} className="h-2 w-2 rounded-full bg-[oklch(0.45_0.18_260)] motion-safe:animate-bounce motion-reduce:animate-none" style={{ animationDelay: `${dot * 120}ms`, animationDuration: "900ms" }} />
+                  ))}
+                </div>
+                <span className="text-xs font-medium text-muted-foreground">Nyumba 360 AI is typing</span>
               </div>
             </div>
           )}
