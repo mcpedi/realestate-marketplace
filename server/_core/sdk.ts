@@ -201,7 +201,7 @@ class SDKServer {
 
   async verifySession(
     cookieValue: string | undefined | null
-  ): Promise<{ openId: string; appId: string; name: string } | null> {
+  ): Promise<{ openId: string; appId: string; name: string; legacySession?: boolean } | null> {
     if (!cookieValue) {
       console.warn("[Auth] Missing session cookie");
       return null;
@@ -209,11 +209,22 @@ class SDKServer {
 
     try {
       const secretKey = this.getSessionSecret();
-      const { payload } = await jwtVerify(cookieValue, secretKey, {
-        algorithms: ["HS256"],
-        issuer: "nyumba360",
-        audience: ENV.appId,
-      });
+      let payload: Record<string, unknown>;
+      let legacySession = false;
+      try {
+        ({ payload } = await jwtVerify(cookieValue, secretKey, {
+          algorithms: ["HS256"],
+          issuer: "nyumba360",
+          audience: ENV.appId,
+        }) as { payload: Record<string, unknown> });
+      } catch {
+        // Tokens issued before the claim hardening rollout are still signature- and
+        // expiry-verified once, then replaced with a current session cookie.
+        ({ payload } = await jwtVerify(cookieValue, secretKey, {
+          algorithms: ["HS256"],
+        }) as { payload: Record<string, unknown> });
+        legacySession = true;
+      }
       const { openId, appId, name } = payload as Record<string, unknown>;
 
       if (
@@ -230,6 +241,7 @@ class SDKServer {
         openId,
         appId,
         name,
+        ...(legacySession ? { legacySession: true } : {}),
       };
     } catch (error) {
       console.warn("[Auth] Session verification failed", String(error));
@@ -321,7 +333,7 @@ class SDKServer {
       lastSignedIn: signedInAt,
     });
 
-    return user;
+    return { ...user, ...(session.legacySession ? { sessionNeedsRotation: true } : {}) };
   }
 }
 
@@ -331,6 +343,7 @@ const CRON_OPEN_ID_PREFIX = "cron_";
 export type AuthenticatedUser = User & {
   taskUid?: string;
   isCron?: boolean;
+  sessionNeedsRotation?: boolean;
 };
 
 function buildCronUser(

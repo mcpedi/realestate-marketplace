@@ -247,6 +247,7 @@
 - [x] Harden session handling, CSRF/origin validation, and production-only token exposure controls without breaking OAuth
 - [x] Add a staged browser security-header policy and remove unnecessary server fingerprinting
 - [x] Add focused security regression tests, run complete verification, update documentation, checkpoint, and publish (34 test files / 157 tests passing; production build, mobile smoke checks, live headers, and clean production audit verified)
+- [x] Preserve valid signed legacy sessions during the JWT-claim migration and rotate them into the new 30-day issuer/audience-bound cookie format (focused migration regression coverage passing)
 
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens

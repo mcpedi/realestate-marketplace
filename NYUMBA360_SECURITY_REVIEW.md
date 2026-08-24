@@ -57,6 +57,8 @@ All file upload routes now enforce server-side filename normalization, base64 in
 
 Session cookies now use `SameSite=Lax` and have a 30-day lifetime. JWTs carry an issuer, audience, issue time, and expiry; production ignores JavaScript-readable bearer tokens and uses the HttpOnly cookie flow. OAuth keeps its one-time state nonce while using the compatible Lax cookie policy. State-changing browser requests receive a same-origin check, and the platform now returns `nosniff`, frame denial, strict referrer, permissions, cross-origin opener, and staged report-only CSP headers. The report-only CSP is intentionally non-blocking until real production violation reports are reviewed.[2] [3] [5] [6]
 
+To avoid unexpectedly signing out active clients during the JWT-claim rollout, a valid pre-hardening session is accepted only after its original signature, expiry, and application ID are verified. The next authenticated request replaces it with a 30-day issuer/audience-bound HttpOnly cookie; the internal migration marker is never returned to the client. New sessions must meet the strict claim policy from the start.
+
 The final verification passed TypeScript, **34 test files / 157 tests**, the production build, a phone-layout marketplace and Add Property smoke check, a live header check, and a clean production dependency audit. The in-process rate limiter is an application-layer backstop; for multi-instance production traffic it should be paired with a shared edge/WAF or Redis-backed limit before a high-traffic launch.
 
 ## Practical repair order

@@ -1,5 +1,8 @@
 import { describe, expect, it } from "vitest";
+import { SignJWT } from "jose";
 import { applySecurityHeaders, consumeRateLimit, enforceSameOriginForMutations } from "./_core/security";
+import { sdk } from "./_core/sdk";
+import { ENV } from "./_core/env";
 import { decodeAndValidateUpload, SAFE_DOCUMENT_TYPES, SAFE_IMAGE_TYPES } from "./_core/uploadSecurity";
 
 function mockResponse() {
@@ -51,5 +54,26 @@ describe("request hardening", () => {
     const blocked = mockResponse();
     enforceSameOriginForMutations({ method: "POST", protocol: "https", get: (header: string) => header === "origin" ? "https://attacker.example" : "nyumba.example", headers: {} } as any, blocked as any, () => { throw new Error("should not continue"); });
     expect(blocked.headers.size).toBe(0);
+  });
+});
+
+describe("session claim migration", () => {
+  it("accepts a signed legacy session once and marks it for rotation", async () => {
+    const secret = new TextEncoder().encode(ENV.cookieSecret);
+    const legacyToken = await new SignJWT({ openId: "legacy-user", appId: ENV.appId, name: "Legacy User" })
+      .setProtectedHeader({ alg: "HS256", typ: "JWT" })
+      .setExpirationTime("5m")
+      .sign(secret);
+    await expect(sdk.verifySession(legacyToken)).resolves.toMatchObject({
+      openId: "legacy-user",
+      legacySession: true,
+    });
+  });
+
+  it("keeps newly issued sessions on the strict issuer-and-audience contract", async () => {
+    const token = await sdk.createSessionToken("current-user", { name: "Current User" });
+    const session = await sdk.verifySession(token);
+    expect(session?.openId).toBe("current-user");
+    expect(session?.legacySession).toBeUndefined();
   });
 });
