@@ -228,6 +228,11 @@
 - [x] Add an accessible, motion-aware success animation with a View Property action after creating a listing
 - [x] Add regression coverage, verify the post-submit experience on a phone viewport, checkpoint, and publish (147 tests passing; production build and 390px listing dialog verified)
 
+## Cybersecurity review
+- [x] Inventory security-relevant code, application configuration, and external dependency exposure across the project
+- [x] Review authentication, authorization, data exposure, input handling, file uploads, APIs, and client-side security controls
+- [x] Validate dependency and deployment configuration risks, prioritize findings, and deliver a plain-English remediation report
+
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries
