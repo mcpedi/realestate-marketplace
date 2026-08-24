@@ -223,6 +223,11 @@
 - [x] Rework the listing form for a phone-first workflow while preserving drafts, validation, media uploads, and location suggestions
 - [x] Add focused mobile workflow coverage, verify on a phone viewport, checkpoint, and publish (146 tests passing; production build and 390px phone form reviewed)
 
+## Listing submission success experience
+- [x] Review the listing create response and property-detail route needed for safe post-submit navigation
+- [x] Add an accessible, motion-aware success animation with a View Property action after creating a listing
+- [x] Add regression coverage, verify the post-submit experience on a phone viewport, checkpoint, and publish (147 tests passing; production build and 390px listing dialog verified)
+
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries

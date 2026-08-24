@@ -122,6 +122,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   const [showAiTools, setShowAiTools] = useState(false);
   const [listingStep, setListingStep] = useState(0);
   const [draftStatus, setDraftStatus] = useState<"idle" | "saved" | "restored">("idle");
+  const [submittedProperty, setSubmittedProperty] = useState<{ id: number; title: string } | null>(null);
   const [isOnline, setIsOnline] = useState(() => navigator.onLine);
 
   const { data: myProperties, isLoading, refetch } = trpc.property.myProperties.useQuery();
@@ -161,9 +162,10 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
     onError: (err) => toast.error(err.message),
   });
   const createMutation = trpc.property.create.useMutation({
-    onSuccess: () => {
+    onSuccess: (result) => {
+      const submittedTitle = formData.title.trim();
       toast.success("Property listing submitted for review!");
-      setShowForm(false);
+      setSubmittedProperty({ id: result.id, title: submittedTitle });
       resetForm();
       clearListingDraft(window.localStorage, user.id);
       setListingStep(0);
@@ -202,6 +204,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
 
   const openNewListing = useCallback(() => {
     setEditingProperty(null);
+    setSubmittedProperty(null);
     setListingStep(0);
     const savedDraft = loadListingDraft(window.localStorage, user.id);
     if (savedDraft) {
@@ -214,13 +217,14 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
   }, [user.id]);
 
   const closeListingForm = useCallback(() => {
-    if (!editingProperty) saveListingDraft(window.localStorage, user.id, formData);
+    if (!editingProperty && !submittedProperty) saveListingDraft(window.localStorage, user.id, formData);
     setShowForm(false);
     setEditingProperty(null);
     setShowAiTools(false);
     setListingStep(0);
+    setSubmittedProperty(null);
     if (newListingRequested) setLocation(sellerDashboardHref());
-  }, [editingProperty, formData, newListingRequested, setLocation, user.id]);
+  }, [editingProperty, formData, newListingRequested, setLocation, submittedProperty, user.id]);
 
   useEffect(() => {
     if (newListingRequested && !editingProperty) {
@@ -348,6 +352,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       photos: (property.photos || []).map((p: any) => ({ fileKey: p.fileKey, url: p.url, preview: p.url, is360: Boolean(p.is360) })),
     });
     setEditingProperty(property);
+    setSubmittedProperty(null);
     setListingStep(0);
     setDraftStatus("idle");
     setShowForm(true);
@@ -416,6 +421,39 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   Add Property
                 </Button>
               <DialogContent className="max-h-[100dvh] w-[calc(100%-1rem)] max-w-2xl overflow-y-auto rounded-t-[1.5rem] rounded-b-none p-0 sm:max-h-[92vh] sm:w-full sm:rounded-2xl">
+                {submittedProperty ? (
+                  <div className="flex min-h-[min(33rem,82dvh)] flex-col px-5 pb-[calc(env(safe-area-inset-bottom)+1.25rem)] pt-12 text-center sm:min-h-[30rem] sm:px-10 sm:pb-8 sm:pt-14">
+                    <DialogHeader className="items-center text-center">
+                      <div className="relative mb-6 grid h-24 w-24 place-items-center rounded-full bg-emerald-50">
+                        <span aria-hidden="true" className="absolute inset-0 rounded-full border-2 border-emerald-300 motion-safe:animate-ping motion-reduce:animate-none" />
+                        <span aria-hidden="true" className="absolute inset-2 rounded-full bg-emerald-100 motion-safe:animate-pulse motion-reduce:animate-none" />
+                        <CheckCircle className="relative h-12 w-12 text-emerald-600 motion-safe:animate-[bounce_500ms_ease-out_1] motion-reduce:animate-none" />
+                      </div>
+                      <DialogTitle className="text-2xl font-extrabold tracking-tight text-slate-950">Property submitted</DialogTitle>
+                      <p role="status" aria-live="polite" className="mt-3 max-w-sm text-sm leading-6 text-slate-600">
+                        <span className="font-semibold text-slate-900">{submittedProperty.title}</span> is now awaiting review. You can view the listing or return to your dashboard.
+                      </p>
+                    </DialogHeader>
+                    <div className="mt-auto grid gap-3 pt-10 sm:mx-auto sm:w-full sm:max-w-sm">
+                      <Button
+                        type="button"
+                        className="min-h-12 w-full rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500"
+                        onClick={() => {
+                          const propertyId = submittedProperty.id;
+                          setShowForm(false);
+                          setSubmittedProperty(null);
+                          setLocation(`/property/${propertyId}`);
+                        }}
+                      >
+                        <Eye className="mr-2 h-4 w-4" />
+                        View Property
+                      </Button>
+                      <Button type="button" variant="outline" className="min-h-12 w-full rounded-xl" onClick={closeListingForm}>
+                        Return to dashboard
+                      </Button>
+                    </div>
+                  </div>
+                ) : <>
                 <DialogHeader>
                   <div className="sticky top-0 z-20 border-b border-slate-100 bg-white/95 px-4 pb-4 pt-5 backdrop-blur sm:px-7 sm:pt-7">
                     <DialogTitle className="pr-8 text-xl font-extrabold tracking-tight">{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
@@ -643,6 +681,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                     )}
                   </div>
                 </form>
+                </>}
               </DialogContent>
             </Dialog>
             </div>

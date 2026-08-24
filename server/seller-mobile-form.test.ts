@@ -20,4 +20,14 @@ describe("seller Add Property smartphone workflow", () => {
     expect(sellerDashboardSource).toContain("aria-label={`Remove photo ${i + 1}`}");
     expect(sellerDashboardSource).toContain("onClick={openNewListing}");
   });
+
+  it("shows an accessible motion-aware success state with a direct property action after submission", () => {
+    expect(sellerDashboardSource).toContain("submittedProperty");
+    expect(sellerDashboardSource).toContain("Property submitted");
+    expect(sellerDashboardSource).toContain('role="status"');
+    expect(sellerDashboardSource).toContain('aria-live="polite"');
+    expect(sellerDashboardSource).toContain("motion-reduce:animate-none");
+    expect(sellerDashboardSource).toContain("View Property");
+    expect(sellerDashboardSource).toContain("setLocation(`/property/${propertyId}`)");
+  });
 });
