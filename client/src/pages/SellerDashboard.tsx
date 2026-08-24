@@ -250,6 +250,14 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
     const allowed = Array.from(files).slice(0, maxPhotos - formData.photos.length);
     if (allowed.length === 0) return;
     for (const file of allowed) {
+      if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+        toast.error(`${file.name}: use a JPG, PNG, or WebP image`);
+        continue;
+      }
+      if (file.size > 5 * 1024 * 1024) {
+        toast.error(`${file.name}: images must be smaller than 5 MB`);
+        continue;
+      }
       try {
         const reader = new FileReader();
         reader.onload = async () => {
@@ -617,7 +625,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                           </div>
                         <input
                           type="file"
-                          accept="image/*"
+                          accept="image/jpeg,image/png,image/webp"
                           multiple
                           className="hidden"
                           onChange={(e) => handlePhotoUpload(e.target.files)}
@@ -879,12 +887,12 @@ function VideoUploadRow({ propertyId, maxVideos, uploadMutation }: { propertyId:
   const handleVideoUpload = async (files: FileList | null) => {
     const file = files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("video/")) {
-      toast.error("Please select a video file");
+    if (!["video/mp4", "video/webm"].includes(file.type)) {
+      toast.error("Use an MP4 or WebM video file");
       return;
     }
-    if (file.size > 100 * 1024 * 1024) {
-      toast.error("Video must be smaller than 100MB");
+    if (file.size > 25 * 1024 * 1024) {
+      toast.error("Video must be smaller than 25 MB");
       return;
     }
     if ((videos?.length ?? 0) >= maxVideos) {
@@ -915,7 +923,7 @@ function VideoUploadRow({ propertyId, maxVideos, uploadMutation }: { propertyId:
           {working ? "Uploading..." : "Add Video"}
           <input
             type="file"
-            accept="video/*"
+            accept="video/mp4,video/webm"
             className="hidden"
             onChange={(e) => handleVideoUpload(e.target.files)}
           />

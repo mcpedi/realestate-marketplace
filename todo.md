@@ -240,6 +240,14 @@
 - [x] Restrict the storage proxy to explicitly public asset prefixes and preserve authorized signed downloads for private documents
 - [x] Add security regression coverage, run the full verification suite, checkpoint, and publish the remediation (153 tests passing; production build and mobile public-marketplace views verified)
 
+## Comprehensive cybersecurity hardening
+- [x] Resolve the remaining moderate production dependency advisory and verify a clean production audit
+- [x] Add reusable endpoint rate limiting, payload limits, security-event logging, and abuse-safe public inquiry handling
+- [x] Add strict file type, size, count, and content validation for listing, profile, agency, video, and document upload paths
+- [x] Harden session handling, CSRF/origin validation, and production-only token exposure controls without breaking OAuth
+- [x] Add a staged browser security-header policy and remove unnecessary server fingerprinting
+- [x] Add focused security regression tests, run complete verification, update documentation, checkpoint, and publish (34 test files / 157 tests passing; production build, mobile smoke checks, live headers, and clean production audit verified)
+
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries

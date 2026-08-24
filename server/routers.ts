@@ -18,6 +18,21 @@ import { users as usersTable } from "../drizzle/schema";
 import { eq } from "drizzle-orm";
 import { calculatePlanningAnalysis, planningAnalysisKinds } from "../shared/planning";
 import { randomUUID } from "node:crypto";
+import { consumeRateLimit, getClientAddress, logSecurityEvent } from "./_core/security";
+import { decodeAndValidateUpload, SAFE_DOCUMENT_TYPES, SAFE_IMAGE_TYPES, SAFE_VIDEO_TYPES } from "./_core/uploadSecurity";
+
+function enforceOperationRateLimit(
+  ctx: { req: any; user: { id: number } | null },
+  scope: string,
+  limit: number,
+  windowMs: number,
+) {
+  const subject = ctx.user ? `user:${ctx.user.id}` : `ip:${getClientAddress(ctx.req)}`;
+  const result = consumeRateLimit(`${scope}:${subject}`, limit, windowMs);
+  if (result.allowed) return;
+  logSecurityEvent("rate_limit.blocked", ctx.req, { scope, authenticated: Boolean(ctx.user) });
+  throw new TRPCError({ code: "TOO_MANY_REQUESTS", message: `Too many ${scope} requests. Please try again later.` });
+}
 
 // ─── Modern Features (AI assistant, recommendations, alerts, bookings, scores) ──
 
@@ -268,6 +283,7 @@ const modernRouter = router({
       }),
     )
     .mutation(async ({ ctx, input }) => {
+      enforceOperationRateLimit(ctx, "ai_assistant", 30, 60 * 60 * 1000);
       const firstName = ctx.user.name?.trim().split(/\s+/)[0]?.slice(0, 60) || "there";
       const response = await invokeLLM({
         messages: [
@@ -494,7 +510,8 @@ const modernRouter = router({
         radius: z.number().min(100).max(50000).optional(),
       }),
     )
-    .query(async ({ input }) => {
+    .query(async ({ ctx, input }) => {
+      enforceOperationRateLimit(ctx, "nearby_places", 12, 10 * 60 * 1000);
       const { makeRequest } = await import("./_core/map");
       try {
         const result = (await makeRequest("/maps/api/place/nearbysearch/json", {
@@ -558,10 +575,11 @@ export const appRouter = router({
         return { success: true, user: updated };
       }),
     uploadPicture: protectedProcedure
-      .input(z.object({ fileName: z.string(), contentType: z.string(), data: z.string() }))
+      .input(z.object({ fileName: z.string().trim().min(3).max(120), contentType: z.string().max(100), data: z.string().min(1).max(4_200_000) }))
       .mutation(async ({ ctx, input }) => {
-        const bytes = Buffer.from(input.data, "base64");
-        const key = `profile-pictures/${ctx.user.id}/${Date.now()}-${input.fileName}`;
+        enforceOperationRateLimit(ctx, "profile_upload", 12, 60 * 60 * 1000);
+        const { bytes, extension } = decodeAndValidateUpload({ ...input, allowedTypes: SAFE_IMAGE_TYPES, maxBytes: 3 * 1024 * 1024 });
+        const key = `profile-pictures/${ctx.user.id}/${Date.now()}.${extension}`;
         const result = await storagePut(key, bytes, input.contentType);
         // Update user profile picture
         await db.updateUserProfile(ctx.user.id, { profilePicture: result.url });
@@ -577,15 +595,15 @@ export const appRouter = router({
       .input(
         z
           .object({
-            location: z.string().optional(),
+            location: z.string().trim().max(120).optional(),
             propertyType: z.string().optional(),
             listingType: z.string().optional(),
-            minPrice: z.number().optional(),
-            maxPrice: z.number().optional(),
-            bedrooms: z.number().optional(),
-            bathrooms: z.number().optional(),
-            page: z.number().optional(),
-            limit: z.number().optional(),
+            minPrice: z.number().finite().min(0).max(10_000_000_000).optional(),
+            maxPrice: z.number().finite().min(0).max(10_000_000_000).optional(),
+            bedrooms: z.number().int().min(0).max(30).optional(),
+            bathrooms: z.number().int().min(0).max(30).optional(),
+            page: z.number().int().min(1).max(10_000).optional(),
+            limit: z.number().int().min(1).max(50).optional(),
           })
           .optional()
       )
@@ -963,16 +981,17 @@ export const appRouter = router({
     create: publicProcedure
       .input(
         z.object({
-          propertyId: z.number(),
-          name: z.string().min(2),
-          email: z.string().email(),
-          phone: z.string().optional(),
-          message: z.string().min(10),
+          propertyId: z.number().int().positive(),
+          name: z.string().trim().min(2).max(160),
+          email: z.string().trim().toLowerCase().email().max(320),
+          phone: z.string().trim().max(40).optional(),
+          message: z.string().trim().min(10).max(2_000),
         })
       )
       .mutation(async ({ ctx, input }) => {
+        enforceOperationRateLimit(ctx, "public_inquiry", 5, 30 * 60 * 1000);
         const property = await db.getPropertyById(input.propertyId);
-        if (!property) {
+        if (!property || property.status !== "approved") {
           throw new TRPCError({ code: "NOT_FOUND" });
         }
         await db.createInquiry({
@@ -991,6 +1010,7 @@ export const appRouter = router({
           href: "/leads",
         } as any);
         await sendInquiryNotification(property.title, input.name, input.email, input.message);
+        logSecurityEvent("inquiry.created", ctx.req, { propertyId: input.propertyId, authenticated: Boolean(ctx.user) });
         return { success: true };
       }),
 
@@ -1196,15 +1216,21 @@ export const appRouter = router({
   upload: protectedProcedure
     .input(
       z.object({
-        file: z.string(), // base64 encoded file
-        fileName: z.string(),
-        contentType: z.string(),
+        file: z.string().min(1).max(7_000_000), // base64 encoded file
+        fileName: z.string().trim().min(3).max(120),
+        contentType: z.string().max(100),
       })
     )
     .mutation(async ({ ctx, input }) => {
-      const fileBuffer = Buffer.from(input.file, "base64");
-      const ext = input.fileName.split(".").pop() || "jpg";
-      const fileKey = `property-photos/${ctx.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${ext}`;
+      enforceOperationRateLimit(ctx, "property_photo_upload", 36, 60 * 60 * 1000);
+      const { bytes: fileBuffer, extension } = decodeAndValidateUpload({
+        fileName: input.fileName,
+        contentType: input.contentType,
+        data: input.file,
+        allowedTypes: SAFE_IMAGE_TYPES,
+        maxBytes: 5 * 1024 * 1024,
+      });
+      const fileKey = `property-photos/${ctx.user.id}/${Date.now()}-${Math.random().toString(36).slice(2)}.${extension}`;
       const { key, url } = await storagePut(
         fileKey,
         fileBuffer,
@@ -1519,12 +1545,13 @@ export const appRouter = router({
 
     upload: protectedProcedure
       .input(z.object({
-        propertyId: z.number(),
-        fileName: z.string(),
-        contentType: z.string(),
-        data: z.string(), // base64
+        propertyId: z.number().int().positive(),
+        fileName: z.string().trim().min(3).max(120),
+        contentType: z.string().max(100),
+        data: z.string().min(1).max(34_000_000), // base64
       }))
       .mutation(async ({ ctx, input }) => {
+        enforceOperationRateLimit(ctx, "property_video_upload", 8, 60 * 60 * 1000);
         // Verify ownership
         const property = await db.getPropertyById(input.propertyId);
         if (!property || property.userId !== ctx.user.id) {
@@ -1536,9 +1563,8 @@ export const appRouter = router({
         if (existing.length >= maxVideos) {
           throw new TRPCError({ code: "FORBIDDEN", message: `Video upload limit reached (${maxVideos}). Upgrade to Premium for more videos.` });
         }
-        const bytes = Buffer.from(input.data, "base64");
-        const ext = input.fileName.split(".").pop() || "mp4";
-        const key = `property-videos/${input.propertyId}/${Date.now()}.${ext}`;
+        const { bytes, extension } = decodeAndValidateUpload({ ...input, allowedTypes: SAFE_VIDEO_TYPES, maxBytes: 25 * 1024 * 1024 });
+        const key = `property-videos/${input.propertyId}/${Date.now()}.${extension}`;
         const { url } = await storagePut(key, bytes, input.contentType);
         return db.addPropertyVideo({
           propertyId: input.propertyId,
@@ -1641,14 +1667,15 @@ export const appRouter = router({
 
     uploadAsset: protectedProcedure
       .input(z.object({
-        fileName: z.string(),
-        contentType: z.string(),
-        data: z.string(),
+        fileName: z.string().trim().min(3).max(120),
+        contentType: z.string().max(100),
+        data: z.string().min(1).max(7_000_000),
         assetType: z.enum(["logo", "banner"]),
       }))
       .mutation(async ({ ctx, input }) => {
-        const bytes = Buffer.from(input.data, "base64");
-        const key = `agency-assets/${ctx.user.id}/${input.assetType}-${Date.now()}.${input.fileName.split(".").pop() || "png"}`;
+        enforceOperationRateLimit(ctx, "agency_asset_upload", 12, 60 * 60 * 1000);
+        const { bytes, extension } = decodeAndValidateUpload({ ...input, allowedTypes: SAFE_IMAGE_TYPES, maxBytes: 5 * 1024 * 1024 });
+        const key = `agency-assets/${ctx.user.id}/${input.assetType}-${Date.now()}.${extension}`;
         const { url } = await storagePut(key, bytes, input.contentType);
         await db.updateAgencyProfileRecord(ctx.user.id,
           input.assetType === "logo" ? { logoUrl: url } : { bannerUrl: url }
@@ -1859,12 +1886,10 @@ export const appRouter = router({
         mimeType: z.enum(["application/pdf", "image/jpeg", "image/png", "image/webp", "application/msword", "application/vnd.openxmlformats-officedocument.wordprocessingml.document"]),
         data: z.string().min(1).max(7_000_000),
       })).mutation(async ({ ctx, input }) => {
+        enforceOperationRateLimit(ctx, "property_document_upload", 18, 60 * 60 * 1000);
         const property = await db.getPropertyById(input.propertyId);
         if (!property || property.userId !== ctx.user.id) throw new TRPCError({ code: "FORBIDDEN", message: "Only the property owner can upload documents." });
-        const base64 = input.data.includes(",") ? input.data.split(",").pop()! : input.data;
-        const bytes = Buffer.from(base64, "base64");
-        if (!bytes.length || bytes.length > 5 * 1024 * 1024) throw new TRPCError({ code: "BAD_REQUEST", message: "Documents must be between 1 byte and 5 MB." });
-        const extension = input.name.split(".").pop()?.replace(/[^a-z0-9]/gi, "") || "file";
+        const { bytes, extension } = decodeAndValidateUpload({ fileName: input.name, contentType: input.mimeType, data: input.data, allowedTypes: SAFE_DOCUMENT_TYPES, maxBytes: 5 * 1024 * 1024 });
         const { key } = await storagePut(`property-documents/${ctx.user.id}/${input.propertyId}/${Date.now()}.${extension}`, bytes, input.mimeType);
         const document = await db.createPropertyDocument({ propertyId: input.propertyId, uploadedByUserId: ctx.user.id, name: input.name, category: input.category, fileKey: key, mimeType: input.mimeType, sizeBytes: bytes.length });
         if (!document) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Document metadata could not be saved." });

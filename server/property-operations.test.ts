@@ -29,7 +29,7 @@ function context(userId = 7): TrpcContext {
   return { user, req: { protocol: "https", headers: {} } as TrpcContext["req"], res: {} as TrpcContext["res"] };
 }
 
-const validUpload = { propertyId: 5, name: "title-deed.pdf", category: "ownership" as const, mimeType: "application/pdf" as const, data: Buffer.from("document-content").toString("base64") };
+const validUpload = { propertyId: 5, name: "title-deed.pdf", category: "ownership" as const, mimeType: "application/pdf" as const, data: Buffer.from("%PDF-1.7\nsecure document").toString("base64") };
 
 describe("Property Operations document vault", () => {
   beforeEach(() => { vi.clearAllMocks(); storageMocks.storagePut.mockResolvedValue({ key: "property-documents/7/5/title-deed_abc.pdf", url: "/manus-storage/property-documents/7/5/title-deed_abc.pdf" }); });

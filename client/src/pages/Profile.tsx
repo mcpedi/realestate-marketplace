@@ -194,12 +194,12 @@ export default function Profile() {
   const handleFileChange = async (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
     if (!file) return;
-    if (!file.type.startsWith("image/")) {
-      toast.error("Please choose an image file");
+    if (!["image/jpeg", "image/png", "image/webp"].includes(file.type)) {
+      toast.error("Use a JPG, PNG, or WebP image");
       return;
     }
-    if (file.size > 5 * 1024 * 1024) {
-      toast.error("Profile photos must be smaller than 5 MB");
+    if (file.size > 3 * 1024 * 1024) {
+      toast.error("Profile photos must be smaller than 3 MB");
       return;
     }
     setUploading(true);
@@ -253,7 +253,7 @@ export default function Profile() {
                   <AvatarFallback className="bg-emerald-100 text-xl font-bold text-emerald-800">{initials}</AvatarFallback>
                 </Avatar>
                 <button type="button" onClick={() => fileInputRef.current?.click()} aria-label="Change profile picture" className="absolute -bottom-1 -right-1 flex h-8 w-8 items-center justify-center rounded-full border-2 border-white bg-emerald-600 text-white shadow-md transition-transform hover:scale-105"><Camera className="h-4 w-4" /></button>
-                <input ref={fileInputRef} type="file" accept="image/*" className="hidden" onChange={handleFileChange} />
+                <input ref={fileInputRef} type="file" accept="image/jpeg,image/png,image/webp" className="hidden" onChange={handleFileChange} />
               </div>
               <div className="min-w-0 flex-1 pt-1">
                 <div className="flex flex-wrap items-center gap-2">

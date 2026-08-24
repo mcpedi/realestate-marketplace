@@ -47,6 +47,18 @@ The storage proxy now permits only explicitly public asset prefixes and branded 
 
 The production dependency set was upgraded, including tRPC, Axios, Drizzle, Express 4, NanoID, AWS SDK packages, Streamdown, and the remaining Lodash resolutions. The final production audit reported **0 critical** and **0 high** advisories, with **one moderate** advisory still requiring separate follow-up. The application passed TypeScript, all 33 test files / 153 tests, and the production build after the remediation.
 
+## Remediation update — comprehensive hardening completed
+
+The remaining production dependency advisory was resolved by pinning the Express dependency manifest through a version-controlled `.pnpmfile.cjs` resolution hook. The lockfile was regenerated and the final `pnpm audit --prod` completed with **no published production advisories**. This hook is deliberately small and logged during dependency installation so the dependency exception remains reviewable until Express publishes a release whose declared `qs` range includes the fixed version.
+
+The application now applies a shared security layer before its tRPC API. It disables Express fingerprinting, caps general JSON and URL-encoded request bodies at 36 MB, returns `RateLimit-*`/`Retry-After` responses, and imposes endpoint-specific controls on public inquiries, Maps nearby-place searches, AI assistant requests, and every upload flow. Blocked rate-limit and cross-origin mutation attempts are emitted as redacted structured security events; these records intentionally omit tokens, full addresses, contact information, and file contents.
+
+All file upload routes now enforce server-side filename normalization, base64 integrity, strict MIME/extension allowlists, small per-route size caps, and matching file signatures. Listing and profile images permit JPEG, PNG, and WebP; videos permit MP4 and WebM; protected documents permit PDF, JPEG, PNG, WebP, DOC, and DOCX. The browser upload pickers mirror the allowed formats and limits. These checks reduce accidental misuse and common spoofing, but production document workflows should still add malware scanning and content-disposition controls before handling high-risk attachments.[4]
+
+Session cookies now use `SameSite=Lax` and have a 30-day lifetime. JWTs carry an issuer, audience, issue time, and expiry; production ignores JavaScript-readable bearer tokens and uses the HttpOnly cookie flow. OAuth keeps its one-time state nonce while using the compatible Lax cookie policy. State-changing browser requests receive a same-origin check, and the platform now returns `nosniff`, frame denial, strict referrer, permissions, cross-origin opener, and staged report-only CSP headers. The report-only CSP is intentionally non-blocking until real production violation reports are reviewed.[2] [3] [5] [6]
+
+The final verification passed TypeScript, **34 test files / 157 tests**, the production build, a phone-layout marketplace and Add Property smoke check, a live header check, and a clean production dependency audit. The in-process rate limiter is an application-layer backstop; for multi-instance production traffic it should be paired with a shared edge/WAF or Redis-backed limit before a high-traffic launch.
+
 ## Practical repair order
 
 | When | What to do | Simple outcome | Verification standard |
