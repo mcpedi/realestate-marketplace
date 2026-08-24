@@ -233,6 +233,11 @@
 - [x] Rebuild the About page with a Nyumba 360 hero, overlapping mission card, values, story, benefits, and contact call-to-action
 - [x] Add regression coverage, verify phone and desktop rendering, checkpoint, and publish (35 test files / 161 tests passing; production build plus 390px and desktop About-page reviews completed)
 
+## Interactive About-page team section
+- [x] Review the current About-page story boundary and choose an interaction that is accessible, responsive, and consistent with Nyumba 360
+- [x] Add an interactive team-member section immediately below the story without disturbing the existing benefits and contact sections
+- [x] Add focused coverage, verify mobile and desktop behavior, checkpoint, and publish (35 test files / 162 tests passing; TypeScript, production build, 390px mobile, and desktop About-page views verified)
+
 ## Cybersecurity review
 - [x] Inventory security-relevant code, application configuration, and external dependency exposure across the project
 - [x] Review authentication, authorization, data exposure, input handling, file uploads, APIs, and client-side security controls

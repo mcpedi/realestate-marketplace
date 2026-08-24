@@ -20,4 +20,14 @@ describe("reference-inspired About page", () => {
     expect(aboutPage).toContain("pb-24 lg:pb-0");
     expect(aboutPage).toContain("grid-cols-2");
   });
+
+  it("places an accessible interactive team spotlight directly below the local story", () => {
+    expect(aboutPage).toContain("The people behind Nyumba 360");
+    expect(aboutPage).toContain("Meet the team shaping every property journey.");
+    expect(aboutPage).toContain("selectedTeamMemberId");
+    expect(aboutPage).toContain("aria-pressed={isSelected}");
+    expect(aboutPage).toContain("Team spotlight");
+    expect(aboutPage.indexOf("The people behind Nyumba 360")).toBeGreaterThan(aboutPage.indexOf("Our story"));
+    expect(aboutPage.indexOf("The people behind Nyumba 360")).toBeLessThan(aboutPage.indexOf("The Nyumba 360 difference"));
+  });
 });
