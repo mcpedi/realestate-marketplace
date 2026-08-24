@@ -1,140 +1,68 @@
-import { Navbar } from "@/components/Navbar";
 import { Footer } from "@/components/Footer";
-import {
-  Target,
-  Eye,
-  Users,
-  Shield,
-  Award,
-  Heart,
-  Home,
-  Building,
-} from "lucide-react";
+import { Navbar } from "@/components/Navbar";
+import { Link } from "wouter";
+import { ArrowLeft, Award, BadgeCheck, Headphones, HeartHandshake, HousePlus, MapPin, ShieldCheck, Target, UsersRound } from "lucide-react";
 
-const SITE_NAME = "Nyumba 360";
-
-const team = [
-  { name: "Peter Wambua", role: "Founder & CEO", bio: "Over 15 years of experience in real estate development and property management." },
-  { name: "Sarah Mwangi", role: "Head of Operations", bio: "Expert in streamlining property transactions and client relationships." },
-  { name: "James Ochieng", role: "Technology Lead", bio: "Building the digital infrastructure that powers modern real estate." },
-  { name: "Grace Njeri", role: "Marketing Director", bio: "Connecting properties with the right buyers through strategic marketing." },
-];
+const heroImage = "/manus-storage/pediwa-kenyan-estate-hero_d54d8e46.jpg";
 
 const values = [
-  { icon: Shield, title: "Trust & Transparency", description: "Every listing is verified and every transaction is transparent." },
-  { icon: Users, title: "Client-First Approach", description: "We prioritize the needs and satisfaction of our clients above all." },
-  { icon: Award, title: "Quality Standards", description: "We maintain the highest standards in property listings and services." },
-  { icon: Heart, title: "Community Focus", description: "We build lasting relationships within the communities we serve." },
+  { icon: ShieldCheck, title: "Trust", description: "Clear information and thoughtful decisions at every step." },
+  { icon: UsersRound, title: "People first", description: "Built around the real needs of buyers, owners and agents." },
+  { icon: Award, title: "Quality", description: "A calmer, more considered way to discover property." },
+  { icon: MapPin, title: "Local focus", description: "Designed for Kenyan neighbourhoods and everyday realities." },
+];
+
+const benefits = [
+  { icon: HousePlus, title: "Thoughtful discovery", description: "Search, compare and save places at your own pace." },
+  { icon: ShieldCheck, title: "A safer process", description: "Practical tools and transparent property information." },
+  { icon: Headphones, title: "Local support", description: "Helpful guidance when you are ready to take the next step." },
+  { icon: BadgeCheck, title: "Easy to use", description: "A simple experience from first search to inquiry." },
 ];
 
 export default function About() {
   return (
-    <div className="min-h-screen flex flex-col">
+    <div className="min-h-screen bg-white text-slate-900">
       <Navbar />
-
-      {/* Hero */}
-      <section className="bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.35_0.18_260)] text-white py-16 md:py-24">
-        <div className="container">
-          <div className="max-w-3xl">
-            <h1 className="text-4xl md:text-5xl font-bold mb-4" style={{ fontFamily: "'Playfair Display', serif" }}>
-              About {SITE_NAME}
-            </h1>
-            <p className="text-lg opacity-90 leading-relaxed">
-              We are a modern real estate marketplace connecting property owners, agents, and buyers in a seamless digital experience. Our mission is to make property transactions accessible, transparent, and efficient for everyone.
-            </p>
+      <main className="pb-24 lg:pb-0">
+        <section className="container pt-5 sm:pt-7">
+          <div className="flex items-center justify-between px-1">
+            <Link href="/" className="inline-flex items-center gap-1.5 text-sm font-bold text-slate-700 transition-colors hover:text-emerald-700"><ArrowLeft className="h-4 w-4" /> Back home</Link>
+            <span className="text-sm font-extrabold tracking-[-0.02em] text-slate-900">About Nyumba 360</span>
+            <Link href="/contact" className="text-sm font-bold text-emerald-700 transition-colors hover:text-emerald-800">Contact</Link>
           </div>
-        </div>
-      </section>
 
-      {/* Mission & Vision */}
-      <section className="py-16">
-        <div className="container">
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-            <div className="bg-white rounded-xl border border-border/50 p-8 shadow-sm">
-              <Target className="w-10 h-10 text-[oklch(0.45_0.18_260)] mb-4" />
-              <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>Our Mission</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                To democratize real estate by providing a trusted platform where property owners can list their properties, buyers can discover their dream homes, and agents can grow their businesses — all in one place.
-              </p>
+          <section className="relative mt-5 overflow-hidden rounded-[2rem] bg-emerald-950 px-6 py-8 text-white shadow-[0_20px_55px_-28px_rgba(4,120,87,0.72)] sm:px-9 sm:py-12 lg:min-h-[26rem] lg:px-14 lg:py-16">
+            <div className="absolute inset-0 bg-cover bg-center" style={{ backgroundImage: `url('${heroImage}')` }} />
+            <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(2,44,34,0.96)_0%,rgba(3,70,51,0.84)_45%,rgba(4,50,42,0.22)_100%)]" />
+            <div className="relative z-10 max-w-xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/20 bg-white/10 px-3 py-1.5 text-xs font-extrabold uppercase tracking-[0.12em] backdrop-blur-sm"><span className="grid h-5 w-5 place-items-center rounded-md bg-lime-300 text-emerald-950"><HousePlus className="h-3.5 w-3.5" /></span>Nyumba 360</div>
+              <h1 className="mt-5 max-w-[12ch] text-[2.15rem] font-extrabold leading-[1.04] tracking-[-0.055em] sm:text-5xl lg:text-6xl">Find the place that <span className="text-lime-300">fits your life.</span></h1>
+              <p className="mt-5 max-w-md text-base leading-7 text-emerald-50/90 sm:text-lg">A clearer, more human way to search, discover and connect around property in Kenya.</p>
             </div>
-            <div className="bg-white rounded-xl border border-border/50 p-8 shadow-sm">
-              <Eye className="w-10 h-10 text-[oklch(0.72_0.15_80)] mb-4" />
-              <h2 className="text-2xl font-bold mb-3" style={{ fontFamily: "'Playfair Display', serif" }}>Our Vision</h2>
-              <p className="text-muted-foreground leading-relaxed">
-                To become the leading real estate marketplace in East Africa, empowering millions of people to find their perfect property through technology, trust, and exceptional service.
-              </p>
-            </div>
-          </div>
-        </div>
-      </section>
+          </section>
 
-      {/* Values */}
-      <section className="py-16 bg-secondary/30">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-10" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Our Values
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {values.map((v) => (
-              <div key={v.title} className="bg-white rounded-xl border border-border/50 p-6 text-center hover:shadow-md transition-shadow">
-                <v.icon className="w-10 h-10 text-[oklch(0.45_0.18_260)] mx-auto mb-3" />
-                <h3 className="font-semibold mb-2">{v.title}</h3>
-                <p className="text-sm text-muted-foreground">{v.description}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <section className="relative z-20 mx-3 -mt-7 rounded-[1.6rem] border border-slate-100 bg-white p-5 shadow-[0_15px_35px_-20px_rgba(15,23,42,0.35)] sm:mx-6 sm:flex sm:items-center sm:gap-6 sm:p-7 lg:mx-10 lg:-mt-10">
+            <div className="grid h-14 w-14 shrink-0 place-items-center rounded-2xl bg-emerald-50 text-emerald-700 sm:h-16 sm:w-16"><Target className="h-7 w-7" /></div>
+            <div className="mt-4 sm:mt-0"><p className="text-xs font-extrabold uppercase tracking-[0.14em] text-emerald-700">Our mission</p><p className="mt-1.5 text-base font-semibold leading-6 text-slate-700 sm:text-lg">To make property discovery and connection simple, accessible and trustworthy for more people across Kenya.</p></div>
+          </section>
 
-      {/* Team */}
-      <section className="py-16">
-        <div className="container">
-          <h2 className="text-3xl font-bold text-center mb-10" style={{ fontFamily: "'Playfair Display', serif" }}>
-            Our Leadership Team
-          </h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-            {team.map((member) => (
-              <div key={member.name} className="bg-white rounded-xl border border-border/50 p-6 text-center">
-                <div className="w-20 h-20 rounded-full bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.72_0.15_80)] mx-auto mb-4 flex items-center justify-center">
-                  <Users className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="font-semibold text-lg">{member.name}</h3>
-                <p className="text-sm text-[oklch(0.45_0.18_260)] mb-2">{member.role}</p>
-                <p className="text-sm text-muted-foreground">{member.bio}</p>
-              </div>
-            ))}
-          </div>
-        </div>
-      </section>
+          <section className="mt-10 sm:mt-14">
+            <div className="flex items-end justify-between gap-5"><div><p className="text-xs font-extrabold uppercase tracking-[0.15em] text-emerald-700">What guides us</p><h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] sm:text-3xl">Our core values</h2></div><div className="hidden h-px flex-1 bg-slate-100 sm:block" /></div>
+            <div className="mt-6 grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm md:grid-cols-4 md:divide-y-0">
+              {values.map(({ icon: Icon, title, description }) => <article key={title} className="p-5 sm:p-6"><div className="grid h-11 w-11 place-items-center rounded-full bg-emerald-50 text-emerald-700"><Icon className="h-5 w-5" /></div><h3 className="mt-4 text-sm font-extrabold tracking-[-0.02em] text-slate-900 sm:text-base">{title}</h3><p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">{description}</p></article>)}
+            </div>
+          </section>
 
-      {/* Stats */}
-      <section className="py-16 bg-gradient-to-br from-[oklch(0.45_0.18_260)] to-[oklch(0.35_0.18_260)] text-white">
-        <div className="container">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-8 text-center">
-            <div>
-              <Building className="w-8 h-8 mx-auto mb-2 opacity-80" />
-              <div className="text-3xl font-bold">2,500+</div>
-              <div className="text-sm opacity-80">Properties Listed</div>
-            </div>
-            <div>
-              <Users className="w-8 h-8 mx-auto mb-2 opacity-80" />
-              <div className="text-3xl font-bold">5,000+</div>
-              <div className="text-sm opacity-80">Happy Clients</div>
-            </div>
-            <div>
-              <Home className="w-8 h-8 mx-auto mb-2 opacity-80" />
-              <div className="text-3xl font-bold">15+</div>
-              <div className="text-sm opacity-80">Cities Served</div>
-            </div>
-            <div>
-              <Award className="w-8 h-8 mx-auto mb-2 opacity-80" />
-              <div className="text-3xl font-bold">98%</div>
-              <div className="text-sm opacity-80">Client Satisfaction</div>
-            </div>
-          </div>
-        </div>
-      </section>
+          <section className="mt-10 overflow-hidden rounded-[2rem] bg-emerald-50 p-5 sm:mt-14 sm:p-8 lg:grid lg:grid-cols-[1.03fr_0.97fr] lg:items-center lg:gap-12 lg:p-10">
+            <div className="max-w-xl"><p className="text-xs font-extrabold uppercase tracking-[0.15em] text-emerald-700">Our story</p><div className="mt-3 h-1 w-11 rounded-full bg-lime-400" /><h2 className="mt-5 text-2xl font-extrabold tracking-[-0.04em] text-slate-900 sm:text-3xl">Property choices deserve better tools.</h2><p className="mt-4 leading-7 text-slate-600">Nyumba 360 brings property search, local insight and useful workflows into one calm place. We are building a marketplace that makes it easier to explore options, ask questions and move forward with confidence.</p><p className="mt-4 leading-7 text-slate-600">Our approach combines technology with a deep respect for the practical decisions people make around homes, land and spaces to grow.</p></div>
+            <div className="relative mt-7 min-h-56 overflow-hidden rounded-[1.5rem] sm:min-h-72 lg:mt-0"><img src={heroImage} alt="Modern Kenyan home at dusk" className="absolute inset-0 h-full w-full object-cover object-[70%_center]" /><div className="absolute inset-0 bg-gradient-to-t from-emerald-950/50 via-transparent to-transparent" /><div className="absolute bottom-4 left-4 rounded-xl bg-white/90 px-3 py-2 text-xs font-bold text-emerald-900 backdrop-blur">Made for property journeys in Kenya</div></div>
+          </section>
 
+          <section className="mt-10 sm:mt-14"><p className="text-xs font-extrabold uppercase tracking-[0.15em] text-emerald-700">The Nyumba 360 difference</p><h2 className="mt-2 text-2xl font-extrabold tracking-[-0.04em] sm:text-3xl">A more considered way to move forward</h2><div className="mt-6 grid grid-cols-2 divide-x divide-y divide-slate-100 overflow-hidden rounded-3xl border border-slate-100 bg-white shadow-sm md:grid-cols-4 md:divide-y-0">{benefits.map(({ icon: Icon, title, description }) => <article key={title} className="p-5 text-center sm:p-6"><Icon className="mx-auto h-6 w-6 text-emerald-600" /><h3 className="mt-3 text-sm font-extrabold tracking-[-0.02em] text-slate-900 sm:text-base">{title}</h3><p className="mt-2 text-xs leading-5 text-slate-500 sm:text-sm">{description}</p></article>)}</div></section>
+
+          <section className="mt-10 overflow-hidden rounded-[1.8rem] bg-gradient-to-r from-emerald-800 via-emerald-700 to-emerald-600 px-6 py-6 text-white shadow-[0_18px_40px_-24px_rgba(4,120,87,0.8)] sm:mt-14 sm:flex sm:items-center sm:justify-between sm:gap-8 sm:px-8 sm:py-7"><div className="flex items-center gap-4"><div className="grid h-12 w-12 shrink-0 place-items-center rounded-2xl bg-white/15"><HeartHandshake className="h-6 w-6" /></div><div><h2 className="text-lg font-extrabold tracking-[-0.03em]">Have a question?</h2><p className="mt-0.5 text-sm text-emerald-50/90">Our team is ready to help you take the next step.</p></div></div><Link href="/contact" className="mt-5 inline-flex h-11 items-center justify-center rounded-xl bg-white px-5 text-sm font-extrabold text-emerald-800 transition-transform hover:-translate-y-0.5 hover:bg-emerald-50 sm:mt-0">Contact us <ArrowLeft className="ml-2 h-4 w-4 rotate-180" /></Link></section>
+        </section>
+      </main>
       <Footer />
     </div>
   );

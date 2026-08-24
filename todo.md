@@ -228,6 +228,11 @@
 - [x] Add an accessible, motion-aware success animation with a View Property action after creating a listing
 - [x] Add regression coverage, verify the post-submit experience on a phone viewport, checkpoint, and publish (147 tests passing; production build and 390px listing dialog verified)
 
+## Reference-inspired About page redesign
+- [x] Audit the current About route, mobile navigation, and reusable image assets against the supplied reference
+- [x] Rebuild the About page with a Nyumba 360 hero, overlapping mission card, values, story, benefits, and contact call-to-action
+- [x] Add regression coverage, verify phone and desktop rendering, checkpoint, and publish (35 test files / 161 tests passing; production build plus 390px and desktop About-page reviews completed)
+
 ## Cybersecurity review
 - [x] Inventory security-relevant code, application configuration, and external dependency exposure across the project
 - [x] Review authentication, authorization, data exposure, input handling, file uploads, APIs, and client-side security controls
