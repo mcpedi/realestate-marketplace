@@ -264,41 +264,48 @@ const modernRouter = router({
     .input(
       z.object({
         message: z.string().min(1).max(500),
+        history: z.array(z.object({ role: z.enum(["user", "assistant"]), content: z.string().min(1).max(800) })).max(6).optional(),
       }),
     )
     .mutation(async ({ ctx, input }) => {
-      // Ask the LLM to parse the natural-language query into structured filters.
-      const parseResp = await invokeLLM({
+      const firstName = ctx.user.name?.trim().split(/\s+/)[0]?.slice(0, 60) || "there";
+      const response = await invokeLLM({
         messages: [
           {
             role: "system",
             content:
-              "You parse natural-language property search queries from buyers in Kenya into structured filters. Property types are: house, apartment, villa, land, commercial, townhouse, studio, penthouse. Listing types are: sale, rent. Locations are Kenyan cities/counties (e.g., Nairobi, Kisumu, Mombasa, Migori, Nakuru, Eldoret, Machakos). Return JSON.",
+              `You are Nyumba 360 AI, a warm, helpful general assistant and Kenyan property guide. The signed-in client is named ${firstName}. You may use only this first name for a natural greeting or an optional, respectful check-in such as “How are you feeling today, ${firstName}?” Do not claim to know their emotions, disclose profile data, ask for sensitive information, or repeat their name excessively. You can answer ordinary everyday questions, explain concepts, brainstorm, write, and converse naturally, in addition to helping with property searches in Kenya. For health, legal, financial, or other high-stakes questions, give general educational information, avoid diagnosis or personalised instructions, and encourage appropriate qualified support when needed. Classify as property_search only when the client is clearly requesting homes, land, rentals, listings, or property recommendations. Otherwise classify as general. For property searches, parse only clearly expressed filters. Property types are house, apartment, villa, land, commercial, townhouse, studio, penthouse. Listing types are sale, rent, or any. Return JSON only.`,
           },
+          ...(input.history ?? []).map((message) => ({ role: message.role, content: message.content })),
           { role: "user", content: input.message },
         ],
+        model: "gpt-5-mini",
         response_format: {
           type: "json_schema",
           json_schema: {
-            name: "search_filters",
+            name: "nyumba_assistant_response",
             strict: true,
             schema: {
               type: "object",
               properties: {
+                intent: { type: "string", enum: ["general", "property_search"] },
+                reply: { type: "string", description: "Helpful, concise answer for the client" },
                 location: { type: "string", description: "City/area mentioned, empty string if none" },
                 propertyType: { type: "string", description: "Property type or empty string" },
                 listingType: { type: "string", description: "sale or rent or any" },
                 minBedrooms: { type: "integer", description: "Minimum bedrooms, 0 if not mentioned" },
                 maxPrice: { type: "integer", description: "Maximum budget in KES, 0 if not mentioned" },
-                summary: { type: "string", description: "Short confirmation of what the buyer asked for" },
               },
-              required: ["location", "propertyType", "listingType", "minBedrooms", "maxPrice", "summary"],
+              required: ["intent", "reply", "location", "propertyType", "listingType", "minBedrooms", "maxPrice"],
               additionalProperties: false,
             },
           },
         },
       });
-      const parsed = JSON.parse((parseResp as any).choices?.[0]?.message?.content || "{}");
+      const parsed = JSON.parse((response as any).choices?.[0]?.message?.content || "{}");
+      if (parsed.intent !== "property_search") {
+        return { summary: parsed.reply || `Hi ${firstName}! How can I help today?`, filters: {}, results: [], total: 0, intent: "general" as const };
+      }
       const filters: any = { status: "approved", limit: 12 };
       if (parsed.location) filters.location = parsed.location;
       if (parsed.propertyType) filters.propertyType = parsed.propertyType;
@@ -306,7 +313,7 @@ const modernRouter = router({
       if (parsed.minBedrooms > 0) filters.bedrooms = parsed.minBedrooms;
       if (parsed.maxPrice > 0) filters.maxPrice = parsed.maxPrice;
       const { items, total } = await db.getProperties(filters);
-      return { summary: parsed.summary, filters, results: items, total };
+      return { summary: parsed.reply || "Here are the listings that match your request.", filters, results: items, total, intent: "property_search" as const };
     }),
 
   // ── Alerts ──────────────────────────────────────────────────────────────────

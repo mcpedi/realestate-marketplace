@@ -204,7 +204,14 @@
 - [x] Rebuild the `/admin` landing experience with the approved mobile-first operational hierarchy, Nyumba 360 visual language, responsive navigation, and no fabricated data
 - [x] Preserve and reorganize functional moderation, users, premium, content, and module-control workflows without weakening authorization
 - [x] Add focused authorization/overview tests and complete responsive verification (140 tests passing; production build plus desktop and mobile dashboard views verified)
-- [ ] Checkpoint and publish the administrator dashboard redesign
+- [x] Checkpoint and publish the administrator dashboard redesign
+
+## Nyumba 360 general AI assistant
+- [x] Expand server-side assistant prompts to support friendly everyday conversation and normal questions alongside property expertise
+- [x] Use the signed-in client name only for personalised greetings and optional wellbeing check-ins without exposing private profile details
+- [x] Refresh the assistant UI with a name-aware welcome, check-in starters, everyday question suggestions, and preserved property-search prompts
+- [x] Add focused prompt/context tests and verify responsive behavior (143 tests passing; production build plus desktop and mobile assistant views verified)
+- [ ] Checkpoint and publish the expanded Nyumba 360 general AI assistant
 
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens

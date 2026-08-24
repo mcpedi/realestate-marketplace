@@ -9,7 +9,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { useAuth } from "@/_core/hooks/useAuth";
-import { Sparkles, Send, ArrowRight, MapPin, Bed, Bath, Tag, Heart, User } from "lucide-react";
+import { Sparkles, Send, ArrowRight, MapPin, Bed, Bath, Tag, Heart, User, MessageCircleHeart, Home } from "lucide-react";
 import { PropertyCard } from "@/components/PropertyCard";
 import {
   Accordion,
@@ -36,9 +36,16 @@ interface ChatMsg {
   text: string;
   properties?: ChatProperty[];
   total?: number;
+  intent?: "general" | "property_search";
 }
 
-const EXAMPLES = [
+const WELLBEING_STARTERS = [
+  "I’m feeling a little stressed today. What is a gentle way to reset?",
+  "Can you give me a short uplifting thought for today?",
+  "What are a few simple ideas for a productive afternoon?",
+];
+
+const PROPERTY_STARTERS = [
   "Find me a 2-bedroom apartment in Migori under KSh 25,000",
   "Show me houses for sale with at least 3 bedrooms",
   "What rental properties are available in Kisii?",
@@ -46,16 +53,18 @@ const EXAMPLES = [
 ];
 
 export default function AIAssistant() {
-  const { isAuthenticated } = useAuth();
+  const { isAuthenticated, user } = useAuth();
   const [input, setInput] = useState("");
-  const [messages, setMessages] = useState<ChatMsg[]>([
-    {
-      role: "assistant",
-      text: "Hi! I'm the Nyumba 360 AI Assistant. Tell me what you're looking for — a location, budget, number of bedrooms, or property type — and I'll find matching listings for you. For example: \"Find me a 2-bedroom apartment in Migori under KSh 25,000.\"",
-    },
-  ]);
+  const [messages, setMessages] = useState<ChatMsg[]>([]);
   const [busy, setBusy] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
+  const firstName = user?.name?.trim().split(/\s+/)[0] || "there";
+
+  useEffect(() => {
+    if (isAuthenticated && messages.length === 0) {
+      setMessages([{ role: "assistant", intent: "general", text: `Hi ${firstName}! How are you feeling today? I’m Nyumba 360 AI — we can chat about everyday questions, ideas, or anything you would like help thinking through. I can also help you find a home, rental, land, or property opportunity whenever you are ready.` }]);
+    }
+  }, [firstName, isAuthenticated, messages.length]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight });
@@ -72,11 +81,12 @@ export default function AIAssistant() {
       startLogin();
       return;
     }
+    const history = messages.slice(-6).map((message) => ({ role: message.role, content: message.text }));
     setMessages((m) => [...m, { role: "user", text: text.trim() }]);
     setInput("");
     setBusy(true);
     try {
-      const res = await askMutation.mutateAsync({ message: text.trim() });
+      const res = await askMutation.mutateAsync({ message: text.trim(), history });
       setMessages((m) => [
         ...m,
         {
@@ -84,6 +94,7 @@ export default function AIAssistant() {
           text: res.summary,
           properties: res.results ?? [],
           total: res.total,
+          intent: res.intent,
         },
       ]);
     } catch {
@@ -106,10 +117,10 @@ export default function AIAssistant() {
           </div>
           <div>
             <h1 className="text-2xl font-bold" style={{ fontFamily: "'Playfair Display', serif" }}>
-              AI Property Assistant
+              Nyumba 360 AI
             </h1>
             <p className="text-sm text-muted-foreground">
-              Describe your dream property in plain language
+              A friendly space for everyday questions, ideas, and property guidance
             </p>
           </div>
         </div>
@@ -167,7 +178,7 @@ export default function AIAssistant() {
                     </Link>
                   </div>
                 )}
-                {m.properties && m.properties.length === 0 && m.role === "assistant" && (
+                {m.intent === "property_search" && m.properties && m.properties.length === 0 && m.role === "assistant" && (
                   <Link
                     href="/properties"
                     className="mt-3 inline-flex items-center gap-1 text-xs font-medium text-[oklch(0.45_0.18_260)] hover:underline"
@@ -188,16 +199,9 @@ export default function AIAssistant() {
         </div>
 
         {messages.length <= 1 && (
-          <div className="flex flex-wrap gap-2 mb-4">
-            {EXAMPLES.map((ex) => (
-              <button
-                key={ex}
-                onClick={() => handleSend(ex)}
-                className="text-xs rounded-full border border-border bg-card px-3 py-1.5 hover:border-[oklch(0.45_0.18_260)] hover:text-[oklch(0.45_0.18_260)] transition-colors"
-              >
-                {ex}
-              </button>
-            ))}
+          <div className="mb-5 grid gap-3 sm:grid-cols-2">
+            <StarterGroup icon={MessageCircleHeart} title="Talk it through" prompts={WELLBEING_STARTERS} onChoose={handleSend} disabled={busy} />
+            <StarterGroup icon={Home} title="Find a property" prompts={PROPERTY_STARTERS} onChoose={handleSend} disabled={busy} />
           </div>
         )}
 
@@ -206,12 +210,12 @@ export default function AIAssistant() {
             e.preventDefault();
             handleSend(input);
           }}
-          className="flex gap-2 sticky bottom-4"
+          className="mt-2 flex gap-2 md:sticky md:bottom-4"
         >
           <Input
             value={input}
             onChange={(e) => setInput(e.target.value)}
-            placeholder="Describe what you're looking for..."
+            placeholder="Ask me anything, or describe a property you want to find..."
             className="flex-1 shadow-lg"
             disabled={busy}
           />
@@ -235,6 +239,15 @@ export default function AIAssistant() {
       </main>
       <Footer />
     </div>
+  );
+}
+
+function StarterGroup({ icon: Icon, title, prompts, onChoose, disabled }: { icon: any; title: string; prompts: string[]; onChoose: (prompt: string) => void; disabled: boolean }) {
+  return (
+    <section className="rounded-2xl border border-border bg-card p-4 shadow-sm">
+      <div className="flex items-center gap-2"><div className="grid h-8 w-8 place-items-center rounded-xl bg-[oklch(0.72_0.15_80/0.18)] text-[oklch(0.45_0.18_260)]"><Icon className="h-4 w-4" /></div><h2 className="text-sm font-bold">{title}</h2></div>
+      <div className="mt-3 flex flex-wrap gap-2">{prompts.map((prompt) => <button key={prompt} type="button" disabled={disabled} onClick={() => onChoose(prompt)} className="rounded-xl border border-border bg-background px-3 py-2 text-left text-xs leading-5 text-muted-foreground transition hover:border-[oklch(0.45_0.18_260)] hover:text-[oklch(0.45_0.18_260)] disabled:cursor-not-allowed disabled:opacity-60">{prompt}</button>)}</div>
+    </section>
   );
 }
 
