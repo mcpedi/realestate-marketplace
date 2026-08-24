@@ -383,16 +383,16 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
       <Navbar />
 
       <section className="bg-secondary/30 border-b border-border/50">
-        <div className="container py-6">
-          <div className="flex items-center justify-between">
+        <div className="container py-4 sm:py-6">
+          <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-foreground" style={{ fontFamily: "'Playfair Display', serif" }}>
                 Seller Dashboard
               </h1>
               <p className="text-muted-foreground text-sm mt-1">Welcome back, {user?.name || "Seller"}</p>
             </div>
-            <div className="flex items-center gap-3">
-              <Link href="/seller/viewings" className="inline-flex items-center gap-2 rounded-md border border-[oklch(0.45_0.18_260)]/30 px-4 py-2 text-sm font-medium text-[oklch(0.45_0.18_260)] hover:bg-[oklch(0.45_0.18_260)]/5 transition-colors">
+            <div className="grid grid-cols-2 gap-2 sm:flex sm:items-center sm:gap-3">
+              <Link href="/seller/viewings" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[oklch(0.45_0.18_260)]/30 px-3 py-2 text-sm font-medium text-[oklch(0.45_0.18_260)] transition-colors hover:bg-[oklch(0.45_0.18_260)]/5 sm:px-4">
                 <CalendarDays className="w-4 h-4" />
                 Viewings
                 {pendingViewings > 0 && (
@@ -401,7 +401,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   </span>
                 )}
               </Link>
-              <Link href="/leads" className="inline-flex items-center gap-2 rounded-md border border-[#0d3b9e]/30 px-4 py-2 text-sm font-medium text-[#0d3b9e] hover:bg-[#0d3b9e]/5 transition-colors">
+              <Link href="/leads" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl border border-[#0d3b9e]/30 px-3 py-2 text-sm font-medium text-[#0d3b9e] transition-colors hover:bg-[#0d3b9e]/5 sm:px-4">
                 <Users className="w-4 h-4" />
                 Leads
                 {totalInquiries > 0 && (
@@ -411,33 +411,33 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                 )}
               </Link>
               <Dialog open={showForm} onOpenChange={(open) => { if (!open) closeListingForm(); }}>
-                <Button onClick={openNewListing} className="gap-2">
+                <Button onClick={openNewListing} className="col-span-2 min-h-12 w-full gap-2 rounded-xl sm:col-auto sm:min-h-10 sm:w-auto">
                   <PlusCircle className="w-4 h-4" />
                   Add Property
                 </Button>
-              <DialogContent className="max-w-2xl max-h-[92vh] overflow-y-auto p-0">
+              <DialogContent className="max-h-[100dvh] w-[calc(100%-1rem)] max-w-2xl overflow-y-auto rounded-t-[1.5rem] rounded-b-none p-0 sm:max-h-[92vh] sm:w-full sm:rounded-2xl">
                 <DialogHeader>
-                  <div className="border-b border-slate-100 px-5 pb-4 pt-5 sm:px-7 sm:pt-7">
-                    <DialogTitle className="text-xl font-extrabold tracking-tight">{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
+                  <div className="sticky top-0 z-20 border-b border-slate-100 bg-white/95 px-4 pb-4 pt-5 backdrop-blur sm:px-7 sm:pt-7">
+                    <DialogTitle className="pr-8 text-xl font-extrabold tracking-tight">{editingProperty ? "Edit Property" : "Add New Property"}</DialogTitle>
                     <p className="mt-1 text-sm text-slate-500">{editingProperty ? "Update your listing details" : "Your progress is saved automatically on this device."}</p>
-                    <ol className="mt-5 grid grid-cols-3 gap-2" aria-label="Listing form progress">
+                    <ol className="mt-5 grid grid-cols-3 gap-1.5 sm:gap-2" aria-label="Listing form progress">
                       {LISTING_FORM_STEPS.map((step, index) => (
                         <li key={step.label} className="min-w-0">
-                          <div className="flex items-center gap-2">
-                            <span className={`grid h-7 w-7 shrink-0 place-items-center rounded-full text-xs font-extrabold ${index < listingStep ? "bg-emerald-600 text-white" : index === listingStep ? "bg-emerald-600 text-white ring-4 ring-emerald-100" : "bg-slate-100 text-slate-500"}`}>{index < listingStep ? <Check className="h-4 w-4" /> : index + 1}</span>
-                            <span className={`truncate text-xs font-bold ${index <= listingStep ? "text-slate-900" : "text-slate-400"}`}>{step.label}</span>
+                          <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center sm:gap-2">
+                            <span className={`grid h-8 w-8 shrink-0 place-items-center rounded-full text-xs font-extrabold ${index < listingStep ? "bg-emerald-600 text-white" : index === listingStep ? "bg-emerald-600 text-white ring-4 ring-emerald-100" : "bg-slate-100 text-slate-500"}`}>{index < listingStep ? <Check className="h-4 w-4" /> : index + 1}</span>
+                            <span className={`text-[11px] font-bold leading-tight sm:text-xs ${index <= listingStep ? "text-slate-900" : "text-slate-400"}`}>{step.label}</span>
                           </div>
                         </li>
                       ))}
                     </ol>
                   </div>
                 </DialogHeader>
-                <form onSubmit={handleSubmit} className="space-y-5 px-5 py-5 sm:px-7 sm:py-6">
+                <form onSubmit={handleSubmit} className="space-y-5 px-4 pb-[calc(env(safe-area-inset-bottom)+6rem)] pt-5 sm:px-7 sm:py-6">
                   {!editingProperty && (draftStatus !== "idle" || !isOnline) && <div className={`flex items-center gap-2 rounded-xl border px-3 py-2 text-xs font-semibold ${isOnline ? "border-emerald-100 bg-emerald-50 text-emerald-800" : "border-amber-200 bg-amber-50 text-amber-900"}`}>{isOnline ? <Check className="h-3.5 w-3.5" /> : <WifiOff className="h-3.5 w-3.5" />}{!isOnline ? "Offline — changes stay safely on this device until you reconnect." : draftStatus === "restored" ? "Your saved local draft was restored." : draftMetadata.savedAt ? `Draft saved locally at ${new Date(draftMetadata.savedAt).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}.` : "Draft saved automatically."}</div>}
                   {listingStep === 0 && <>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Title *</label>
-                    <Input required value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Modern 3BR Villa in Karen" />
+                    <Input required className="h-12 text-base" value={formData.title} onChange={(e) => setFormData({ ...formData, title: e.target.value })} placeholder="e.g. Modern 3BR Villa in Karen" />
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Description *</label>
@@ -449,17 +449,17 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                       rows={4}
                       placeholder="Describe the property, key features, and nearby conveniences..."
                       aria-invalid={descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH}
-                      className={descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? "border-amber-400 focus-visible:ring-amber-300" : ""}
+                      className={descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? "min-h-28 text-base border-amber-400 focus-visible:ring-amber-300" : "min-h-28 text-base"}
                     />
                     <p className={`mt-1.5 text-xs ${descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? "font-semibold text-amber-700" : "text-slate-500"}`}>
                       {descriptionLength}/{MIN_LISTING_DESCRIPTION_LENGTH} characters minimum {descriptionLength > 0 && descriptionLength < MIN_LISTING_DESCRIPTION_LENGTH ? `— add ${MIN_LISTING_DESCRIPTION_LENGTH - descriptionLength} more.` : ""}
                     </p>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Property Type *</label>
                       <Select value={formData.propertyType} onValueChange={(v) => setFormData({ ...formData, propertyType: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {PROPERTY_TYPES.map((t) => <SelectItem key={t} value={t}>{t.charAt(0).toUpperCase() + t.slice(1)}</SelectItem>)}
                         </SelectContent>
@@ -468,51 +468,51 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                     <div>
                       <label className="text-sm font-medium mb-1 block">Listing Type *</label>
                       <Select value={formData.listingType} onValueChange={(v) => setFormData({ ...formData, listingType: v })}>
-                        <SelectTrigger><SelectValue /></SelectTrigger>
+                        <SelectTrigger className="h-12 text-base"><SelectValue /></SelectTrigger>
                         <SelectContent>
                           {LISTING_TYPES.map((t) => <SelectItem key={t} value={t}>{t === "sale" ? "For Sale" : "For Rent"}</SelectItem>)}
                         </SelectContent>
                       </Select>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Bedrooms</label>
-                      <Input type="number" min="0" value={formData.bedrooms} onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })} />
+                      <Input className="h-12 text-base" type="number" inputMode="numeric" min="0" value={formData.bedrooms} onChange={(e) => setFormData({ ...formData, bedrooms: e.target.value })} />
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-1 block">Bathrooms</label>
-                      <Input type="number" min="0" value={formData.bathrooms} onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })} />
+                      <Input className="h-12 text-base" type="number" inputMode="numeric" min="0" value={formData.bathrooms} onChange={(e) => setFormData({ ...formData, bathrooms: e.target.value })} />
                     </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Floor Area (sqm)</label>
-                    <Input type="number" value={formData.floorArea} onChange={(e) => setFormData({ ...formData, floorArea: e.target.value })} />
+                    <Input className="h-12 text-base" type="number" inputMode="decimal" value={formData.floorArea} onChange={(e) => setFormData({ ...formData, floorArea: e.target.value })} />
                   </div>
                   </>}
                   {listingStep === 1 && <>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Price (Ksh) *</label>
-                    <Input required type="number" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} placeholder="5000000" />
+                    <Input required className="h-12 text-base" type="number" inputMode="numeric" value={formData.price} onChange={(e) => setFormData({ ...formData, price: e.target.value })} placeholder="5000000" />
                   </div>
                   <LocationSuggestionInput
                     value={formData.location}
                     onChange={(location: string) => setFormData((current) => ({ ...current, location }))}
                     onSelect={(selection) => setFormData((current) => applySuggestedLocation(current, selection))}
                   />
-                  <div className="grid grid-cols-2 gap-4">
+                  <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 sm:gap-4">
                     <div>
                       <label className="text-sm font-medium mb-1 block">Latitude</label>
-                      <Input type="number" step="any" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} placeholder="-1.3100" />
+                      <Input className="h-12 text-base" type="number" inputMode="decimal" step="any" value={formData.latitude} onChange={(e) => setFormData({ ...formData, latitude: e.target.value })} placeholder="-1.3100" />
                     </div>
                     <div>
                       <label className="text-sm font-medium mb-1 block">Longitude</label>
-                      <Input type="number" step="any" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} placeholder="36.7069" />
+                      <Input className="h-12 text-base" type="number" inputMode="decimal" step="any" value={formData.longitude} onChange={(e) => setFormData({ ...formData, longitude: e.target.value })} placeholder="36.7069" />
                     </div>
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-1 block">Land Size (sqm)</label>
-                    <Input type="number" value={formData.landSize} onChange={(e) => setFormData({ ...formData, landSize: e.target.value })} />
+                    <Input className="h-12 text-base" type="number" inputMode="decimal" value={formData.landSize} onChange={(e) => setFormData({ ...formData, landSize: e.target.value })} />
                   </div>
                   </>}
                   {listingStep === 2 && <>
@@ -524,7 +524,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                           key={a}
                           type="button"
                           onClick={() => toggleAmenity(a)}
-                          className={`px-3 py-1.5 rounded-full text-xs border transition-colors ${
+                          className={`min-h-10 rounded-full border px-3 py-1.5 text-[13px] font-medium transition-colors ${
                             formData.amenities.includes(a)
                               ? "bg-[oklch(0.45_0.18_260)] text-white border-[oklch(0.45_0.18_260)]"
                               : "border-border hover:border-[oklch(0.45_0.18_260)]"
@@ -537,19 +537,20 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                   </div>
                   <div>
                     <label className="text-sm font-medium mb-2 block">Property Photos</label>
-                    <div className="flex flex-wrap gap-3 mb-3">
+                    <div className="grid grid-cols-3 gap-3 mb-3">
                       {formData.photos.length > 0 && (
-                        <div className="w-full text-xs text-muted-foreground mb-1">
+                        <div className="col-span-full text-xs text-muted-foreground">
                           {formData.photos.length} / {maxPhotos} photos {isPremium && "(Premium limit)"}
                         </div>
                       )}
                       {formData.photos.map((photo, i) => (
-                        <div key={i} className="relative w-24 h-24 rounded-lg overflow-hidden border">
+                        <div key={i} className="relative aspect-square min-w-0 overflow-hidden rounded-xl border">
                           <img src={photo.preview} alt="" className="w-full h-full object-cover" />
                           <button
                             type="button"
                             onClick={() => removePhoto(i)}
-                            className="absolute top-1 right-1 w-5 h-5 rounded-full bg-black/50 text-white flex items-center justify-center"
+                            aria-label={`Remove photo ${i + 1}`}
+                            className="absolute right-1 top-1 flex h-8 w-8 items-center justify-center rounded-full bg-black/60 text-white"
                           >
                             <X className="w-3 h-3" />
                           </button>
@@ -571,8 +572,8 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                         </div>
                       ))}
                       {formData.photos.length < maxPhotos && (
-                        <label className="w-24 h-24 rounded-lg border-2 border-dashed border-border flex items-center justify-center cursor-pointer hover:border-[oklch(0.45_0.18_260)] transition-colors">
-                          <div className="text-center">
+                        <label className="aspect-square cursor-pointer rounded-xl border-2 border-dashed border-border transition-colors hover:border-[oklch(0.45_0.18_260)]">
+                          <div className="flex h-full flex-col items-center justify-center text-center">
                             <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
                             <span className="text-xs text-muted-foreground">Upload</span>
                           </div>
@@ -596,7 +597,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
 
                   {/* AI Tools (Premium) */}
                   <div className="rounded-lg border border-dashed border-[oklch(0.72_0.15_80)]/50 bg-[oklch(0.72_0.15_80)]/5 p-4">
-                    <div className="flex items-center justify-between gap-2 mb-3">
+                    <div className="mb-3 flex flex-col items-stretch gap-3 sm:flex-row sm:items-center sm:justify-between">
                       <div className="flex items-center gap-2">
                         <Sparkles className="w-4 h-4 text-[oklch(0.72_0.15_80)]" />
                         <span className="text-sm font-semibold text-foreground">AI Assistant</span>
@@ -608,7 +609,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                         type="button"
                         variant="outline"
                         size="sm"
-                        className="gap-1"
+                        className="min-h-10 w-full gap-1 sm:w-auto"
                         disabled={!isPremium}
                         onClick={() => {
                           if (!isPremium) {
@@ -629,14 +630,14 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
                     )}
                   </div>
                   </>}
-                  <div className="flex items-center justify-between gap-3 border-t border-slate-100 pt-4">
-                    <Button type="button" variant="outline" className="rounded-xl" onClick={() => listingStep > 0 ? setListingStep((step) => step - 1) : closeListingForm()}>
+                  <div className="sticky bottom-0 -mx-4 flex items-center gap-3 border-t border-slate-100 bg-white/95 px-4 pb-[calc(env(safe-area-inset-bottom)+0.75rem)] pt-3 backdrop-blur sm:static sm:mx-0 sm:justify-between sm:bg-transparent sm:px-0 sm:pb-0 sm:pt-4">
+                    <Button type="button" variant="outline" className="min-h-12 flex-1 rounded-xl sm:flex-none" onClick={() => listingStep > 0 ? setListingStep((step) => step - 1) : closeListingForm()}>
                       {listingStep > 0 ? <><ChevronLeft className="mr-1 h-4 w-4" />Back</> : "Save & close"}
                     </Button>
                     {listingStep < LISTING_FORM_STEPS.length - 1 ? (
-                      <Button type="button" className="rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500" onClick={advanceListingStep}>Continue <ChevronRight className="ml-1 h-4 w-4" /></Button>
+                      <Button type="button" className="min-h-12 flex-1 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500 sm:flex-none" onClick={advanceListingStep}>Continue <ChevronRight className="ml-1 h-4 w-4" /></Button>
                     ) : (
-                      <Button type="submit" className="rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500" disabled={createMutation.isPending || updateMutation.isPending}>
+                      <Button type="submit" className="min-h-12 flex-1 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500 sm:flex-none" disabled={createMutation.isPending || updateMutation.isPending}>
                         {createMutation.isPending || updateMutation.isPending ? "Saving..." : editingProperty ? "Update Property" : "Submit for Review"}
                       </Button>
                     )}
@@ -724,7 +725,7 @@ function SellerDashboardContent({ user }: { user: NonNullable<ReturnType<typeof 
               <ImageIcon className="w-16 h-16 mx-auto mb-4 opacity-30" />
               <h3 className="text-xl font-semibold mb-2">No Properties Yet</h3>
               <p className="text-muted-foreground mb-6">Start by adding your first property listing</p>
-              <Button onClick={() => setShowForm(true)} className="gap-2">
+              <Button onClick={openNewListing} className="gap-2">
                 <PlusCircle className="w-4 h-4" />
                 Add Property
               </Button>

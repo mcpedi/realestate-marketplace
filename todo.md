@@ -216,7 +216,12 @@
 ## AI chat typing indicator
 - [x] Replace the generic AI response loader with an accessible, motion-aware typing-indicator animation
 - [x] Verify the typing indicator on responsive assistant layouts and add coverage (144 tests passing; production build verified)
-- [ ] Checkpoint and publish the AI typing-indicator refinement
+- [x] Checkpoint and publish the AI typing-indicator refinement
+
+## Smartphone Add Property optimization
+- [x] Audit the Add Property route and multi-step listing form at a phone viewport to identify touch, spacing, control, and action-bar issues
+- [x] Rework the listing form for a phone-first workflow while preserving drafts, validation, media uploads, and location suggestions
+- [x] Add focused mobile workflow coverage, verify on a phone viewport, checkpoint, and publish (146 tests passing; production build and 390px phone form reviewed)
 
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
