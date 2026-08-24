@@ -1,11 +1,34 @@
 import type { Express } from "express";
 import { ENV } from "./env";
 
+const PUBLIC_STORAGE_PREFIXES = [
+  "agency-assets/",
+  "generated/",
+  "profile-pictures/",
+  "property-photos/",
+  "property-videos/",
+] as const;
+const PUBLIC_ROOT_ASSET = /^(?:nyumba|pediwa)-[a-zA-Z0-9_.-]+$/;
+
+export function isPublicStorageKey(key: string) {
+  const normalized = key.replace(/^\/+/, "");
+  if (!normalized || normalized.includes("..") || normalized.startsWith("/")) return false;
+  return (
+    PUBLIC_STORAGE_PREFIXES.some((prefix) => normalized.startsWith(prefix)) ||
+    (!normalized.includes("/") && PUBLIC_ROOT_ASSET.test(normalized))
+  );
+}
+
 export function registerStorageProxy(app: Express) {
   app.get("/manus-storage/*", async (req, res) => {
     const key = (req.params as Record<string, string>)[0];
     if (!key) {
       res.status(400).send("Missing storage key");
+      return;
+    }
+
+    if (!isPublicStorageKey(key)) {
+      res.status(404).send("Not found");
       return;
     }
 

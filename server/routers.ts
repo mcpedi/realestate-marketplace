@@ -590,32 +590,50 @@ export const appRouter = router({
           .optional()
       )
       .query(async ({ input }) => {
-        return db.getProperties({ ...input, status: "approved" });
+        return db.getPublicProperties(input ?? {});
       }),
 
     featured: publicProcedure.query(async () => {
-      return db.getFeaturedProperties();
+      return db.getPublicFeaturedProperties();
     }),
 
     latest: publicProcedure.query(async () => {
-      return db.getLatestProperties(8);
+      return db.getPublicLatestProperties(8);
     }),
 
-    byId: publicProcedure.input(z.number()).query(async ({ input }) => {
-      const property = await db.getPropertyById(input);
+    byId: publicProcedure.input(z.number().int().positive()).query(async ({ ctx, input }) => {
+      if (ctx.user) {
+        const privateProperty = await db.getPropertyById(input);
+        if (
+          privateProperty &&
+          (ctx.user.role === "admin" || privateProperty.userId === ctx.user.id)
+        ) {
+          return privateProperty;
+        }
+      }
+      const property = await db.getPublicPropertyById(input);
       if (!property) return null;
       await db.incrementPropertyViews(input);
       return property;
     }),
 
-    photos: publicProcedure.input(z.number()).query(async ({ input }) => {
-      return db.getPropertyPhotos(input);
+    photos: publicProcedure.input(z.number().int().positive()).query(async ({ ctx, input }) => {
+      if (ctx.user) {
+        const privateProperty = await db.getPropertyById(input);
+        if (
+          privateProperty &&
+          (ctx.user.role === "admin" || privateProperty.userId === ctx.user.id)
+        ) {
+          return db.getPropertyPhotos(input);
+        }
+      }
+      const publicPhotos = await db.getPublicPropertyPhotos(input);
+      return publicPhotos ?? null;
     }),
 
-    seller: publicProcedure.input(z.number()).query(async ({ input }) => {
-      const property = await db.getPropertyById(input);
-      if (!property) return null;
-      return db.getUserById(property.userId);
+    seller: publicProcedure.input(z.number().int().positive()).query(async ({ input }) => {
+      const publicSeller = await db.getPublicSellerByPropertyId(input);
+      return publicSeller ?? null;
     }),
 
     create: protectedProcedure

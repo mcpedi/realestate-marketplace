@@ -1,8 +1,8 @@
 import { Link } from "wouter";
-import { Bed, Bath, Maximize, MapPin, Heart, Tag, BadgeCheck, GitCompareArrows } from "lucide-react";
+import { Bed, Bath, Maximize, MapPin, Heart, Tag, GitCompareArrows } from "lucide-react";
 import { emitCompareChange } from "@/pages/Compare";
 import { useCompareIds } from "@/hooks/useCompareIds";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 import { trpc } from "@/lib/trpc";
 import { toast } from "sonner";
 import type { Property } from "../../../drizzle/schema";
@@ -34,26 +34,20 @@ export function MatchBadge({ propertyId }: { propertyId: number }) {
 }
 
 interface PropertyCardProps {
-  property: Property & { photos?: { url: string }[] };
-}
-
-function usePremiumSellerBadge(userId?: number | null) {
-  // Stabilize the userId reference so the query doesn't refetch on every render.
-  // A fresh userId only when it actually changes.
-  const stableUserId = useMemo(() => userId ?? -1, [userId ?? -1]);
-  const { data } = trpc.subscription.isPremium.useQuery(undefined, {
-    enabled: stableUserId !== -1,
-  });
-  return data?.isPremium || false;
-}
-
-function PremiumBadge() {
-  return (
-    <span className="px-2.5 py-1 rounded-md text-xs font-semibold text-white bg-[oklch(0.72_0.15_80)] inline-flex items-center gap-1">
-      <BadgeCheck className="w-3 h-3" />
-      Verified
-    </span>
-  );
+  property: Pick<
+    Property,
+    | "id"
+    | "title"
+    | "price"
+    | "location"
+    | "propertyType"
+    | "listingType"
+    | "bedrooms"
+    | "bathrooms"
+    | "landSize"
+    | "floorArea"
+    | "featured"
+  > & { photos?: { url: string }[] };
 }
 
 export function PropertyCard({ property }: PropertyCardProps) {
@@ -69,9 +63,6 @@ export function PropertyCard({ property }: PropertyCardProps) {
       toast.error("Please sign in to save favorites");
     },
   });
-
-  // Premium sellers get a "Verified" badge on their listings
-  const isVerifiedSeller = usePremiumSellerBadge(property.userId);
 
   const formatPrice = (price: number) => {
     if (price >= 1000000) return `Ksh ${Math.round(price / 1000000).toLocaleString()}M`;
@@ -106,7 +97,6 @@ export function PropertyCard({ property }: PropertyCardProps) {
               Featured
             </span>
           )}
-          {isVerifiedSeller && <PremiumBadge />}
           <MatchBadge propertyId={property.id} />
         </div>
         <div className="absolute top-3 right-3 flex flex-col gap-2">

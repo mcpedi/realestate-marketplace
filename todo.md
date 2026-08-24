@@ -233,6 +233,13 @@
 - [x] Review authentication, authorization, data exposure, input handling, file uploads, APIs, and client-side security controls
 - [x] Validate dependency and deployment configuration risks, prioritize findings, and deliver a plain-English remediation report
 
+## Immediate cybersecurity remediation
+- [x] Define safe public property, seller, photo, and storage-object access contracts without breaking approved-listing discovery
+- [x] Upgrade vulnerable direct and transitive production dependencies and confirm the production audit result (0 critical and 0 high production advisories; one moderate remains for separate follow-up)
+- [x] Prevent anonymous access to pending/rejected listing data and private seller fields while preserving owner/admin workflows
+- [x] Restrict the storage proxy to explicitly public asset prefixes and preserve authorized signed downloads for private documents
+- [x] Add security regression coverage, run the full verification suite, checkpoint, and publish the remediation (153 tests passing; production build and mobile public-marketplace views verified)
+
 ## Advanced platform enhancement program
 - [x] Inventory every requested module and map it to existing Nyumba 360 data, roles, APIs, and screens
 - [x] Define phased releases, shared domain models, permissions, audit controls, and integration boundaries

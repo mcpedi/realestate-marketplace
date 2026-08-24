@@ -18,6 +18,7 @@ import {
   propertyVideos,
   agencyProfiles,
   type InsertProperty,
+  type Property,
   type InsertPropertyPhoto,
   type InsertInquiry,
   type InsertFavorite,
@@ -198,6 +199,70 @@ export async function getPropertyById(id: number) {
   return result.length > 0 ? result[0] : undefined;
 }
 
+/** Removes owner-only operational fields before anonymous marketplace access. */
+export function toPublicProperty(property: Property) {
+  return {
+    id: property.id,
+    title: property.title,
+    description: property.description,
+    price: property.price,
+    location: property.location,
+    latitude: property.latitude,
+    longitude: property.longitude,
+    propertyType: property.propertyType,
+    listingType: property.listingType,
+    bedrooms: property.bedrooms,
+    bathrooms: property.bathrooms,
+    landSize: property.landSize,
+    floorArea: property.floorArea,
+    amenities: property.amenities,
+    featured: property.featured,
+    viewsCount: property.viewsCount,
+    createdAt: property.createdAt,
+  };
+}
+
+export async function getPublicPropertyById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db
+    .select()
+    .from(properties)
+    .where(and(eq(properties.id, id), eq(properties.status, "approved")))
+    .limit(1);
+  return result.length > 0 ? toPublicProperty(result[0]) : undefined;
+}
+
+export async function getPublicPropertyPhotos(propertyId: number) {
+  const publicProperty = await getPublicPropertyById(propertyId);
+  if (!publicProperty) return undefined;
+  const db = await getDb();
+  if (!db) return [];
+  return db
+    .select({ url: propertyPhotos.url, is360: propertyPhotos.is360 })
+    .from(propertyPhotos)
+    .where(eq(propertyPhotos.propertyId, propertyId))
+    .orderBy(asc(propertyPhotos.sortOrder));
+}
+
+export async function getPublicSellerByPropertyId(propertyId: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const propertyResult = await db
+    .select({ userId: properties.userId })
+    .from(properties)
+    .where(and(eq(properties.id, propertyId), eq(properties.status, "approved")))
+    .limit(1);
+  const property = propertyResult[0];
+  if (!property) return undefined;
+  const sellerResult = await db
+    .select({ id: users.id, name: users.name, profilePicture: users.profilePicture })
+    .from(users)
+    .where(eq(users.id, property.userId))
+    .limit(1);
+  return sellerResult[0];
+}
+
 export async function incrementPropertyViews(id: number) {
   const db = await getDb();
   if (!db) return;
@@ -281,6 +346,17 @@ export async function getProperties(filters: PropertyFilters = {}) {
   return { items: [...featuredItems, ...regularItems], total: totalResult?.count || 0 };
 }
 
+export async function getPublicProperties(filters: Omit<PropertyFilters, "status"> = {}) {
+  const result = await getProperties({ ...filters, status: "approved" });
+  return {
+    total: result.total,
+    items: result.items.map((item) => {
+      const { photos, ...property } = item;
+      return { ...toPublicProperty(property), photos: photos.map((photo) => ({ url: photo.url })) };
+    }),
+  };
+}
+
 export async function getFeaturedProperties() {
   const db = await getDb();
   if (!db) return [];
@@ -294,6 +370,14 @@ export async function getFeaturedProperties() {
     const photos = await db.select().from(propertyPhotos).where(eq(propertyPhotos.propertyId, p.id)).orderBy(asc(propertyPhotos.sortOrder)).limit(1);
     return { ...p, photos: photos.map((ph) => ({ url: ph.url })) };
   }));
+}
+
+export async function getPublicFeaturedProperties() {
+  const rows = await getFeaturedProperties();
+  return rows.map((item) => {
+    const { photos, ...property } = item;
+    return { ...toPublicProperty(property), photos: photos.map((photo) => ({ url: photo.url })) };
+  });
 }
 
 export async function getLatestProperties(limit = 8) {
@@ -312,6 +396,14 @@ export async function getLatestProperties(limit = 8) {
   const featuredItems = rowsWithPhotos.filter((i) => i.featured);
   const regularItems = rowsWithPhotos.filter((i) => !i.featured);
   return [...featuredItems, ...regularItems];
+}
+
+export async function getPublicLatestProperties(limit = 8) {
+  const rows = await getLatestProperties(limit);
+  return rows.map((item) => {
+    const { photos, ...property } = item;
+    return { ...toPublicProperty(property), photos: photos.map((photo) => ({ url: photo.url })) };
+  });
 }
 
 export async function getUserProperties(userId: number) {

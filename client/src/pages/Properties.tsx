@@ -39,7 +39,22 @@ import { trpc } from "@/lib/trpc";
 import { buildExploreQuery, mergeExploreFilters, sortExploreProperties, type ExploreFilters, type ExploreSort } from "@/lib/explore";
 import { toast } from "sonner";
 
-type PropertyWithPhotos = Property & { photos?: { url: string }[] };
+type PropertyWithPhotos = Pick<
+  Property,
+  | "id"
+  | "title"
+  | "price"
+  | "location"
+  | "propertyType"
+  | "listingType"
+  | "bedrooms"
+  | "bathrooms"
+  | "landSize"
+  | "floorArea"
+  | "amenities"
+  | "featured"
+  | "createdAt"
+> & { photos?: { url: string }[] };
 
 const propertyTypes = [
   { value: "all", label: "All", icon: Home },

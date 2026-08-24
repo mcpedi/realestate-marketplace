@@ -16,9 +16,7 @@ import {
   Maximize,
   MapPin,
   Heart,
-  Phone,
   MessageSquare,
-  Mail,
   User,
   ChevronLeft,
   ChevronRight,
@@ -539,41 +537,9 @@ export default function PropertyDetail() {
             {/* Contact Card */}
             <div className="bg-white rounded-xl border border-border/50 p-5 shadow-sm">
               <h3 className="font-semibold text-foreground mb-4">Contact Seller</h3>
-              <div className="space-y-3 mb-5">
-                <a
-                  href={`tel:+${seller?.phone || '0716339552'}`}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-green-50 hover:bg-green-100 transition-colors"
-                >
-                  <Phone className="w-5 h-5 text-green-600" />
-                  <div>
-                    <div className="text-sm font-medium">Call Seller</div>
-                    <div className="text-xs text-muted-foreground">Tap to call</div>
-                  </div>
-                </a>
-                <a
-                  href={`https://wa.me/${(seller?.phone || '0716339552').replace(/[^0-9]/g, '')}?text=${encodeURIComponent(
-                    `Hi, I'm interested in your listing: ${property.title} — ${formatPrice(property.price)}${property.listingType === "rent" ? "/month" : ""} — Listing ID: ${property.id}. Could you share more details?`
-                  )}`}
-                  target="_blank"
-                  rel="noopener noreferrer"
-                  className="flex items-center gap-3 p-3 rounded-lg bg-green-500 hover:bg-green-600 transition-colors text-white"
-                >
-                  <MessageSquare className="w-5 h-5" />
-                  <div>
-                    <div className="text-sm font-medium">WhatsApp</div>
-                    <div className="text-xs opacity-80">One-tap personalized inquiry</div>
-                  </div>
-                </a>
-                <a
-                  href={`mailto:${seller?.email || 'pediwarealestate@gmail.com'}?subject=Inquiry: ${encodeURIComponent(property.title)}`}
-                  className="flex items-center gap-3 p-3 rounded-lg bg-blue-50 hover:bg-blue-100 transition-colors"
-                >
-                  <Mail className="w-5 h-5 text-blue-600" />
-                  <div>
-                    <div className="text-sm font-medium">Email</div>
-                    <div className="text-xs text-muted-foreground">Send an email</div>
-                  </div>
-                </a>
+              <div className="mb-5 flex items-start gap-3 rounded-lg border border-blue-100 bg-blue-50 p-3 text-blue-950">
+                <MessageSquare className="mt-0.5 h-5 w-5 shrink-0 text-blue-600" />
+                <p className="text-sm leading-5">Seller contact details stay private. Send a secure inquiry below and the seller can respond through Nyumba 360.</p>
               </div>
 
               {/* Inquiry Form */}

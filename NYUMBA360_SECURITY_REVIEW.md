@@ -39,6 +39,14 @@ The highest priorities are to patch vulnerable dependencies, prevent public acce
 
 The code uses shared `protectedProcedure` and `adminProcedure` guards, and many sensitive owner actions verify record ownership before mutation. The document-vault download route is a useful model: it checks owner/uploader/grant/admin permission before generating a signed URL. Environment files are ignored by Git, and a source-signature scan found no obvious committed API-key or private-key markers. These controls should be preserved while the weaker paths are repaired.
 
+## Remediation update — immediate priority items completed
+
+The authorized immediate remediation was implemented after this review. Public marketplace procedures now return explicit approved-listing projections instead of raw records, and anonymous seller results are limited to a display name and profile image. Pending and rejected listings remain visible only to their owner or an administrator; private seller email, phone, open ID, role, listing owner ID, and raw listing status are no longer in the anonymous response contract. The public property page now directs visitors to the secure inquiry flow instead of publishing seller contact details.
+
+The storage proxy now permits only explicitly public asset prefixes and branded root assets. `property-documents/` and other private keys receive a generic not-found response, while the existing authorized document-download procedure remains the path for short-lived signed document downloads. Security regression tests cover anonymous approved-only access, owner-only draft access, seller-field projection, hidden private photos, and the storage allowlist.
+
+The production dependency set was upgraded, including tRPC, Axios, Drizzle, Express 4, NanoID, AWS SDK packages, Streamdown, and the remaining Lodash resolutions. The final production audit reported **0 critical** and **0 high** advisories, with **one moderate** advisory still requiring separate follow-up. The application passed TypeScript, all 33 test files / 153 tests, and the production build after the remediation.
+
 ## Practical repair order
 
 | When | What to do | Simple outcome | Verification standard |
