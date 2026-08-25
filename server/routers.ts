@@ -796,6 +796,10 @@ export const appRouter = router({
       .input(z.object({ query: z.string().trim().max(80).default("") }).optional())
       .query(async ({ input }) => db.getAdminCommandCenter(input?.query ?? "")),
 
+    operationsHub: adminProcedure
+      .input(z.object({ page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
+      .query(async ({ input }) => db.getAdminOperationsHub(input ?? {})),
+
     pendingProperties: adminProcedure.query(async () => {
       const props = await db.getPendingProperties();
       return Promise.all(

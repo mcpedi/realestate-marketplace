@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 import { appRouter } from "./routers";
 
@@ -42,5 +42,15 @@ describe("admin dashboard overview", () => {
     await expect(adminCaller.admin.commandCenter({ query: "Kilimani" })).resolves.toEqual(commandCenter);
     expect(dbMocks.getAdminCommandCenter).toHaveBeenCalledWith("Kilimani");
     await expect(adminCaller.admin.commandCenter({ query: "x".repeat(81) })).rejects.toThrow();
+  });
+
+  it("keeps operations summaries admin-only and bounds their pagination input", async () => {
+    const operations = { page: 2, limit: 10, payments: [], viewings: [], documents: [], auditEvents: [] };
+    dbMocks.getAdminOperationsHub.mockResolvedValue(operations);
+    const adminCaller = appRouter.createCaller(context("admin"));
+    await expect(appRouter.createCaller(context("user")).admin.operationsHub({ page: 2, limit: 10 })).rejects.toThrow();
+    await expect(adminCaller.admin.operationsHub({ page: 2, limit: 10 })).resolves.toEqual(operations);
+    expect(dbMocks.getAdminOperationsHub).toHaveBeenCalledWith({ page: 2, limit: 10 });
+    await expect(adminCaller.admin.operationsHub({ page: 1, limit: 26 })).rejects.toThrow();
   });
 });

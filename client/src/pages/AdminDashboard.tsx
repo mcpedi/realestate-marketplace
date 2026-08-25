@@ -39,8 +39,9 @@ import {
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
-import { Link } from "wouter";
+import { Link, useSearch } from "wouter";
 import { AdminSearchGroup } from "@/components/AdminSearchGroup";
+import { AdminOperationsHub } from "@/components/AdminOperationsHub";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Shield,
@@ -129,7 +130,10 @@ export default function AdminDashboard() {
 
 function AdminContent() {
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState("overview");
+  const adminLocationSearch = useSearch();
+  const requestedAdminTab = new URLSearchParams(adminLocationSearch).get("tab");
+  const supportedAdminTabs = ["overview", "pending", "properties", "users", "premium", "operations", "testimonials", "blog", "categories"];
+  const [activeTab, setActiveTab] = useState(() => requestedAdminTab && supportedAdminTabs.includes(requestedAdminTab) ? requestedAdminTab : "overview");
   const [overviewRange, setOverviewRange] = useState<7 | 30 | 90 | 365>(7);
   const [adminSearch, setAdminSearch] = useState("");
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
@@ -142,6 +146,7 @@ function AdminContent() {
 
   const overview = trpc.admin.dashboardOverview.useQuery({ range: overviewRange });
   const commandCenter = trpc.admin.commandCenter.useQuery({ query: adminSearch });
+  const operationsHub = trpc.admin.operationsHub.useQuery({ page: 1, limit: 10 });
   const { data: stats } = trpc.admin.stats.useQuery();
   const { data: pendingProps, refetch: refetchPending } = trpc.admin.pendingProperties.useQuery();
   const { data: allProps } = trpc.admin.allProperties.useQuery({ page: 1, limit: 20 });
@@ -267,6 +272,7 @@ function AdminContent() {
               <TabsTrigger value="premium" className="gap-1.5">
                 <Crown className="w-3.5 h-3.5" /> Premium
               </TabsTrigger>
+              <TabsTrigger value="operations" className="gap-1.5"><ReceiptText className="w-3.5 h-3.5" /> Operations</TabsTrigger>
               <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
               <TabsTrigger value="blog">Blog</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -512,6 +518,10 @@ function AdminContent() {
                   </div>
                 </div>
               </div>
+            </TabsContent>
+
+            <TabsContent value="operations" className="focus-visible:outline-none">
+              <AdminOperationsHub data={operationsHub.data} isLoading={operationsHub.isLoading} />
             </TabsContent>
 
             {/* Plan Edit Dialog */}
