@@ -108,6 +108,8 @@ The premium experience supports plan display, plan selection, checkout-form inte
 
 > **Important payment status.** The site does **not** currently process live M-Pesa STK Push, card, or PayPal transactions. Live M-Pesa integration remains explicitly deferred until the project owner selects a provider and supplies merchant, account, callback, and credential requirements through a secure setup process. A recorded payment status or plan-selection workflow must not be presented as proof of a settled live transaction.
 
+For controlled checkout testing, administrators can use a clearly labelled **Mock M-Pesa sandbox**. It accepts a test Kenyan mobile number only to derive a masked reference, never contacts Safaricom, never sends an STK prompt, and never moves money. The sandbox can create pending, successful, or failed simulated payment records. Only a simulated success activates a test subscription; pending and failed outcomes do not activate benefits. The mock route is administrator-restricted and rate-limited so it cannot become a public premium-grant path.
+
 ## 8. AI assistant and notification experience
 
 The Nyumba 360 assistant can help with ordinary conversational prompts as well as property search. For a signed-in user, it may use the user’s first name for a friendly greeting or optional wellbeing check-in. It retains a short client-provided conversation context and can return property-search results when relevant. The UI provides accessible starter prompts and a motion-aware typing indicator; reduced-motion preferences are respected.

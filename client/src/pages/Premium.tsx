@@ -6,7 +6,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { PremiumCheckoutDialog, type PremiumCheckoutPlan } from "@/components/PremiumCheckoutDialog";
-import { parsePremiumCheckoutPlanId } from "@/lib/premiumCheckout";
+import { parsePremiumCheckoutPlanId, type PremiumCheckoutSubmission } from "@/lib/premiumCheckout";
 import { Check, Crown, Loader2, Zap, Star, Shield, BarChart3, Video, Image, Share2, Headphones, Building2, Calendar } from "lucide-react";
 import { toast } from "sonner";
 import { useEffect, useMemo, useRef, useState } from "react";
@@ -50,6 +50,7 @@ export default function Premium() {
   const [checkoutPlan, setCheckoutPlan] = useState<PremiumCheckoutPlan | null>(null);
   const directCheckoutHandled = useRef<number | null>(null);
   const requestedCheckoutPlanId = useMemo(() => parsePremiumCheckoutPlanId(search), [search]);
+  const mockMpesaEnabled = user?.role === "admin";
 
   const { data: plans, isLoading: plansLoading } = trpc.subscription.plans.useQuery();
   const { data: mySub, isLoading: subLoading } = trpc.subscription.mySubscription.useQuery(undefined, {
@@ -88,7 +89,27 @@ export default function Premium() {
     },
   });
 
-  const handleSubscribe = async ({ method, reference }: { method: "mpesa" | "bank_transfer"; reference: string }) => {
+  const mockMpesaMutation = trpc.subscription.mockMpesaCheckout.useMutation({
+    onSuccess: (data) => {
+      setSubscribing(false);
+      setCheckoutPlan(null);
+      utils.subscription.mySubscription.invalidate();
+      utils.subscription.paymentHistory.invalidate();
+      setActiveTab(data.outcome === "success" ? "my-subscription" : "payments");
+      const message = data.outcome === "success"
+        ? "Mock M-Pesa success recorded. Test premium benefits are active."
+        : data.outcome === "pending"
+          ? "Mock M-Pesa payment recorded as pending. No benefits were activated."
+          : "Mock M-Pesa failure recorded. No benefits were activated.";
+      toast.success(message);
+    },
+    onError: (err) => {
+      setSubscribing(false);
+      toast.error(err.message || "Unable to run the mock M-Pesa sandbox");
+    },
+  });
+
+  const handleSubscribe = async ({ method, reference, mockOutcome }: PremiumCheckoutSubmission) => {
     if (!isAuthenticated) {
       startLogin();
       return;
@@ -96,6 +117,10 @@ export default function Premium() {
     if (!checkoutPlan) return;
     setSubscribing(true);
     try {
+      if (method === "mpesa" && mockOutcome) {
+        await mockMpesaMutation.mutateAsync({ planId: checkoutPlan.id, outcome: mockOutcome });
+        return;
+      }
       await subscribeMutation.mutateAsync({ planId: checkoutPlan.id, method, reference });
     } catch {
       setSubscribing(false);
@@ -446,7 +471,8 @@ export default function Premium() {
       <PremiumCheckoutDialog
         plan={checkoutPlan}
         open={Boolean(checkoutPlan)}
-        isSubmitting={subscribing}
+        isSubmitting={subscribing || mockMpesaMutation.isPending}
+        mockMpesaEnabled={mockMpesaEnabled}
         onClose={() => { if (!subscribing) setCheckoutPlan(null); }}
         onConfirm={handleSubscribe}
       />

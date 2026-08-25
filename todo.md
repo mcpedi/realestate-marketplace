@@ -194,6 +194,14 @@
 - [ ] Update premium checkout status feedback and payment history for live transactions
 - [ ] Test with authorized provider credentials, verify the webhook, checkpoint, and publish
 
+## Mock M-Pesa checkout simulation
+- [x] Review the existing premium checkout and payment-record contracts for a safe simulation boundary
+- [x] Add a clearly labelled mock M-Pesa path that simulates pending, successful, and failed outcomes without contacting a payment provider or moving money
+- [x] Add focused checkout and payment-record coverage, verify responsive behavior, checkpoint, and publish (36 test files / 167 tests passing; TypeScript, production build, and authenticated premium checkout rendering verified)
+- [x] Verify the authenticated mock checkout on a 390px mobile viewport and save the verified sandbox release checkpoint (desktop and 390px checkout dialogs reviewed; no live payment prompt or money movement)
+- [x] Record authenticated-administrator sandbox evidence for desktop and mobile, then save and publish the mock M-Pesa release checkpoint (administrator-only sandbox controls and all three outcomes confirmed; no Safaricom call, STK prompt, or money movement)
+- [ ] Save the verified mock M-Pesa sandbox release checkpoint and confirm the published deployment
+
 ## Publishing reliability
 - [ ] Reproduce the reported publishing failure with the current version and capture the build or deployment error output
 - [ ] Apply the smallest safe fix if a concrete publishing blocker is identified, then rerun verification

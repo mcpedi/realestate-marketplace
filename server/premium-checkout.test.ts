@@ -33,6 +33,10 @@ describe("premium checkout payment form", () => {
       error: null,
       payload: { method: "bank_transfer", reference: "BANK-TRANSFER-REQUEST" },
     });
+    expect(preparePremiumCheckoutSubmission("mpesa", "0716 339 552", "failure")).toEqual({
+      error: null,
+      payload: { method: "mpesa", reference: "MPESA-****9552", mockOutcome: "failure" },
+    });
   });
 
   it("accepts a positive plan identifier for a direct checkout link only", () => {

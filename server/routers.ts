@@ -1314,6 +1314,9 @@ export const appRouter = router({
     subscribe: protectedProcedure
       .input(z.object({ planId: z.number(), method: z.enum(["mpesa", "card", "bank_transfer"]).default("mpesa"), reference: z.string().max(255).optional() }))
       .mutation(async ({ ctx, input }) => {
+        if (input.method === "mpesa") {
+          throw new TRPCError({ code: "BAD_REQUEST", message: "Live M-Pesa is not connected. Administrators can use the separate mock M-Pesa sandbox for safe checkout testing." });
+        }
         const plan = await db.getSubscriptionPlanById(input.planId);
         if (!plan || !plan.active) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
 
@@ -1340,6 +1343,38 @@ export const appRouter = router({
         if (!sub) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Failed to create subscription" });
 
         return { subscription: sub.subscription, plan: sub.plan, payment };
+      }),
+
+    mockMpesaCheckout: adminProcedure
+      .input(z.object({ planId: z.number().int().positive(), outcome: z.enum(["pending", "success", "failure"]) }))
+      .mutation(async ({ ctx, input }) => {
+        enforceOperationRateLimit(ctx, "mock_mpesa_checkout", 12, 10 * 60 * 1000);
+        const plan = await db.getSubscriptionPlanById(input.planId);
+        if (!plan || !plan.active) throw new TRPCError({ code: "NOT_FOUND", message: "Plan not found" });
+
+        const paymentStatus = input.outcome === "success" ? "completed" : input.outcome === "failure" ? "failed" : "pending";
+        const reference = `MOCK-MPESA-${input.outcome.toUpperCase()}-${randomUUID().slice(0, 8).toUpperCase()}`;
+        const payment = await db.createPaymentRecord({
+          userId: ctx.user.id,
+          amount: plan.price,
+          currency: plan.currency,
+          method: "mpesa",
+          reference,
+          status: paymentStatus,
+          type: "subscription",
+          description: `Mock M-Pesa sandbox (${input.outcome}) — no live transaction`,
+        });
+        if (!payment) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to create mock payment record" });
+
+        let subscription: Awaited<ReturnType<typeof db.createSubscriptionRecord>> | null = null;
+        if (input.outcome === "success") {
+          const endDate = new Date();
+          endDate.setMonth(endDate.getMonth() + (plan.period === "annual" ? 12 : 1));
+          subscription = await db.createSubscriptionRecord({ userId: ctx.user.id, planId: plan.id, endDate });
+          if (!subscription) throw new TRPCError({ code: "INTERNAL_SERVER_ERROR", message: "Unable to activate mock subscription" });
+        }
+
+        return { sandbox: true as const, outcome: input.outcome, payment, subscription, plan };
       }),
 
     cancel: protectedProcedure

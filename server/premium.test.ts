@@ -92,10 +92,12 @@ describe("subscription.subscribe + cancel", () => {
       throw new Error("Premium plan not seeded");
     }
 
-    const result = await caller.subscription.subscribe({ planId: plan.id, method: "mpesa", reference: "MPESA-****9552" });
+    await expect(caller.subscription.subscribe({ planId: plan.id, method: "mpesa", reference: "MPESA-****9552" })).rejects.toThrow("Live M-Pesa is not connected");
+
+    const result = await caller.subscription.subscribe({ planId: plan.id, method: "bank_transfer", reference: "BANK-TRANSFER-REQUEST" });
     expect(result.subscription).toBeDefined();
     expect(result.plan.id).toBe(plan.id);
-    expect(result.payment.reference).toBe("MPESA-****9552");
+    expect(result.payment.reference).toBe("BANK-TRANSFER-REQUEST");
 
     // Active subscription now visible
     const sub = await caller.subscription.mySubscription();
@@ -122,6 +124,34 @@ describe("subscription.subscribe + cancel", () => {
     } else {
       expect(remaining.plan.name).toBeDefined();
     }
+  });
+});
+
+describe("subscription.mockMpesaCheckout", () => {
+  it("restricts the sandbox to administrators and records pending, success, and failure without a provider call", async () => {
+    const plans = await db.getSubscriptionPlans();
+    const plan = plans.find((item) => item.name === "Basic") ?? plans[0];
+    if (!plan) throw new Error("Premium plan not seeded");
+
+    const nonAdmin = appRouter.createCaller(createUserContext());
+    await expect(nonAdmin.subscription.mockMpesaCheckout({ planId: plan.id, outcome: "success" })).rejects.toThrow();
+
+    const admin = appRouter.createCaller(createUserContext("admin"));
+    const pending = await admin.subscription.mockMpesaCheckout({ planId: plan.id, outcome: "pending" });
+    expect(pending).toMatchObject({ sandbox: true, outcome: "pending", subscription: null });
+    expect(pending.payment.status).toBe("pending");
+    expect(pending.payment.reference).toMatch(/^MOCK-MPESA-PENDING-/);
+
+    const failed = await admin.subscription.mockMpesaCheckout({ planId: plan.id, outcome: "failure" });
+    expect(failed).toMatchObject({ sandbox: true, outcome: "failure", subscription: null });
+    expect(failed.payment.status).toBe("failed");
+    expect(failed.payment.reference).toMatch(/^MOCK-MPESA-FAILURE-/);
+
+    const successful = await admin.subscription.mockMpesaCheckout({ planId: plan.id, outcome: "success" });
+    expect(successful.sandbox).toBe(true);
+    expect(successful.payment.status).toBe("completed");
+    expect(successful.subscription?.subscription.status).toBe("active");
+    expect(successful.payment.description).toContain("no live transaction");
   });
 });
 

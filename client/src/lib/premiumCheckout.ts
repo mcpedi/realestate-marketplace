@@ -1,4 +1,11 @@
 export type PremiumPaymentMethod = "mpesa" | "bank_transfer";
+export type MockMpesaOutcome = "pending" | "success" | "failure";
+
+export type PremiumCheckoutSubmission = {
+  method: PremiumPaymentMethod;
+  reference: string;
+  mockOutcome?: MockMpesaOutcome;
+};
 
 export function normalizeKenyanPhone(phone: string): string | null {
   const digits = phone.replace(/\D/g, "");
@@ -23,10 +30,17 @@ export function premiumPaymentReference(method: PremiumPaymentMethod, phone: str
   return "BANK-TRANSFER-REQUEST";
 }
 
-export function preparePremiumCheckoutSubmission(method: PremiumPaymentMethod, phone: string): { error: string | null; payload: { method: PremiumPaymentMethod; reference: string } | null } {
+export function preparePremiumCheckoutSubmission(
+  method: PremiumPaymentMethod,
+  phone: string,
+  mockOutcome?: MockMpesaOutcome,
+): { error: string | null; payload: PremiumCheckoutSubmission | null } {
   const error = premiumCheckoutError(method, phone);
   if (error) return { error, payload: null };
-  return { error: null, payload: { method, reference: premiumPaymentReference(method, phone) } };
+
+  const payload: PremiumCheckoutSubmission = { method, reference: premiumPaymentReference(method, phone) };
+  if (method === "mpesa" && mockOutcome) payload.mockOutcome = mockOutcome;
+  return { error: null, payload };
 }
 
 export function parsePremiumCheckoutPlanId(search: string): number | null {

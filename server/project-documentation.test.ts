@@ -21,6 +21,8 @@ describe("Nyumba 360 project documentation", () => {
     expect(guide).toContain("approved-listing projection");
     expect(guide).toContain("Live M-Pesa STK Push");
     expect(guide).toContain("does **not** currently process live M-Pesa STK Push");
+    expect(guide).toContain("Mock M-Pesa sandbox");
+    expect(guide).toContain("never contacts Safaricom");
     expect(guide).toContain("## 15. Current deferred work and decisions");
   });
 

@@ -11,30 +11,39 @@ afterEach(() => cleanup());
 describe("PremiumCheckoutDialog", () => {
   it("renders the selected plan, blocks an invalid M-Pesa number, and confirms a safe payload", () => {
     const onConfirm = vi.fn();
-    render(createElement(PremiumCheckoutDialog, { plan, open: true, isSubmitting: false, onClose: vi.fn(), onConfirm }));
+    render(createElement(PremiumCheckoutDialog, { plan, open: true, isSubmitting: false, mockMpesaEnabled: true, onClose: vi.fn(), onConfirm }));
 
     expect(screen.getByText("Basic Membership")).toBeTruthy();
     expect(screen.getByText("KES 500")).toBeTruthy();
-    expect(screen.getByLabelText("M-Pesa phone number")).toBeTruthy();
+    expect(screen.getByLabelText("Test M-Pesa phone number")).toBeTruthy();
 
-    fireEvent.change(screen.getByLabelText("M-Pesa phone number"), { target: { value: "short" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirm M-Pesa payment" }));
+    fireEvent.change(screen.getByLabelText("Test M-Pesa phone number"), { target: { value: "short" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run mock M-Pesa success" }));
     expect(screen.getByText("Enter a valid Kenyan M-Pesa number, for example 0716 339 552.")).toBeTruthy();
     expect(onConfirm).not.toHaveBeenCalled();
 
-    fireEvent.change(screen.getByLabelText("M-Pesa phone number"), { target: { value: "0716 339 552" } });
-    fireEvent.click(screen.getByRole("button", { name: "Confirm M-Pesa payment" }));
-    expect(onConfirm).toHaveBeenCalledWith({ method: "mpesa", reference: "MPESA-****9552" });
+    fireEvent.change(screen.getByLabelText("Test M-Pesa phone number"), { target: { value: "0716 339 552" } });
+    fireEvent.click(screen.getByRole("button", { name: "Run mock M-Pesa success" }));
+    expect(screen.getByTestId("mock-mpesa-notice")).toBeTruthy();
+    expect(onConfirm).toHaveBeenCalledWith({ method: "mpesa", reference: "MPESA-****9552", mockOutcome: "success" });
   });
 
   it("switches to bank transfer and confirms the expected subscription payload", () => {
     const onConfirm = vi.fn();
-    render(createElement(PremiumCheckoutDialog, { plan, open: true, isSubmitting: false, onClose: vi.fn(), onConfirm }));
+    render(createElement(PremiumCheckoutDialog, { plan, open: true, isSubmitting: false, mockMpesaEnabled: true, onClose: vi.fn(), onConfirm }));
 
     fireEvent.click(screen.getByRole("button", { name: /Bank transfer/i }));
     expect(screen.queryByLabelText("M-Pesa phone number")).toBeNull();
     expect(screen.getByText("Bank transfer request")).toBeTruthy();
     fireEvent.click(screen.getByRole("button", { name: "Confirm bank transfer payment" }));
     expect(onConfirm).toHaveBeenCalledWith({ method: "bank_transfer", reference: "BANK-TRANSFER-REQUEST" });
+  });
+
+  it("keeps the M-Pesa sandbox unavailable to non-administrators", () => {
+    render(createElement(PremiumCheckoutDialog, { plan, open: true, isSubmitting: false, mockMpesaEnabled: false, onClose: vi.fn(), onConfirm: vi.fn() }));
+
+    expect((screen.getByRole("button", { name: /Mock M-Pesa/i }) as HTMLButtonElement).disabled).toBe(true);
+    expect(screen.queryByLabelText("Test M-Pesa phone number")).toBeNull();
+    expect(screen.getByText("M-Pesa sandbox testing is restricted to administrators. The live M-Pesa gateway is not connected.")).toBeTruthy();
   });
 });
