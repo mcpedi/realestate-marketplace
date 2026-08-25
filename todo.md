@@ -268,6 +268,11 @@
 - [x] Persist only the minimum review outcome and show the signal, confidence, and human-review boundary in the administrator moderation queue
 - [x] Add authorization, schema-validation, and human-review regression coverage; verify responsive behavior, publish, and document limitations (migration 0017 applied; 36 test files / 175 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
 
+## Moderation queue inline quick actions
+- [x] Review the current list-level approval and rejection controls, confirmation behavior, mutation state, and audit guarantees
+- [x] Refine the inline approve and reject actions for pending properties with clear state feedback while keeping the existing confirmation and server-side audit boundaries
+- [x] Add regression coverage, verify desktop and mobile layouts, checkpoint, and publish (38 test files / 179 tests passing; TypeScript, production build, desktop, and 390px moderation views verified)
+
 ## Pending human-review badge
 - [x] Review the existing factual pending-listing count and current administrator desktop/mobile navigation locations
 - [x] Add a visible, accessible pending-human-review badge that routes administrators to the moderation queue without changing the count source
