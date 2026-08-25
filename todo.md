@@ -268,6 +268,11 @@
 - [x] Persist only the minimum review outcome and show the signal, confidence, and human-review boundary in the administrator moderation queue
 - [x] Add authorization, schema-validation, and human-review regression coverage; verify responsive behavior, publish, and document limitations (migration 0017 applied; 36 test files / 175 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
 
+## Pending human-review badge
+- [x] Review the existing factual pending-listing count and current administrator desktop/mobile navigation locations
+- [x] Add a visible, accessible pending-human-review badge that routes administrators to the moderation queue without changing the count source
+- [x] Add coverage, verify desktop and mobile rendering, checkpoint, and publish (37 test files / 177 tests passing; TypeScript, production build, desktop, and 390px header views verified)
+
 ## Project documentation refresh
 - [x] Inventory existing product, technical, security, operational, and release documentation against the current Nyumba 360 feature set
 - [x] Prepare an updated maintainable documentation package covering public journeys, role workflows, architecture, security controls, operations, deployment, and current deferred work
