@@ -1,4 +1,4 @@
-import { eq, desc, asc, and, like, sql, count, inArray, gt, lt, isNull } from "drizzle-orm";
+import { eq, desc, asc, and, or, like, sql, count, inArray, gt, lt, isNull } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import {
   InsertUser,
@@ -663,7 +663,7 @@ export async function getDashboardStats() {
   };
 }
 
-type AdminDashboardRange = 7 | 30;
+export type AdminDashboardRange = 7 | 30 | 90 | 365;
 
 export async function getAdminDashboardOverview(range: AdminDashboardRange) {
   const db = await getDb();
@@ -726,6 +726,45 @@ export async function getAdminDashboardOverview(range: AdminDashboardRange) {
     recentProperties: recentProperties.map((property) => ({ ...property, imageUrl: propertyPhotosById.get(property.id) ?? null })),
     recentActivity,
   };
+}
+
+export async function getAdminCommandCenter(query = "") {
+  const db = await getDb();
+  const normalizedQuery = query.trim().slice(0, 80);
+  const empty = { properties: [], users: [], payments: [] };
+  if (!db) {
+    return {
+      tasks: [
+        { id: "listing-review", label: "Listings awaiting review", count: 0, href: "/admin?tab=pending", tone: "amber" },
+        { id: "pending-payments", label: "Pending payment records", count: 0, href: "/admin?tab=premium", tone: "blue" },
+        { id: "upcoming-viewings", label: "Upcoming confirmed viewings", count: 0, href: "/admin?tab=operations", tone: "emerald" },
+      ],
+      search: empty,
+    };
+  }
+
+  const now = new Date();
+  const [pendingPropertyRows, pendingPaymentRows, upcomingViewingRows] = await Promise.all([
+    db.select({ count: count() }).from(properties).where(eq(properties.status, "pending")),
+    db.select({ count: count() }).from(payments).where(eq(payments.status, "pending")),
+    db.select({ count: count() }).from(viewingBookings).where(and(gt(viewingBookings.scheduledAt, now), or(eq(viewingBookings.status, "pending"), eq(viewingBookings.status, "confirmed")))),
+  ]);
+
+  const tasks = [
+    { id: "listing-review", label: "Listings awaiting review", count: Number(pendingPropertyRows[0]?.count ?? 0), href: "/admin?tab=pending", tone: "amber" },
+    { id: "pending-payments", label: "Pending payment records", count: Number(pendingPaymentRows[0]?.count ?? 0), href: "/admin?tab=premium", tone: "blue" },
+    { id: "upcoming-viewings", label: "Upcoming confirmed viewings", count: Number(upcomingViewingRows[0]?.count ?? 0), href: "/admin?tab=operations", tone: "emerald" },
+  ];
+
+  if (normalizedQuery.length < 2) return { tasks, search: empty };
+  const pattern = `%${normalizedQuery}%`;
+  const [propertyRows, userRows, paymentRows] = await Promise.all([
+    db.select({ id: properties.id, title: properties.title, location: properties.location, status: properties.status, price: properties.price }).from(properties).where(or(like(properties.title, pattern), like(properties.location, pattern))).orderBy(desc(properties.createdAt)).limit(6),
+    db.select({ id: users.id, name: users.name, email: users.email, role: users.role }).from(users).where(or(like(users.name, pattern), like(users.email, pattern))).orderBy(desc(users.createdAt)).limit(6),
+    db.select({ id: payments.id, userId: payments.userId, amount: payments.amount, status: payments.status, reference: payments.reference, type: payments.type }).from(payments).where(or(like(payments.reference, pattern), like(payments.description, pattern))).orderBy(desc(payments.createdAt)).limit(6),
+  ]);
+
+  return { tasks, search: { properties: propertyRows, users: userRows, payments: paymentRows } };
 }
 
 // ─── Premium: Subscription Plans ─────────────────────────────────────────────

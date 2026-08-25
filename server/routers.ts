@@ -789,8 +789,12 @@ export const appRouter = router({
     }),
 
     dashboardOverview: adminProcedure
-      .input(z.object({ range: z.union([z.literal(7), z.literal(30)]).default(7) }).optional())
+      .input(z.object({ range: z.union([z.literal(7), z.literal(30), z.literal(90), z.literal(365)]).default(7) }).optional())
       .query(async ({ input }) => db.getAdminDashboardOverview(input?.range ?? 7)),
+
+    commandCenter: adminProcedure
+      .input(z.object({ query: z.string().trim().max(80).default("") }).optional())
+      .query(async ({ input }) => db.getAdminCommandCenter(input?.query ?? "")),
 
     pendingProperties: adminProcedure.query(async () => {
       const props = await db.getPendingProperties();

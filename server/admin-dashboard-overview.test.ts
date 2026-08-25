@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 import { appRouter } from "./routers";
 
@@ -20,11 +20,27 @@ describe("admin dashboard overview", () => {
     expect(dbMocks.getAdminDashboardOverview).toHaveBeenCalledWith(30);
   });
 
-  it("defaults to seven days and rejects unsupported dashboard ranges", async () => {
+  it("defaults to seven days, supports the approved control-center presets, and rejects unsupported dashboard ranges", async () => {
     dbMocks.getAdminDashboardOverview.mockResolvedValue({ stats: {}, changes: {}, series: [], recentProperties: [], recentActivity: [] });
     const caller = appRouter.createCaller(context("admin"));
     await caller.admin.dashboardOverview();
     expect(dbMocks.getAdminDashboardOverview).toHaveBeenCalledWith(7);
+    await caller.admin.dashboardOverview({ range: 90 });
+    await caller.admin.dashboardOverview({ range: 365 });
+    expect(dbMocks.getAdminDashboardOverview).toHaveBeenCalledWith(365);
     await expect(caller.admin.dashboardOverview({ range: 14 as never })).rejects.toThrow();
+  });
+
+  it("exposes grouped global discovery and factual tasks only to administrators", async () => {
+    const commandCenter = {
+      tasks: [{ id: "listing-review", label: "Listings awaiting review", count: 2, href: "/admin?tab=pending", tone: "amber" }],
+      search: { properties: [{ id: 4, title: "Kilimani Apartment", location: "Kilimani", status: "approved", price: 150000 }], users: [], payments: [] },
+    };
+    dbMocks.getAdminCommandCenter.mockResolvedValue(commandCenter);
+    const adminCaller = appRouter.createCaller(context("admin"));
+    await expect(appRouter.createCaller(context("user")).admin.commandCenter({ query: "Kilimani" })).rejects.toThrow();
+    await expect(adminCaller.admin.commandCenter({ query: "Kilimani" })).resolves.toEqual(commandCenter);
+    expect(dbMocks.getAdminCommandCenter).toHaveBeenCalledWith("Kilimani");
+    await expect(adminCaller.admin.commandCenter({ query: "x".repeat(81) })).rejects.toThrow();
   });
 });

@@ -247,6 +247,14 @@
 - [x] Add an interactive team-member section immediately below the story without disturbing the existing benefits and contact sections
 - [x] Add focused coverage, verify mobile and desktop behavior, checkpoint, and publish (35 test files / 162 tests passing; TypeScript, production build, 390px mobile, and desktop About-page views verified)
 
+## Administrator control-center enhancement program
+- [x] Audit the current administrator dashboard, data domains, existing authorization, and mobile navigation against the supplied control-center brief
+- [x] Create a phased delivery map that distinguishes implemented controls, safely derivable factual metrics, administrator-entered configuration, and modules that require new approved product scope or data models
+- [x] Deliver the dashboard foundation: date-aware factual KPIs, pending task queue, operational quick actions, status summaries, global admin discovery, and responsive mobile/desktop navigation (36 test files / 168 tests passing; TypeScript, production build, and desktop plus 390px administrator views verified)
+- [ ] Extend property moderation, verification, users/agents, payments, leads, viewings, content, locations, operations, documents, audit, and system-health workspaces without fabricating data or weakening authorization
+- [ ] Add role/permission and audit-action boundaries for newly introduced sensitive controls, with server-side authorization and pagination for large data sets
+- [ ] Add focused regression coverage, complete responsive reviews, publish the delivered phase, and document deferred modules
+
 ## Project documentation refresh
 - [x] Inventory existing product, technical, security, operational, and release documentation against the current Nyumba 360 feature set
 - [x] Prepare an updated maintainable documentation package covering public journeys, role workflows, architecture, security controls, operations, deployment, and current deferred work

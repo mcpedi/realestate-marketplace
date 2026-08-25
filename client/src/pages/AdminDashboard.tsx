@@ -40,6 +40,7 @@ import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { startLogin } from "@/const";
 import { Link } from "wouter";
+import { AdminSearchGroup } from "@/components/AdminSearchGroup";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Shield,
@@ -69,6 +70,9 @@ import {
   PanelLeft,
   ReceiptText,
   TrendingUp,
+  Search,
+  ListTodo,
+  WalletCards,
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -126,7 +130,8 @@ export default function AdminDashboard() {
 function AdminContent() {
   const { user } = useAuth();
   const [activeTab, setActiveTab] = useState("overview");
-  const [overviewRange, setOverviewRange] = useState<7 | 30>(7);
+  const [overviewRange, setOverviewRange] = useState<7 | 30 | 90 | 365>(7);
+  const [adminSearch, setAdminSearch] = useState("");
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -136,6 +141,7 @@ function AdminContent() {
   const [editPlan, setEditPlan] = useState<any>(null);
 
   const overview = trpc.admin.dashboardOverview.useQuery({ range: overviewRange });
+  const commandCenter = trpc.admin.commandCenter.useQuery({ query: adminSearch });
   const { data: stats } = trpc.admin.stats.useQuery();
   const { data: pendingProps, refetch: refetchPending } = trpc.admin.pendingProperties.useQuery();
   const { data: allProps } = trpc.admin.allProperties.useQuery({ page: 1, limit: 20 });
@@ -219,13 +225,38 @@ function AdminContent() {
           <div className="container py-7 md:py-10">
             <div className="flex flex-col gap-5 sm:flex-row sm:items-end sm:justify-between">
               <div><div className="inline-flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-xs font-bold uppercase tracking-[0.13em] text-emerald-100"><Shield className="h-3.5 w-3.5" /> Nyumba 360 control centre</div><h1 className="mt-4 text-3xl font-extrabold tracking-[-0.045em] md:text-5xl">Welcome back, Admin.</h1><p className="mt-2 max-w-xl text-sm leading-6 text-white/80 md:text-base">Here is a live view of listings, users, moderation, subscriptions, and platform activity.</p></div>
-              <Select value={String(overviewRange)} onValueChange={(value) => setOverviewRange(Number(value) as 7 | 30)}><SelectTrigger className="h-11 w-40 rounded-xl border-white/20 bg-white/10 font-bold text-white hover:bg-white/15"><CalendarDays className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="7">Last 7 days</SelectItem><SelectItem value="30">Last 30 days</SelectItem></SelectContent></Select>
+              <Select value={String(overviewRange)} onValueChange={(value) => setOverviewRange(Number(value) as 7 | 30 | 90 | 365)}><SelectTrigger className="h-11 w-40 rounded-xl border-white/20 bg-white/10 font-bold text-white hover:bg-white/15"><CalendarDays className="mr-2 h-4 w-4" /><SelectValue /></SelectTrigger><SelectContent><SelectItem value="7">Last 7 days</SelectItem><SelectItem value="30">Last 30 days</SelectItem><SelectItem value="90">Last 3 months</SelectItem><SelectItem value="365">Last 12 months</SelectItem></SelectContent></Select>
             </div>
           </div>
         </section>
 
-        <div className="container py-6 md:py-8">
-          <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
+          <div className="container py-6 md:py-8">
+            <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+              <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+                <div>
+                  <p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Global admin discovery</p>
+                  <h2 className="mt-1 text-lg font-extrabold tracking-[-0.03em] text-slate-950">Find platform records quickly</h2>
+                  <p className="mt-1 text-sm text-slate-500">Search existing properties, user accounts, and recorded payments. Results are grouped and access-controlled.</p>
+                </div>
+                <div className="relative w-full md:max-w-md"><Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" /><Input aria-label="Search administrator records" value={adminSearch} onChange={(event) => setAdminSearch(event.target.value)} placeholder="Search property, user, payment reference…" className="h-11 rounded-xl border-slate-200 pl-10" /></div>
+              </div>
+              {adminSearch.trim().length >= 2 && <div className="mt-4 grid gap-3 lg:grid-cols-3">
+                <AdminSearchGroup title="Properties" empty="No matching properties" items={commandCenter.data?.search.properties ?? []} renderItem={(item) => <Link href={`/property/${item.id}`} className="block rounded-xl border border-slate-100 px-3 py-2.5 transition hover:border-emerald-200 hover:bg-emerald-50/60"><p className="truncate text-sm font-bold text-slate-900">{item.title}</p><p className="mt-0.5 truncate text-xs text-slate-500">{item.location} · <span className="capitalize">{item.status}</span></p></Link>} />
+                <AdminSearchGroup title="Users" empty="No matching users" items={commandCenter.data?.search.users ?? []} renderItem={(item) => <button type="button" onClick={() => setActiveTab("users")} className="block w-full rounded-xl border border-slate-100 px-3 py-2.5 text-left transition hover:border-emerald-200 hover:bg-emerald-50/60"><p className="truncate text-sm font-bold text-slate-900">{item.name || "Unnamed account"}</p><p className="mt-0.5 truncate text-xs text-slate-500">{item.email || "No email"} · {item.role}</p></button>} />
+                <AdminSearchGroup title="Payments" empty="No matching payments" items={commandCenter.data?.search.payments ?? []} renderItem={(item) => <button type="button" onClick={() => setActiveTab("premium")} className="block w-full rounded-xl border border-slate-100 px-3 py-2.5 text-left transition hover:border-emerald-200 hover:bg-emerald-50/60"><p className="truncate text-sm font-bold text-slate-900">KSh {Number(item.amount).toLocaleString()} · <span className="capitalize">{item.status}</span></p><p className="mt-0.5 truncate font-mono text-xs text-slate-500">{item.reference || `Payment #${item.id}`}</p></button>} />
+              </div>}
+            </section>
+
+            <section className="mb-6 rounded-3xl border border-slate-200 bg-white p-4 shadow-sm md:p-5">
+              <div className="flex items-center justify-between gap-3"><div><p className="text-xs font-bold uppercase tracking-[0.12em] text-emerald-700">Operations queue</p><h2 className="mt-1 text-lg font-extrabold tracking-[-0.03em] text-slate-950">Priority administrative tasks</h2></div><ListTodo className="h-5 w-5 text-emerald-600" /></div>
+              <div className="mt-4 grid gap-3 sm:grid-cols-3">{commandCenter.data?.tasks.map((task) => {
+                const targetTab = task.id === "listing-review" ? "pending" : task.id === "pending-payments" ? "premium" : "overview";
+                const Icon = task.id === "pending-payments" ? WalletCards : task.id === "upcoming-viewings" ? CalendarDays : ClipboardCheck;
+                const tone = task.tone === "amber" ? "border-amber-200 bg-amber-50 text-amber-950" : task.tone === "blue" ? "border-blue-200 bg-blue-50 text-blue-950" : "border-emerald-200 bg-emerald-50 text-emerald-950";
+                return <button key={task.id} type="button" onClick={() => setActiveTab(targetTab)} className={`rounded-2xl border p-4 text-left transition hover:-translate-y-0.5 hover:shadow-sm focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-emerald-600 ${tone}`}><div className="flex items-start justify-between gap-3"><Icon className="h-5 w-5" /><span className="rounded-full bg-white/80 px-2.5 py-1 text-lg font-extrabold tabular-nums">{task.count}</span></div><p className="mt-5 text-sm font-bold">{task.label}</p><p className="mt-1 text-xs opacity-75">Open its existing control surface</p></button>;
+              })}</div>
+            </section>
+            <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
             <TabsList className="hidden h-auto w-full justify-start gap-1 overflow-x-auto rounded-2xl border border-slate-200 bg-white p-1.5 shadow-sm md:flex">
               <TabsTrigger value="overview" className="gap-1.5 rounded-xl px-4"><LayoutDashboard className="h-4 w-4" /> Overview</TabsTrigger>
               <TabsTrigger value="pending" className="gap-1.5">
