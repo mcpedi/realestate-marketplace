@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn(), getAdminSystemHealth: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn(), getAdminSystemHealth: vi.fn(), getAgencyProfileById: vi.fn(), setAgencyVerification: vi.fn(), createModuleAuditLog: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 import { appRouter } from "./routers";
 
@@ -81,5 +81,16 @@ describe("admin dashboard overview", () => {
     dbMocks.getAdminSystemHealth.mockResolvedValue(health);
     await expect(appRouter.createCaller(context("user")).admin.systemHealth()).rejects.toThrow();
     await expect(appRouter.createCaller(context("admin")).admin.systemHealth()).resolves.toEqual(health);
+  });
+
+  it("records an audit event when an administrator changes an agency verification flag", async () => {
+    dbMocks.getAgencyProfileById.mockResolvedValue({ id: 9, userId: 42, verified: false });
+    dbMocks.setAgencyVerification.mockResolvedValue(true);
+    dbMocks.createModuleAuditLog.mockResolvedValue({ id: 1 });
+    const input = { agencyId: 9, verified: true };
+    await expect(appRouter.createCaller(context("user")).admin.setAgencyVerification(input)).rejects.toThrow();
+    await expect(appRouter.createCaller(context("admin")).admin.setAgencyVerification(input)).resolves.toEqual({ success: true });
+    expect(dbMocks.setAgencyVerification).toHaveBeenCalledWith(9, true);
+    expect(dbMocks.createModuleAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "agency.verify", resourceType: "agency", resourceId: 9, metadata: { agencyUserId: 42, verified: true } }));
   });
 });

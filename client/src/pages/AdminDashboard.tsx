@@ -229,6 +229,16 @@ function AdminContent() {
         <div className="container flex h-16 items-center justify-between gap-3"><div className="flex min-w-0 items-center gap-3"><button type="button" className="grid h-10 w-10 place-items-center rounded-xl text-slate-600 transition hover:bg-slate-100 md:hidden" aria-label="Administrator navigation"><PanelLeft className="h-5 w-5" /></button><Link href="/admin" className="flex min-w-0 items-center gap-2"><div className="grid h-10 w-10 place-items-center rounded-xl bg-emerald-600 text-white shadow-sm"><Shield className="h-5 w-5" /></div><div className="min-w-0"><p className="truncate text-sm font-extrabold tracking-[-0.03em] text-slate-950">Nyumba 360</p><p className="hidden text-[10px] font-bold uppercase tracking-[0.12em] text-emerald-700 sm:block">Admin console</p></div></Link></div><div className="flex items-center gap-2"><Button variant="ghost" size="icon" className="rounded-xl text-slate-600" aria-label="Platform alerts"><Bell className="h-5 w-5" /></Button><Link href="/admin/modules" className="hidden rounded-xl px-3 py-2 text-xs font-bold text-emerald-700 transition hover:bg-emerald-50 sm:block">Module controls</Link><div className="grid h-9 w-9 place-items-center rounded-full bg-slate-950 text-xs font-extrabold text-white" title={user?.name ?? "Administrator"}>{user?.name?.slice(0, 1).toUpperCase() ?? "A"}</div></div></div>
       </header>
 
+      <nav aria-label="Administrator mobile navigation" className="fixed inset-x-0 bottom-0 z-50 grid grid-cols-5 border-t border-slate-200 bg-white/95 px-1 pb-[max(0.35rem,env(safe-area-inset-bottom))] pt-1.5 shadow-[0_-8px_24px_rgba(15,23,42,0.08)] backdrop-blur md:hidden">
+        {[
+          { id: "overview", label: "Dashboard", icon: LayoutDashboard },
+          { id: "moderation", label: "Review", icon: ShieldAlert },
+          { id: "agencies", label: "Agencies", icon: Building },
+          { id: "operations", label: "Operations", icon: ReceiptText },
+          { id: "health", label: "Health", icon: Activity },
+        ].map(({ id, label, icon: Icon }) => <button key={id} type="button" onClick={() => setActiveTab(id)} className={`flex min-h-12 flex-col items-center justify-center gap-0.5 rounded-xl px-1 text-[10px] font-extrabold transition ${activeTab === id ? "bg-emerald-50 text-emerald-700" : "text-slate-500 hover:bg-slate-50"}`} aria-current={activeTab === id ? "page" : undefined}><Icon className="h-4 w-4" /><span className="truncate">{label}</span></button>)}
+      </nav>
+
       <main className="flex-1 bg-slate-50 pb-24 md:pb-10">
         <section className="border-b border-slate-200 bg-[radial-gradient(circle_at_78%_0,_#d9f99d_0,_transparent_30%),linear-gradient(120deg,_#062b2c,_#075b42_52%,_#0f766e)] text-white">
           <div className="container py-7 md:py-10">

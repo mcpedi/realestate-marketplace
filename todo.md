@@ -251,14 +251,16 @@
 - [x] Audit the current administrator dashboard, data domains, existing authorization, and mobile navigation against the supplied control-center brief
 - [x] Create a phased delivery map that distinguishes implemented controls, safely derivable factual metrics, administrator-entered configuration, and modules that require new approved product scope or data models
 - [x] Deliver the dashboard foundation: date-aware factual KPIs, pending task queue, operational quick actions, status summaries, global admin discovery, and responsive mobile/desktop navigation (36 test files / 168 tests passing; TypeScript, production build, and desktop plus 390px administrator views verified)
-- [ ] Extend property moderation, verification, users/agents, payments, leads, viewings, content, locations, operations, documents, audit, and system-health workspaces without fabricating data or weakening authorization
+- [x] Extend property moderation, verification, users/agents, payments, leads, viewings, content, locations, operations, documents, audit, and system-health workspaces without fabricating data or weakening authorization (delivered data-backed moderation, agency verification, operations, audit, health, and navigation control-center layers while preserving existing user, premium, content, leads, and property workflows)
 - [x] Deliver an administrator operations hub that exposes existing recorded payments, active viewing appointments, document metadata, and audit activity through paginated, server-authorized summaries (36 test files / 169 tests passing; TypeScript, production build, and desktop plus 390px operations views verified)
 - [x] Support direct, safe administrator tab links for operations and existing control surfaces
 - [x] Deliver a richer administrator moderation queue for existing property records, including bounded filtering, listing context, and auditable approve/reject actions (36 test files / 170 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
 - [x] Deliver an administrator agency-verification directory using existing agency records, bounded filtering, and audited verification changes (36 test files / 171 tests passing; TypeScript, production build, and desktop plus 390px agency views verified)
 - [x] Deliver an administrator system-health and control-posture summary with an actual database-availability check and clearly labelled configuration states (36 test files / 172 tests passing; TypeScript, production build, and desktop plus 390px health views verified)
-- [ ] Add role/permission and audit-action boundaries for newly introduced sensitive controls, with server-side authorization and pagination for large data sets
-- [ ] Add focused regression coverage, complete responsive reviews, publish the delivered phase, and document deferred modules
+- [x] Add role/permission and audit-action boundaries for newly introduced sensitive controls, with server-side authorization and pagination for large data sets (all new data and mutations use server-side administrator procedures; bounded inputs and paginated summaries applied)
+- [x] Add direct regression coverage that administrator-only verification mutations write their audit events
+- [x] Add a focused mobile administrator navigation strip for the dashboard, moderation, agencies, operations, and health workspaces
+- [x] Add focused regression coverage, complete responsive reviews, publish the delivered phase, and document deferred modules (36 test files / 173 tests passing; TypeScript, production build, desktop and 390px reviews, and updated delivery roadmap)
 
 ## Project documentation refresh
 - [x] Inventory existing product, technical, security, operational, and release documentation against the current Nyumba 360 feature set

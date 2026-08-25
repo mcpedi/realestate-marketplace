@@ -1,20 +1,24 @@
 # Nyumba 360 Administrator Control Center Roadmap
 
-**Status:** Active delivery program  
+**Status:** Active delivery program — foundation and initial control workspaces published  
 **Purpose:** Translate the supplied administration brief into compatible Nyumba 360 releases without inventing records, weakening authorization, or interrupting the live marketplace.
 
 > **Scope boundary.** Nyumba 360 already has an administrator workspace, protected procedures, marketplace moderation, premium management, property operations, tenant access, planning controls, referrals, QR sharing, and audit records. This program expands those capabilities through server-authorized, data-backed modules. A requested surface is not presented as live until its supporting data model, permissions, workflow, and review states exist.
 
 ## 1. Delivered foundation
 
-The first control-center phase enhances `/admin` rather than replacing it. It preserves the existing moderation, user, premium, content, and module-control capabilities while adding four safe operational improvements.
+The first control-center phase enhances `/admin` rather than replacing it. It preserves the existing moderation, user, premium, content, and module-control capabilities while adding safe operational improvements and initial role-safe workspaces.
 
 | Capability | Delivered behavior | Data boundary |
 |---|---|---|
 | Date-aware overview | Supports **7, 30, 90, and 365-day** factual property and registration trends | Uses persisted `properties` and `users` timestamps only |
 | Global admin discovery | Finds matching properties, user accounts, and recorded payments in grouped results | Runs only through an administrator procedure; search is capped and result sets are limited |
 | Operations queue | Shows pending listing reviews, pending payment records, and future pending/confirmed viewings | Counts only existing marketplace records; no support-ticket or fraud count is fabricated |
-| Responsive control surface | Keeps the desktop control console and delivers stacked, touch-friendly mobile cards | Existing public navigation, users, and marketplace routes remain unchanged |
+| Operations hub | Summarises recorded payments, active viewings, document metadata, and module audit activity | Private document bytes and file keys remain unavailable |
+| Moderation queue | Filters existing property records and records audit events for approve/reject actions | No automated fraud decision, account suspension, or unsupported verification claim is made |
+| Agency verification | Filters existing agency profiles and audits changes to the existing verification flag | Verification is not presented as licensing, ownership, safety, or service-quality proof |
+| System health | Performs an administrator-only database availability probe and labels control configuration | It is not an external uptime, security-certification, or provider-telemetry service |
+| Responsive control surface | Keeps the desktop control console and delivers stacked cards plus a five-destination fixed mobile administrator strip | Existing public navigation, users, and marketplace routes remain unchanged |
 
 ## 2. Control-center releases
 
@@ -23,12 +27,12 @@ The requested control center is organized into compatible releases. Each release
 | Release | Primary workspaces | Current foundation | Additional work required |
 |---|---|---|---|
 | **A — Admin command center** | KPI overview, global discovery, task queue, quick actions, status signals | Delivered | Custom date ranges and richer admin alerts can follow after their persistence policy is approved |
-| **B — Moderation and verification** | Listing review, report intake, duplicate/suspicion flags, review history, document/ownership/location verification | Pending-listing review and property audit records exist | Requires explicit report and verification-review entities; flags remain human-review prompts, never automatic fraud findings |
-| **C — People and agency operations** | Users, agents, agency verification, account state, role profiles, performance | Users, agency profiles, agent CRM, leads, and viewings exist | Requires a formal staff-role/permission model before delegated admin actions are enabled |
+| **B — Moderation and verification** | Listing review, report intake, duplicate/suspicion flags, review history, document/ownership/location verification | **Partial delivery:** bounded listing review and approve/reject audit history | Requires explicit report and verification-review entities; flags remain human-review prompts, never automatic fraud findings |
+| **C — People and agency operations** | Users, agents, agency verification, account state, role profiles, performance | **Partial delivery:** agency directory and audited existing verification flag | Requires a formal staff-role/permission model before delegated admin actions are enabled |
 | **D — Finance and promotion operations** | Payments, subscriptions, featured placements, finance reporting, export controls | Payments, subscriptions, premium plans, and featured records exist | Live M-Pesa remains separately deferred; finance export requires an approved data-retention and access policy |
-| **E — Marketplace operations** | Leads, viewings, rental operations, maintenance, tenant activity, documents | Existing leads, viewing bookings, tenant assignments, operations records, and document vault exist | Admin list views must preserve property-level authorization and private-document protections |
+| **E — Marketplace operations** | Leads, viewings, rental operations, maintenance, tenant activity, documents | **Partial delivery:** recorded payments, active viewings, document metadata, and audit summaries | Admin list views must preserve property-level authorization and private-document protections |
 | **F — Content and market configuration** | Blog, FAQs, announcements, locations, market intelligence, sharing configuration | Blog/categories, module settings, planning templates, location strings, and QR sharing exist | CMS scheduling, structured Kenyan locations, market datasets, and public-copy revisions need dedicated data models or approved source data |
-| **G — Governance and reliability** | Roles, permissions, audit explorer, system health, notifications, security settings | Admin procedure, module audit logs, security telemetry, feature controls exist | Delegated roles, session controls, alert routing, and health probes need explicit designs and review before activation |
+| **G — Governance and reliability** | Roles, permissions, audit explorer, system health, notifications, security settings | **Partial delivery:** database probe, configuration posture, admin-only queries, bounded inputs, and audit events | Delegated roles, session controls, alert routing, and external health probes need explicit designs and review before activation |
 
 ## 3. Data and safety rules
 
@@ -59,15 +63,15 @@ The supplied brief contains modules with different readiness levels. The table d
 
 ## 5. Navigation strategy
 
-The desktop console will retain a persistent operational header with global discovery, alerts, profile context, and contextual tabs. The mobile administrator experience will prioritize a dedicated five-destination navigation:
+The desktop console retains a persistent operational header with global discovery, alerts, profile context, and contextual tabs. The mobile administrator experience now provides a dedicated fixed five-destination navigation:
 
 | Mobile destination | First-release responsibility |
 |---|---|
-| Dashboard | Overview metrics, task queue, quick actions, trend snapshot |
-| Properties | Listing inventory and moderation controls |
-| Users | Accounts, agencies, and delegated access where enabled |
-| Analytics | Factual registrations/listings/payment summaries and later market intelligence |
-| More | Premium, verification, leads, viewings, documents, content, audit, health, settings, and future modules |
+| Dashboard | Overview metrics, task queue, quick actions, and factual trend snapshot |
+| Review | Bounded property moderation queue and existing approve/reject controls |
+| Agencies | Existing agency directory and verification-flag control |
+| Operations | Recorded payments, active viewings, document metadata, and audit activity |
+| Health | Database availability probe and configuration posture |
 
 ## 6. Verification and release gate
 
