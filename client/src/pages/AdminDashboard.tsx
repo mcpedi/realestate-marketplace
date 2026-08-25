@@ -140,6 +140,8 @@ function AdminContent() {
   const [activeTab, setActiveTab] = useState(() => requestedAdminTab && supportedAdminTabs.includes(requestedAdminTab) ? requestedAdminTab : "overview");
   const [overviewRange, setOverviewRange] = useState<7 | 30 | 90 | 365>(7);
   const [adminSearch, setAdminSearch] = useState("");
+  const [auditFilter, setAuditFilter] = useState<"all" | "rejections_with_notes">("all");
+  const [auditQuery, setAuditQuery] = useState("");
   const [showTestimonialForm, setShowTestimonialForm] = useState(false);
   const [showBlogForm, setShowBlogForm] = useState(false);
   const [showCategoryForm, setShowCategoryForm] = useState(false);
@@ -151,7 +153,7 @@ function AdminContent() {
   const overview = trpc.admin.dashboardOverview.useQuery({ range: overviewRange });
   const commandCenter = trpc.admin.commandCenter.useQuery({ query: adminSearch });
   const pendingReviewCount = commandCenter.data?.tasks.find((task) => task.id === "listing-review")?.count ?? 0;
-  const operationsHub = trpc.admin.operationsHub.useQuery({ page: 1, limit: 10 });
+  const operationsHub = trpc.admin.operationsHub.useQuery({ page: 1, limit: 10, auditFilter, auditQuery });
   const { data: stats } = trpc.admin.stats.useQuery();
   const { data: pendingProps, refetch: refetchPending } = trpc.admin.pendingProperties.useQuery();
   const { data: allProps } = trpc.admin.allProperties.useQuery({ page: 1, limit: 20 });
@@ -547,7 +549,7 @@ function AdminContent() {
             </TabsContent>
 
             <TabsContent value="operations" className="focus-visible:outline-none">
-              <AdminOperationsHub data={operationsHub.data} isLoading={operationsHub.isLoading} />
+              <AdminOperationsHub data={operationsHub.data} isLoading={operationsHub.isLoading} auditFilter={auditFilter} auditQuery={auditQuery} onAuditFilterChange={setAuditFilter} onAuditQueryChange={setAuditQuery} />
             </TabsContent>
 
             <TabsContent value="health" className="focus-visible:outline-none">

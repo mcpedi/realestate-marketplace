@@ -797,7 +797,7 @@ export const appRouter = router({
       .query(async ({ input }) => db.getAdminCommandCenter(input?.query ?? "")),
 
     operationsHub: adminProcedure
-      .input(z.object({ page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
+      .input(z.object({ page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10), auditFilter: z.enum(["all", "rejections_with_notes"]).default("all"), auditQuery: z.string().trim().max(80).default("") }).optional())
       .query(async ({ input }) => db.getAdminOperationsHub(input ?? {})),
 
     moderationQueue: adminProcedure

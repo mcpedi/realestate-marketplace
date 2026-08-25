@@ -768,18 +768,27 @@ export async function getAdminCommandCenter(query = "") {
   return { tasks, search: { properties: propertyRows, users: userRows, payments: paymentRows } };
 }
 
-export async function getAdminOperationsHub(input: { page?: number; limit?: number } = {}) {
+export async function getAdminOperationsHub(input: { page?: number; limit?: number; auditFilter?: "all" | "rejections_with_notes"; auditQuery?: string } = {}) {
   const db = await getDb();
   const page = Math.max(1, Math.floor(input.page ?? 1));
   const limit = Math.min(25, Math.max(5, Math.floor(input.limit ?? 10)));
+  const auditFilter = input.auditFilter ?? "all";
+  const auditQuery = auditFilter === "rejections_with_notes" ? input.auditQuery?.trim().slice(0, 80) ?? "" : "";
   if (!db) return { page, limit, payments: [], viewings: [], documents: [], auditEvents: [] };
 
   const now = new Date();
+  const moderationNote = sql<string | null>`JSON_UNQUOTE(JSON_EXTRACT(${moduleAuditLogs.metadata}, '$.reason'))`;
+  const auditConditions = [] as any[];
+  if (auditFilter === "rejections_with_notes") {
+    auditConditions.push(eq(moduleAuditLogs.action, "moderation.reject"), sql`${moderationNote} IS NOT NULL`, sql`${moderationNote} <> ''`);
+  }
+  if (auditQuery) auditConditions.push(like(moderationNote, `%${auditQuery}%`));
+  const auditWhereClause = auditConditions.length ? and(...auditConditions) : undefined;
   const [paymentRows, viewingRows, documentRows, auditRows] = await Promise.all([
     db.select({ id: payments.id, userId: payments.userId, amount: payments.amount, currency: payments.currency, method: payments.method, reference: payments.reference, status: payments.status, type: payments.type, description: payments.description, createdAt: payments.createdAt }).from(payments).orderBy(desc(payments.createdAt)).limit(limit).offset((page - 1) * limit),
     db.select({ id: viewingBookings.id, propertyId: viewingBookings.propertyId, buyerId: viewingBookings.buyerId, scheduledAt: viewingBookings.scheduledAt, type: viewingBookings.type, status: viewingBookings.status, createdAt: viewingBookings.createdAt }).from(viewingBookings).where(and(gt(viewingBookings.scheduledAt, now), or(eq(viewingBookings.status, "pending"), eq(viewingBookings.status, "confirmed")))).orderBy(asc(viewingBookings.scheduledAt)).limit(limit),
     db.select({ id: propertyDocuments.id, propertyId: propertyDocuments.propertyId, uploadedByUserId: propertyDocuments.uploadedByUserId, name: propertyDocuments.name, category: propertyDocuments.category, mimeType: propertyDocuments.mimeType, sizeBytes: propertyDocuments.sizeBytes, createdAt: propertyDocuments.createdAt }).from(propertyDocuments).where(isNull(propertyDocuments.deletedAt)).orderBy(desc(propertyDocuments.createdAt)).limit(limit),
-    db.select({ id: moduleAuditLogs.id, actorUserId: moduleAuditLogs.actorUserId, action: moduleAuditLogs.action, resourceType: moduleAuditLogs.resourceType, resourceId: moduleAuditLogs.resourceId, propertyId: moduleAuditLogs.propertyId, createdAt: moduleAuditLogs.createdAt }).from(moduleAuditLogs).orderBy(desc(moduleAuditLogs.createdAt)).limit(limit),
+    db.select({ id: moduleAuditLogs.id, actorUserId: moduleAuditLogs.actorUserId, action: moduleAuditLogs.action, resourceType: moduleAuditLogs.resourceType, resourceId: moduleAuditLogs.resourceId, propertyId: moduleAuditLogs.propertyId, createdAt: moduleAuditLogs.createdAt, moderationNote }).from(moduleAuditLogs).where(auditWhereClause).orderBy(desc(moduleAuditLogs.createdAt)).limit(limit),
   ]);
 
   const propertyIds = Array.from(new Set([...viewingRows.map((row) => row.propertyId), ...documentRows.map((row) => row.propertyId), ...auditRows.flatMap((row) => row.propertyId ? [row.propertyId] : [])]));
@@ -797,7 +806,12 @@ export async function getAdminOperationsHub(input: { page?: number; limit?: numb
     payments: paymentRows.map((row) => ({ ...row, user: userById.get(row.userId) ? { id: row.userId, name: userById.get(row.userId)?.name ?? null, email: userById.get(row.userId)?.email ?? null } : null })),
     viewings: viewingRows.map((row) => ({ ...row, property: propertyById.get(row.propertyId) ?? null, buyer: userById.get(row.buyerId) ? { id: row.buyerId, name: userById.get(row.buyerId)?.name ?? null, email: userById.get(row.buyerId)?.email ?? null } : null })),
     documents: documentRows.map((row) => ({ ...row, property: propertyById.get(row.propertyId) ?? null, uploadedBy: userById.get(row.uploadedByUserId) ? { id: row.uploadedByUserId, name: userById.get(row.uploadedByUserId)?.name ?? null } : null })),
-    auditEvents: auditRows.map((row) => ({ ...row, property: row.propertyId ? propertyById.get(row.propertyId) ?? null : null, actor: userById.get(row.actorUserId) ? { id: row.actorUserId, name: userById.get(row.actorUserId)?.name ?? null } : null })),
+    auditEvents: auditRows.map(({ moderationNote: privateModerationNote, ...row }) => ({
+      ...row,
+      ...(auditFilter === "rejections_with_notes" && privateModerationNote ? { moderationNote: privateModerationNote } : {}),
+      property: row.propertyId ? propertyById.get(row.propertyId) ?? null : null,
+      actor: userById.get(row.actorUserId) ? { id: row.actorUserId, name: userById.get(row.actorUserId)?.name ?? null } : null,
+    })),
   };
 }
 

@@ -53,9 +53,10 @@ describe("admin dashboard overview", () => {
     dbMocks.getAdminOperationsHub.mockResolvedValue(operations);
     const adminCaller = appRouter.createCaller(context("admin"));
     await expect(appRouter.createCaller(context("user")).admin.operationsHub({ page: 2, limit: 10 })).rejects.toThrow();
-    await expect(adminCaller.admin.operationsHub({ page: 2, limit: 10 })).resolves.toEqual(operations);
-    expect(dbMocks.getAdminOperationsHub).toHaveBeenCalledWith({ page: 2, limit: 10 });
+    await expect(adminCaller.admin.operationsHub({ page: 2, limit: 10, auditFilter: "rejections_with_notes", auditQuery: "ownership" })).resolves.toEqual(operations);
+    expect(dbMocks.getAdminOperationsHub).toHaveBeenCalledWith({ page: 2, limit: 10, auditFilter: "rejections_with_notes", auditQuery: "ownership" });
     await expect(adminCaller.admin.operationsHub({ page: 1, limit: 26 })).rejects.toThrow();
+    await expect(adminCaller.admin.operationsHub({ page: 1, limit: 10, auditQuery: "x".repeat(81) })).rejects.toThrow();
   });
 
   it("keeps the moderation queue admin-only and validates its bounded filters", async () => {

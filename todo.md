@@ -278,6 +278,11 @@
 - [x] Add an optional validated rejection reason to the inline confirmation dialog and protected server-side rejection action
 - [x] Preserve the reason in the administrator audit trail without exposing internal notes through public listing data, then add coverage, verify, checkpoint, and publish (38 test files / 182 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
 
+## Administrator audit-log rejection-note filter
+- [x] Review the existing audit-event query, Operations workspace, and private moderation-note access boundary
+- [x] Add a bounded administrator-only filter and search path for rejected-property audit events that contain moderation notes
+- [x] Add privacy and authorization coverage, verify desktop and mobile layouts, checkpoint, and publish the audit-log refinement (39 test files / 184 tests passing; TypeScript, production build, and desktop plus 390px Operations views verified)
+
 ## Pending human-review badge
 - [x] Review the existing factual pending-listing count and current administrator desktop/mobile navigation locations
 - [x] Add a visible, accessible pending-human-review badge that routes administrators to the moderation queue without changing the count source
