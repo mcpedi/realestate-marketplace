@@ -200,7 +200,8 @@
 - [x] Add focused checkout and payment-record coverage, verify responsive behavior, checkpoint, and publish (36 test files / 167 tests passing; TypeScript, production build, and authenticated premium checkout rendering verified)
 - [x] Verify the authenticated mock checkout on a 390px mobile viewport and save the verified sandbox release checkpoint (desktop and 390px checkout dialogs reviewed; no live payment prompt or money movement)
 - [x] Record authenticated-administrator sandbox evidence for desktop and mobile, then save and publish the mock M-Pesa release checkpoint (administrator-only sandbox controls and all three outcomes confirmed; no Safaricom call, STK prompt, or money movement)
-- [ ] Save the verified mock M-Pesa sandbox release checkpoint and confirm the published deployment
+- [x] Save the verified mock M-Pesa sandbox release checkpoint and confirm the published deployment (checkpoint `5a9c36ae` saved; auto-publish triggered)
+- [x] Confirm checkpoint `5a9c36ae` on the live domain and verify the published mock-only checkout boundary (deployment-success notification received; published bundle contains the Mock M-Pesa sandbox UI while the signed-out route remains gated)
 
 ## Publishing reliability
 - [ ] Reproduce the reported publishing failure with the current version and capture the build or deployment error output
