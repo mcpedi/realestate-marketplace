@@ -238,6 +238,11 @@
 - [x] Add an interactive team-member section immediately below the story without disturbing the existing benefits and contact sections
 - [x] Add focused coverage, verify mobile and desktop behavior, checkpoint, and publish (35 test files / 162 tests passing; TypeScript, production build, 390px mobile, and desktop About-page views verified)
 
+## Project documentation refresh
+- [x] Inventory existing product, technical, security, operational, and release documentation against the current Nyumba 360 feature set
+- [x] Prepare an updated maintainable documentation package covering public journeys, role workflows, architecture, security controls, operations, deployment, and current deferred work
+- [x] Add documentation regression coverage, verify accuracy and project health, checkpoint, publish, and deliver the Markdown guide (36 test files / 165 tests passing; TypeScript and production build verified)
+
 ## Cybersecurity review
 - [x] Inventory security-relevant code, application configuration, and external dependency exposure across the project
 - [x] Review authentication, authorization, data exposure, input handling, file uploads, APIs, and client-side security controls
