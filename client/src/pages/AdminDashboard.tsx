@@ -43,6 +43,7 @@ import { Link, useSearch } from "wouter";
 import { AdminSearchGroup } from "@/components/AdminSearchGroup";
 import { AdminOperationsHub } from "@/components/AdminOperationsHub";
 import { AdminModerationQueue } from "@/components/AdminModerationQueue";
+import { AdminAgencyDirectory } from "@/components/AdminAgencyDirectory";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Shield,
@@ -134,7 +135,7 @@ function AdminContent() {
   const { user } = useAuth();
   const adminLocationSearch = useSearch();
   const requestedAdminTab = new URLSearchParams(adminLocationSearch).get("tab");
-  const supportedAdminTabs = ["overview", "pending", "moderation", "properties", "users", "premium", "operations", "testimonials", "blog", "categories"];
+  const supportedAdminTabs = ["overview", "pending", "moderation", "properties", "users", "agencies", "premium", "operations", "testimonials", "blog", "categories"];
   const [activeTab, setActiveTab] = useState(() => requestedAdminTab && supportedAdminTabs.includes(requestedAdminTab) ? requestedAdminTab : "overview");
   const [overviewRange, setOverviewRange] = useState<7 | 30 | 90 | 365>(7);
   const [adminSearch, setAdminSearch] = useState("");
@@ -272,6 +273,7 @@ function AdminContent() {
               <TabsTrigger value="moderation" className="gap-1.5"><ShieldAlert className="w-3.5 h-3.5" /> Moderation</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
+              <TabsTrigger value="agencies" className="gap-1.5"><Building className="w-3.5 h-3.5" /> Agencies</TabsTrigger>
               <TabsTrigger value="premium" className="gap-1.5">
                 <Crown className="w-3.5 h-3.5" /> Premium
               </TabsTrigger>
@@ -407,6 +409,10 @@ function AdminContent() {
                   </tbody>
                 </table>
               </div>
+            </TabsContent>
+
+            <TabsContent value="agencies" className="focus-visible:outline-none">
+              <AdminAgencyDirectory />
             </TabsContent>
 
             {/* Premium Management */}

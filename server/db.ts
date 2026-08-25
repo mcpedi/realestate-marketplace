@@ -1154,6 +1154,39 @@ export async function updateAgencyProfileRecord(
   return true;
 }
 
+export async function getAdminAgencyDirectory(input: { verification?: "verified" | "unverified" | "all"; query?: string; page?: number; limit?: number } = {}) {
+  const db = await getDb();
+  const page = Math.max(1, Math.floor(input.page ?? 1));
+  const limit = Math.min(25, Math.max(5, Math.floor(input.limit ?? 10)));
+  const verification = input.verification ?? "all";
+  const query = input.query?.trim().slice(0, 80) ?? "";
+  if (!db) return { page, limit, total: 0, items: [] };
+  const conditions = [] as any[];
+  if (verification === "verified") conditions.push(eq(agencyProfiles.verified, true));
+  if (verification === "unverified") conditions.push(eq(agencyProfiles.verified, false));
+  if (query) conditions.push(or(like(agencyProfiles.agencyName, `%${query}%`), like(users.name, `%${query}%`), like(users.email, `%${query}%`)));
+  const whereClause = conditions.length ? and(...conditions) : undefined;
+  const [totalRow, rows] = await Promise.all([
+    db.select({ count: count() }).from(agencyProfiles).innerJoin(users, eq(users.id, agencyProfiles.userId)).where(whereClause),
+    db.select({ id: agencyProfiles.id, userId: agencyProfiles.userId, agencyName: agencyProfiles.agencyName, logoUrl: agencyProfiles.logoUrl, website: agencyProfiles.website, verified: agencyProfiles.verified, updatedAt: agencyProfiles.updatedAt, ownerName: users.name, ownerEmail: users.email }).from(agencyProfiles).innerJoin(users, eq(users.id, agencyProfiles.userId)).where(whereClause).orderBy(desc(agencyProfiles.updatedAt)).limit(limit).offset((page - 1) * limit),
+  ]);
+  return { page, limit, total: Number(totalRow[0]?.count ?? 0), items: rows };
+}
+
+export async function getAgencyProfileById(id: number) {
+  const db = await getDb();
+  if (!db) return undefined;
+  const result = await db.select().from(agencyProfiles).where(eq(agencyProfiles.id, id)).limit(1);
+  return result[0];
+}
+
+export async function setAgencyVerification(id: number, verified: boolean) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.update(agencyProfiles).set({ verified }).where(eq(agencyProfiles.id, id));
+  return true;
+}
+
 export async function countPropertySaves(propertyId: number): Promise<number> {
   const db = await getDb();
   if (!db) return 0;

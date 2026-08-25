@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 import { appRouter } from "./routers";
 
@@ -63,5 +63,16 @@ describe("admin dashboard overview", () => {
     await expect(adminCaller.admin.moderationQueue(input)).resolves.toEqual(moderation);
     expect(dbMocks.getAdminModerationQueue).toHaveBeenCalledWith(input);
     await expect(adminCaller.admin.moderationQueue({ status: "all", query: "x".repeat(81), page: 1, limit: 10 })).rejects.toThrow();
+  });
+
+  it("keeps the agency directory admin-only and validates its bounded filters", async () => {
+    const directory = { page: 1, limit: 10, total: 1, items: [{ id: 3, agencyName: "Nyumba Agency", verified: false }] };
+    dbMocks.getAdminAgencyDirectory.mockResolvedValue(directory);
+    const adminCaller = appRouter.createCaller(context("admin"));
+    const input = { verification: "unverified" as const, query: "Nyumba", page: 1, limit: 10 };
+    await expect(appRouter.createCaller(context("user")).admin.agencyDirectory(input)).rejects.toThrow();
+    await expect(adminCaller.admin.agencyDirectory(input)).resolves.toEqual(directory);
+    expect(dbMocks.getAdminAgencyDirectory).toHaveBeenCalledWith(input);
+    await expect(adminCaller.admin.agencyDirectory({ verification: "all", query: "x".repeat(81), page: 1, limit: 10 })).rejects.toThrow();
   });
 });

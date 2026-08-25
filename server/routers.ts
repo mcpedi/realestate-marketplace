@@ -804,6 +804,20 @@ export const appRouter = router({
       .input(z.object({ status: z.enum(["pending", "approved", "rejected", "all"]).default("pending"), query: z.string().trim().max(80).default(""), page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
       .query(async ({ input }) => db.getAdminModerationQueue(input ?? {})),
 
+    agencyDirectory: adminProcedure
+      .input(z.object({ verification: z.enum(["verified", "unverified", "all"]).default("all"), query: z.string().trim().max(80).default(""), page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
+      .query(async ({ input }) => db.getAdminAgencyDirectory(input ?? {})),
+
+    setAgencyVerification: adminProcedure
+      .input(z.object({ agencyId: z.number().int().positive(), verified: z.boolean() }))
+      .mutation(async ({ ctx, input }) => {
+        const agency = await db.getAgencyProfileById(input.agencyId);
+        if (!agency) throw new TRPCError({ code: "NOT_FOUND", message: "Agency profile not found" });
+        await db.setAgencyVerification(input.agencyId, input.verified);
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: input.verified ? "agency.verify" : "agency.unverify", resourceType: "agency", resourceId: input.agencyId, metadata: { agencyUserId: agency.userId, verified: input.verified } });
+        return { success: true };
+      }),
+
     pendingProperties: adminProcedure.query(async () => {
       const props = await db.getPendingProperties();
       return Promise.all(
