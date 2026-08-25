@@ -273,6 +273,11 @@
 - [x] Refine the inline approve and reject actions for pending properties with clear state feedback while keeping the existing confirmation and server-side audit boundaries
 - [x] Add regression coverage, verify desktop and mobile layouts, checkpoint, and publish (38 test files / 179 tests passing; TypeScript, production build, desktop, and 390px moderation views verified)
 
+## Moderation rejection reason
+- [x] Review the protected rejection mutation, audit metadata, and seller-notification boundary for a private administrator comment
+- [x] Add an optional validated rejection reason to the inline confirmation dialog and protected server-side rejection action
+- [x] Preserve the reason in the administrator audit trail without exposing internal notes through public listing data, then add coverage, verify, checkpoint, and publish (38 test files / 182 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
+
 ## Pending human-review badge
 - [x] Review the existing factual pending-listing count and current administrator desktop/mobile navigation locations
 - [x] Add a visible, accessible pending-human-review badge that routes administrators to the moderation queue without changing the count source

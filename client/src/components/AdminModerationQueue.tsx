@@ -6,6 +6,7 @@ import { trpc } from "@/lib/trpc";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
+import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import {
   AlertDialog,
@@ -31,6 +32,7 @@ export function AdminModerationQueue() {
   const [query, setQuery] = useState("");
   const [pendingDecision, setPendingDecision] = useState<ModerationDecision | null>(null);
   const [actionInProgress, setActionInProgress] = useState<ModerationDecision | null>(null);
+  const [rejectionReason, setRejectionReason] = useState("");
   const utils = trpc.useUtils();
   const queue = trpc.admin.moderationQueue.useQuery({ status, query, page: 1, limit: 10 });
 
@@ -58,6 +60,7 @@ export function AdminModerationQueue() {
       toast.success("Listing rejected and audit event recorded.");
       setActionInProgress(null);
       setPendingDecision(null);
+      setRejectionReason("");
       refresh();
     },
     onError: (error) => {
@@ -78,7 +81,7 @@ export function AdminModerationQueue() {
     if (!pendingDecision) return;
     setActionInProgress(pendingDecision);
     if (pendingDecision.action === "approve") approve.mutate(pendingDecision.propertyId);
-    else reject.mutate(pendingDecision.propertyId);
+    else reject.mutate({ propertyId: pendingDecision.propertyId, reason: rejectionReason.trim() || undefined });
   };
 
   return (
@@ -187,7 +190,7 @@ export function AdminModerationQueue() {
         </div>
       </section>
 
-      <AlertDialog open={Boolean(pendingDecision)} onOpenChange={(open) => { if (!open && !decisionPending) setPendingDecision(null); }}>
+      <AlertDialog open={Boolean(pendingDecision)} onOpenChange={(open) => { if (!open && !decisionPending) { setPendingDecision(null); setRejectionReason(""); } }}>
         <AlertDialogContent>
           <AlertDialogHeader>
             <AlertDialogTitle>{pendingDecision?.action === "approve" ? "Approve this listing?" : "Reject this listing?"}</AlertDialogTitle>
@@ -196,6 +199,11 @@ export function AdminModerationQueue() {
             </AlertDialogDescription>
           </AlertDialogHeader>
           <p className="rounded-xl bg-slate-50 px-3 py-2 text-sm font-bold text-slate-700">{pendingDecision?.title}</p>
+          {pendingDecision?.action === "reject" && <div className="space-y-2">
+            <label htmlFor="moderation-rejection-reason" className="text-sm font-extrabold text-slate-800">Private administrator reason <span className="font-medium text-slate-500">(optional)</span></label>
+            <Textarea id="moderation-rejection-reason" value={rejectionReason} onChange={(event) => setRejectionReason(event.target.value.slice(0, 600))} placeholder="For example: missing required listing details" className="min-h-24 rounded-xl" disabled={decisionPending} />
+            <p className="text-xs leading-5 text-slate-500">Stored in the administrator moderation audit trail only. This internal note is not exposed on public listing data or sent in the standard rejection notification.</p>
+          </div>}
           <AlertDialogFooter>
             <AlertDialogCancel disabled={decisionPending}>Cancel</AlertDialogCancel>
             <AlertDialogAction onClick={confirmDecision} disabled={decisionPending} className={pendingDecision?.action === "reject" ? "bg-red-600 hover:bg-red-500" : "bg-emerald-600 hover:bg-emerald-500"}>

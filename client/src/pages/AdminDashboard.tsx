@@ -340,7 +340,7 @@ function AdminContent() {
                           <Button size="sm" className="gap-1 bg-green-600 hover:bg-green-700" onClick={() => approveMutation.mutate(prop.id)}>
                             <CheckCircle className="w-3.5 h-3.5" /> Approve
                           </Button>
-                          <Button size="sm" variant="outline" className="gap-1 text-red-600 border-red-200 hover:border-red-400" onClick={() => rejectMutation.mutate(prop.id)}>
+                          <Button size="sm" variant="outline" className="gap-1 text-red-600 border-red-200 hover:border-red-400" onClick={() => rejectMutation.mutate({ propertyId: prop.id })}>
                             <XCircle className="w-3.5 h-3.5" /> Reject
                           </Button>
                         </div>

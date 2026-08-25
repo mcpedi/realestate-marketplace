@@ -18,4 +18,13 @@ describe("moderation queue inline quick actions", () => {
     expect(moderationQueue).toContain('currentAction === "approve" ? "Approving…" : "Approve"');
     expect(moderationQueue).toContain('currentAction === "reject" ? "Rejecting…" : "Reject"');
   });
+
+  it("collects an optional private rejection reason only in the rejection confirmation", () => {
+    expect(moderationQueue).toContain("Private administrator reason");
+    expect(moderationQueue).toContain('id="moderation-rejection-reason"');
+    expect(moderationQueue).toContain('pendingDecision?.action === "reject"');
+    expect(moderationQueue).toContain("reason: rejectionReason.trim() || undefined");
+    expect(moderationQueue).toContain("Stored in the administrator moderation audit trail only");
+    expect(moderationQueue).toContain("This internal note is not exposed on public listing data or sent in the standard rejection notification.");
+  });
 });

@@ -918,12 +918,13 @@ export const appRouter = router({
       }),
 
     rejectProperty: adminProcedure
-      .input(z.number())
+      .input(z.object({ propertyId: z.number().int().positive(), reason: z.string().trim().max(600).optional() }))
       .mutation(async ({ ctx, input }) => {
-        const property = await db.getPropertyById(input);
-        await db.rejectProperty(input);
-        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "moderation.reject", resourceType: "property", resourceId: input, propertyId: input, metadata: { status: "rejected" } });
-        await sendRejectionNotification(property?.title || "Property", input);
+        const reason = input.reason?.trim() || undefined;
+        const property = await db.getPropertyById(input.propertyId);
+        await db.rejectProperty(input.propertyId);
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "moderation.reject", resourceType: "property", resourceId: input.propertyId, propertyId: input.propertyId, metadata: { status: "rejected", ...(reason ? { reason } : {}) } });
+        await sendRejectionNotification(property?.title || "Property", input.propertyId);
         return { success: true };
       }),
 

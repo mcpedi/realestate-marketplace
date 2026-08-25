@@ -1,10 +1,12 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn(), getAdminSystemHealth: vi.fn(), getAgencyProfileById: vi.fn(), setAgencyVerification: vi.fn(), getPropertyById: vi.fn(), upsertPropertyModerationSignal: vi.fn(), createModuleAuditLog: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn(), getAdminSystemHealth: vi.fn(), getAgencyProfileById: vi.fn(), setAgencyVerification: vi.fn(), getPropertyById: vi.fn(), rejectProperty: vi.fn(), upsertPropertyModerationSignal: vi.fn(), createModuleAuditLog: vi.fn() }));
 const llmMocks = vi.hoisted(() => ({ invokeLLM: vi.fn() }));
+const notificationMocks = vi.hoisted(() => ({ sendInquiryNotification: vi.fn(), sendApprovalNotification: vi.fn(), sendRejectionNotification: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 vi.mock("./_core/llm", () => llmMocks);
+vi.mock("./notifications", () => notificationMocks);
 import { appRouter } from "./routers";
 
 type AuthenticatedUser = NonNullable<TrpcContext["user"]>;
@@ -94,6 +96,27 @@ describe("admin dashboard overview", () => {
     await expect(appRouter.createCaller(context("admin")).admin.setAgencyVerification(input)).resolves.toEqual({ success: true });
     expect(dbMocks.setAgencyVerification).toHaveBeenCalledWith(9, true);
     expect(dbMocks.createModuleAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "agency.verify", resourceType: "agency", resourceId: 9, metadata: { agencyUserId: 42, verified: true } }));
+  });
+
+  it("records an optional private rejection reason only for an administrator and leaves the standard notification generic", async () => {
+    dbMocks.getPropertyById.mockResolvedValue({ id: 24, title: "Kilimani Apartment" });
+    dbMocks.rejectProperty.mockResolvedValue(true);
+    dbMocks.createModuleAuditLog.mockResolvedValue({ id: 4 });
+    notificationMocks.sendRejectionNotification.mockResolvedValue(undefined);
+    const input = { propertyId: 24, reason: "  Missing required ownership documents.  " };
+    await expect(appRouter.createCaller(context("user")).admin.rejectProperty(input)).rejects.toThrow();
+    await expect(appRouter.createCaller(context("admin")).admin.rejectProperty(input)).resolves.toEqual({ success: true });
+    expect(dbMocks.rejectProperty).toHaveBeenCalledWith(24);
+    expect(dbMocks.createModuleAuditLog).toHaveBeenCalledWith(expect.objectContaining({ action: "moderation.reject", resourceType: "property", resourceId: 24, propertyId: 24, metadata: { status: "rejected", reason: "Missing required ownership documents." } }));
+    expect(notificationMocks.sendRejectionNotification).toHaveBeenCalledWith("Kilimani Apartment", 24);
+  });
+
+  it("rejects oversized private rejection reasons before changing listing status or writing an audit event", async () => {
+    dbMocks.rejectProperty.mockClear();
+    dbMocks.createModuleAuditLog.mockClear();
+    await expect(appRouter.createCaller(context("admin")).admin.rejectProperty({ propertyId: 25, reason: "x".repeat(601) })).rejects.toThrow();
+    expect(dbMocks.rejectProperty).not.toHaveBeenCalled();
+    expect(dbMocks.createModuleAuditLog).not.toHaveBeenCalled();
   });
 
   it("creates an auditable human-review signal without changing a listing decision", async () => {
