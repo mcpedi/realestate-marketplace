@@ -77,6 +77,27 @@ export const properties = mysqlTable("properties", {
 export type Property = typeof properties.$inferSelect;
 export type InsertProperty = typeof properties.$inferInsert;
 
+// ─── AI-assisted property moderation signals ──────────────────────────────────
+// A signal is a limited review aid, not a moderation decision. The source listing
+// text is never duplicated here; only the structured current outcome is retained.
+export const propertyModerationSignals = mysqlTable("propertyModerationSignals", {
+  id: int("id").autoincrement().primaryKey(),
+  propertyId: int("propertyId").notNull().unique(),
+  riskLevel: mysqlEnum("riskLevel", ["none", "low", "medium", "high"]).default("none").notNull(),
+  categories: json("categories").notNull(),
+  summary: varchar("summary", { length: 600 }).notNull(),
+  confidence: int("confidence").notNull(),
+  model: varchar("model", { length: 96 }).notNull(),
+  inputFingerprint: varchar("inputFingerprint", { length: 64 }).notNull(),
+  analyzedByUserId: int("analyzedByUserId").notNull(),
+  analyzedAt: timestamp("analyzedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+}, (table) => [
+  index("moderation_signal_level_updated_idx").on(table.riskLevel, table.updatedAt),
+]);
+export type PropertyModerationSignal = typeof propertyModerationSignals.$inferSelect;
+export type InsertPropertyModerationSignal = typeof propertyModerationSignals.$inferInsert;
+
 export const propertyPhotos = mysqlTable("propertyPhotos", {
   id: int("id").autoincrement().primaryKey(),
   propertyId: int("propertyId").notNull(),

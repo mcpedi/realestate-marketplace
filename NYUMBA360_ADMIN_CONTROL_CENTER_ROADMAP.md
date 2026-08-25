@@ -27,7 +27,7 @@ The requested control center is organized into compatible releases. Each release
 | Release | Primary workspaces | Current foundation | Additional work required |
 |---|---|---|---|
 | **A — Admin command center** | KPI overview, global discovery, task queue, quick actions, status signals | Delivered | Custom date ranges and richer admin alerts can follow after their persistence policy is approved |
-| **B — Moderation and verification** | Listing review, report intake, duplicate/suspicion flags, review history, document/ownership/location verification | **Partial delivery:** bounded listing review and approve/reject audit history | Requires explicit report and verification-review entities; flags remain human-review prompts, never automatic fraud findings |
+| **B — Moderation and verification** | Listing review, report intake, duplicate/suspicion flags, review history, document/ownership/location verification | **Partial delivery:** bounded listing review, auditable approve/reject history, and on-demand AI text-risk signals | Requires explicit report and verification-review entities; AI signals remain human-review prompts, never automatic fraud findings or enforcement |
 | **C — People and agency operations** | Users, agents, agency verification, account state, role profiles, performance | **Partial delivery:** agency directory and audited existing verification flag | Requires a formal staff-role/permission model before delegated admin actions are enabled |
 | **D — Finance and promotion operations** | Payments, subscriptions, featured placements, finance reporting, export controls | Payments, subscriptions, premium plans, and featured records exist | Live M-Pesa remains separately deferred; finance export requires an approved data-retention and access policy |
 | **E — Marketplace operations** | Leads, viewings, rental operations, maintenance, tenant activity, documents | **Partial delivery:** recorded payments, active viewings, document metadata, and audit summaries | Admin list views must preserve property-level authorization and private-document protections |
@@ -42,7 +42,7 @@ The following rules apply across every release.
 |---|---|
 | Authorization | Every sensitive read or mutation is protected on the server. Client-side visibility never authorizes an action. |
 | Privacy | Search results use purpose-limited fields. Public routes continue to use approved-listing projections only. Private document keys remain unavailable through public storage delivery. |
-| Moderation | Suspicion, duplicate, price, and account flags are review signals. They do not establish fraud or automatically penalize a person or listing. |
+| Moderation | Suspicion, duplicate, price, account, and AI text-risk flags are review signals. AI analysis is initiated by an administrator, reviews bounded listing text only, stores a minimal structured outcome, and does not establish fraud or automatically penalize a person or listing. |
 | Payments | The live M-Pesa gateway remains disabled until a provider, merchant account, callbacks, and credentials are supplied securely. The current mock M-Pesa sandbox never sends an STK prompt or moves money. |
 | Reviews | No customer, agent, or property review/score will be fabricated, seeded, or hardcoded. Moderation tools will operate only on genuine submitted records. |
 | Data scale | New administrative list endpoints must paginate and bound search/filter inputs. Charts must use stored aggregates or clearly labelled user-entered assumptions. |

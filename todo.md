@@ -262,6 +262,12 @@
 - [x] Add a focused mobile administrator navigation strip for the dashboard, moderation, agencies, operations, and health workspaces
 - [x] Add focused regression coverage, complete responsive reviews, publish the delivered phase, and document deferred modules (36 test files / 173 tests passing; TypeScript, production build, desktop and 390px reviews, and updated delivery roadmap)
 
+## AI-assisted property moderation signals
+- [x] Audit the current property moderation queue, existing property fields, audit records, and server-side AI integration boundary
+- [x] Add a protected AI analysis that returns structured review signals for inappropriate, deceptive, discriminatory, or unsafe listing content without automatic rejection or account action
+- [x] Persist only the minimum review outcome and show the signal, confidence, and human-review boundary in the administrator moderation queue
+- [x] Add authorization, schema-validation, and human-review regression coverage; verify responsive behavior, publish, and document limitations (migration 0017 applied; 36 test files / 175 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
+
 ## Project documentation refresh
 - [x] Inventory existing product, technical, security, operational, and release documentation against the current Nyumba 360 feature set
 - [x] Prepare an updated maintainable documentation package covering public journeys, role workflows, architecture, security controls, operations, deployment, and current deferred work

@@ -5,6 +5,7 @@ import {
   users,
   properties,
   propertyPhotos,
+  propertyModerationSignals,
   inquiries,
   favorites,
   testimonials,
@@ -816,14 +817,23 @@ export async function getAdminModerationQueue(input: { status?: "pending" | "app
   const rows = await db.select().from(properties).where(whereClause).orderBy(desc(properties.createdAt)).limit(limit).offset((page - 1) * limit);
   if (!rows.length) return { page, limit, total: Number(totalRow?.count ?? 0), items: [] };
 
-  const [photoRows, ownerRows, auditRows] = await Promise.all([
+  const [photoRows, ownerRows, auditRows, signalRows] = await Promise.all([
     db.select({ propertyId: propertyPhotos.propertyId, url: propertyPhotos.url, sortOrder: propertyPhotos.sortOrder }).from(propertyPhotos).where(inArray(propertyPhotos.propertyId, rows.map((row) => row.id))).orderBy(asc(propertyPhotos.sortOrder)),
     db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, Array.from(new Set(rows.map((row) => row.userId))))),
     db.select({ id: moduleAuditLogs.id, propertyId: moduleAuditLogs.propertyId, action: moduleAuditLogs.action, createdAt: moduleAuditLogs.createdAt }).from(moduleAuditLogs).where(inArray(moduleAuditLogs.propertyId, rows.map((row) => row.id))).orderBy(desc(moduleAuditLogs.createdAt)).limit(limit * 3),
+    db.select({ propertyId: propertyModerationSignals.propertyId, riskLevel: propertyModerationSignals.riskLevel, categories: propertyModerationSignals.categories, summary: propertyModerationSignals.summary, confidence: propertyModerationSignals.confidence, analyzedAt: propertyModerationSignals.analyzedAt, inputFingerprint: propertyModerationSignals.inputFingerprint }).from(propertyModerationSignals).where(inArray(propertyModerationSignals.propertyId, rows.map((row) => row.id))),
   ]);
   const photoByPropertyId = new Map<number, string>();
   for (const photo of photoRows) if (!photoByPropertyId.has(photo.propertyId)) photoByPropertyId.set(photo.propertyId, photo.url);
   const ownerById = new Map(ownerRows.map((row) => [row.id, row]));
+  const signalByPropertyId = new Map(signalRows.map((row) => [row.propertyId, {
+    riskLevel: row.riskLevel,
+    categories: Array.isArray(row.categories) ? row.categories.filter((category): category is string => typeof category === "string").slice(0, 4) : [],
+    summary: row.summary,
+    confidence: row.confidence,
+    analyzedAt: row.analyzedAt,
+    inputFingerprint: row.inputFingerprint,
+  }]));
   const auditByPropertyId = new Map<number, typeof auditRows>();
   for (const audit of auditRows) {
     if (!audit.propertyId) continue;
@@ -851,8 +861,38 @@ export async function getAdminModerationQueue(input: { status?: "pending" | "app
       photoUrl: photoByPropertyId.get(row.id) ?? null,
       owner: ownerById.get(row.userId) ? { id: row.userId, name: ownerById.get(row.userId)?.name ?? null, email: ownerById.get(row.userId)?.email ?? null } : null,
       recentModeration: auditByPropertyId.get(row.id) ?? [],
+      aiReviewSignal: signalByPropertyId.get(row.id) ?? null,
     })),
   };
+}
+
+export type PropertyModerationSignalInput = {
+  propertyId: number;
+  riskLevel: "none" | "low" | "medium" | "high";
+  categories: string[];
+  summary: string;
+  confidence: number;
+  model: string;
+  inputFingerprint: string;
+  analyzedByUserId: number;
+};
+
+export async function upsertPropertyModerationSignal(input: PropertyModerationSignalInput) {
+  const db = await getDb();
+  if (!db) return false;
+  await db.insert(propertyModerationSignals).values({ ...input, categories: input.categories, analyzedAt: new Date() }).onDuplicateKeyUpdate({
+    set: {
+      riskLevel: input.riskLevel,
+      categories: input.categories,
+      summary: input.summary,
+      confidence: input.confidence,
+      model: input.model,
+      inputFingerprint: input.inputFingerprint,
+      analyzedByUserId: input.analyzedByUserId,
+      analyzedAt: new Date(),
+    },
+  });
+  return true;
 }
 
 // ─── Premium: Subscription Plans ─────────────────────────────────────────────
