@@ -800,6 +800,61 @@ export async function getAdminOperationsHub(input: { page?: number; limit?: numb
   };
 }
 
+export async function getAdminModerationQueue(input: { status?: "pending" | "approved" | "rejected" | "all"; query?: string; page?: number; limit?: number } = {}) {
+  const db = await getDb();
+  const page = Math.max(1, Math.floor(input.page ?? 1));
+  const limit = Math.min(25, Math.max(5, Math.floor(input.limit ?? 10)));
+  const status = input.status ?? "pending";
+  const query = input.query?.trim().slice(0, 80) ?? "";
+  if (!db) return { page, limit, total: 0, items: [] };
+
+  const conditions = [] as any[];
+  if (status !== "all") conditions.push(eq(properties.status, status));
+  if (query) conditions.push(or(like(properties.title, `%${query}%`), like(properties.location, `%${query}%`)));
+  const whereClause = conditions.length ? and(...conditions) : undefined;
+  const [totalRow] = await db.select({ count: count() }).from(properties).where(whereClause);
+  const rows = await db.select().from(properties).where(whereClause).orderBy(desc(properties.createdAt)).limit(limit).offset((page - 1) * limit);
+  if (!rows.length) return { page, limit, total: Number(totalRow?.count ?? 0), items: [] };
+
+  const [photoRows, ownerRows, auditRows] = await Promise.all([
+    db.select({ propertyId: propertyPhotos.propertyId, url: propertyPhotos.url, sortOrder: propertyPhotos.sortOrder }).from(propertyPhotos).where(inArray(propertyPhotos.propertyId, rows.map((row) => row.id))).orderBy(asc(propertyPhotos.sortOrder)),
+    db.select({ id: users.id, name: users.name, email: users.email }).from(users).where(inArray(users.id, Array.from(new Set(rows.map((row) => row.userId))))),
+    db.select({ id: moduleAuditLogs.id, propertyId: moduleAuditLogs.propertyId, action: moduleAuditLogs.action, createdAt: moduleAuditLogs.createdAt }).from(moduleAuditLogs).where(inArray(moduleAuditLogs.propertyId, rows.map((row) => row.id))).orderBy(desc(moduleAuditLogs.createdAt)).limit(limit * 3),
+  ]);
+  const photoByPropertyId = new Map<number, string>();
+  for (const photo of photoRows) if (!photoByPropertyId.has(photo.propertyId)) photoByPropertyId.set(photo.propertyId, photo.url);
+  const ownerById = new Map(ownerRows.map((row) => [row.id, row]));
+  const auditByPropertyId = new Map<number, typeof auditRows>();
+  for (const audit of auditRows) {
+    if (!audit.propertyId) continue;
+    const existing = auditByPropertyId.get(audit.propertyId) ?? [];
+    if (existing.length < 3) existing.push(audit);
+    auditByPropertyId.set(audit.propertyId, existing);
+  }
+
+  return {
+    page,
+    limit,
+    total: Number(totalRow?.count ?? 0),
+    items: rows.map((row) => ({
+      id: row.id,
+      title: row.title,
+      description: row.description,
+      location: row.location,
+      price: row.price,
+      propertyType: row.propertyType,
+      listingType: row.listingType,
+      bedrooms: row.bedrooms,
+      bathrooms: row.bathrooms,
+      status: row.status,
+      createdAt: row.createdAt,
+      photoUrl: photoByPropertyId.get(row.id) ?? null,
+      owner: ownerById.get(row.userId) ? { id: row.userId, name: ownerById.get(row.userId)?.name ?? null, email: ownerById.get(row.userId)?.email ?? null } : null,
+      recentModeration: auditByPropertyId.get(row.id) ?? [],
+    })),
+  };
+}
+
 // ─── Premium: Subscription Plans ─────────────────────────────────────────────
 
 export async function getSubscriptionPlans() {

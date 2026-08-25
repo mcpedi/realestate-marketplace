@@ -42,6 +42,7 @@ import { startLogin } from "@/const";
 import { Link, useSearch } from "wouter";
 import { AdminSearchGroup } from "@/components/AdminSearchGroup";
 import { AdminOperationsHub } from "@/components/AdminOperationsHub";
+import { AdminModerationQueue } from "@/components/AdminModerationQueue";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Shield,
@@ -74,6 +75,7 @@ import {
   Search,
   ListTodo,
   WalletCards,
+  ShieldAlert,
 } from "lucide-react";
 
 export default function AdminDashboard() {
@@ -132,7 +134,7 @@ function AdminContent() {
   const { user } = useAuth();
   const adminLocationSearch = useSearch();
   const requestedAdminTab = new URLSearchParams(adminLocationSearch).get("tab");
-  const supportedAdminTabs = ["overview", "pending", "properties", "users", "premium", "operations", "testimonials", "blog", "categories"];
+  const supportedAdminTabs = ["overview", "pending", "moderation", "properties", "users", "premium", "operations", "testimonials", "blog", "categories"];
   const [activeTab, setActiveTab] = useState(() => requestedAdminTab && supportedAdminTabs.includes(requestedAdminTab) ? requestedAdminTab : "overview");
   const [overviewRange, setOverviewRange] = useState<7 | 30 | 90 | 365>(7);
   const [adminSearch, setAdminSearch] = useState("");
@@ -267,6 +269,7 @@ function AdminContent() {
               <TabsTrigger value="pending" className="gap-1.5">
                 <Clock className="w-3.5 h-3.5" /> Pending ({pendingProps?.length || 0})
               </TabsTrigger>
+              <TabsTrigger value="moderation" className="gap-1.5"><ShieldAlert className="w-3.5 h-3.5" /> Moderation</TabsTrigger>
               <TabsTrigger value="properties">Properties</TabsTrigger>
               <TabsTrigger value="users">Users</TabsTrigger>
               <TabsTrigger value="premium" className="gap-1.5">
@@ -331,6 +334,10 @@ function AdminContent() {
                   ))
                 )}
               </div>
+            </TabsContent>
+
+            <TabsContent value="moderation" className="focus-visible:outline-none">
+              <AdminModerationQueue />
             </TabsContent>
 
             {/* All Properties */}

@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 import { appRouter } from "./routers";
 
@@ -52,5 +52,16 @@ describe("admin dashboard overview", () => {
     await expect(adminCaller.admin.operationsHub({ page: 2, limit: 10 })).resolves.toEqual(operations);
     expect(dbMocks.getAdminOperationsHub).toHaveBeenCalledWith({ page: 2, limit: 10 });
     await expect(adminCaller.admin.operationsHub({ page: 1, limit: 26 })).rejects.toThrow();
+  });
+
+  it("keeps the moderation queue admin-only and validates its bounded filters", async () => {
+    const moderation = { page: 1, limit: 10, total: 1, items: [{ id: 4, title: "Kilimani Apartment", status: "pending" }] };
+    dbMocks.getAdminModerationQueue.mockResolvedValue(moderation);
+    const adminCaller = appRouter.createCaller(context("admin"));
+    const input = { status: "pending" as const, query: "Kilimani", page: 1, limit: 10 };
+    await expect(appRouter.createCaller(context("user")).admin.moderationQueue(input)).rejects.toThrow();
+    await expect(adminCaller.admin.moderationQueue(input)).resolves.toEqual(moderation);
+    expect(dbMocks.getAdminModerationQueue).toHaveBeenCalledWith(input);
+    await expect(adminCaller.admin.moderationQueue({ status: "all", query: "x".repeat(81), page: 1, limit: 10 })).rejects.toThrow();
   });
 });

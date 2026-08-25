@@ -254,6 +254,7 @@
 - [ ] Extend property moderation, verification, users/agents, payments, leads, viewings, content, locations, operations, documents, audit, and system-health workspaces without fabricating data or weakening authorization
 - [x] Deliver an administrator operations hub that exposes existing recorded payments, active viewing appointments, document metadata, and audit activity through paginated, server-authorized summaries (36 test files / 169 tests passing; TypeScript, production build, and desktop plus 390px operations views verified)
 - [x] Support direct, safe administrator tab links for operations and existing control surfaces
+- [x] Deliver a richer administrator moderation queue for existing property records, including bounded filtering, listing context, and auditable approve/reject actions (36 test files / 170 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
 - [ ] Add role/permission and audit-action boundaries for newly introduced sensitive controls, with server-side authorization and pagination for large data sets
 - [ ] Add focused regression coverage, complete responsive reviews, publish the delivered phase, and document deferred modules
 

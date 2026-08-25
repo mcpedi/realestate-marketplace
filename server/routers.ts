@@ -800,6 +800,10 @@ export const appRouter = router({
       .input(z.object({ page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
       .query(async ({ input }) => db.getAdminOperationsHub(input ?? {})),
 
+    moderationQueue: adminProcedure
+      .input(z.object({ status: z.enum(["pending", "approved", "rejected", "all"]).default("pending"), query: z.string().trim().max(80).default(""), page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
+      .query(async ({ input }) => db.getAdminModerationQueue(input ?? {})),
+
     pendingProperties: adminProcedure.query(async () => {
       const props = await db.getPendingProperties();
       return Promise.all(
@@ -826,9 +830,10 @@ export const appRouter = router({
 
     approveProperty: adminProcedure
       .input(z.number())
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         await db.approveProperty(input);
         const property = await db.getPropertyById(input);
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "moderation.approve", resourceType: "property", resourceId: input, propertyId: input, metadata: { status: "approved" } });
         await sendApprovalNotification(property?.title || "Property", input);
         if (property) {
           const computed = computePropertyScore({
@@ -846,9 +851,10 @@ export const appRouter = router({
 
     rejectProperty: adminProcedure
       .input(z.number())
-      .mutation(async ({ input }) => {
+      .mutation(async ({ ctx, input }) => {
         const property = await db.getPropertyById(input);
         await db.rejectProperty(input);
+        await db.createModuleAuditLog({ actorUserId: ctx.user.id, action: "moderation.reject", resourceType: "property", resourceId: input, propertyId: input, metadata: { status: "rejected" } });
         await sendRejectionNotification(property?.title || "Property", input);
         return { success: true };
       }),
