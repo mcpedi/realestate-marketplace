@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import type { TrpcContext } from "./_core/context";
 
-const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn() }));
+const dbMocks = vi.hoisted(() => ({ getAdminDashboardOverview: vi.fn(), getAdminCommandCenter: vi.fn(), getAdminOperationsHub: vi.fn(), getAdminModerationQueue: vi.fn(), getAdminAgencyDirectory: vi.fn(), getAdminSystemHealth: vi.fn() }));
 vi.mock("./db", () => dbMocks);
 import { appRouter } from "./routers";
 
@@ -74,5 +74,12 @@ describe("admin dashboard overview", () => {
     await expect(adminCaller.admin.agencyDirectory(input)).resolves.toEqual(directory);
     expect(dbMocks.getAdminAgencyDirectory).toHaveBeenCalledWith(input);
     await expect(adminCaller.admin.agencyDirectory({ verification: "all", query: "x".repeat(81), page: 1, limit: 10 })).rejects.toThrow();
+  });
+
+  it("keeps the system-health posture summary admin-only", async () => {
+    const health = { checkedAt: new Date("2026-08-25T08:00:00.000Z"), database: { status: "available", label: "Database connection" }, controls: [] };
+    dbMocks.getAdminSystemHealth.mockResolvedValue(health);
+    await expect(appRouter.createCaller(context("user")).admin.systemHealth()).rejects.toThrow();
+    await expect(appRouter.createCaller(context("admin")).admin.systemHealth()).resolves.toEqual(health);
   });
 });

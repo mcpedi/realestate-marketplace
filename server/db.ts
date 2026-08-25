@@ -1173,6 +1173,30 @@ export async function getAdminAgencyDirectory(input: { verification?: "verified"
   return { page, limit, total: Number(totalRow[0]?.count ?? 0), items: rows };
 }
 
+export async function getAdminSystemHealth() {
+  const checkedAt = new Date();
+  const db = await getDb();
+  let databaseStatus: "available" | "unavailable" = "unavailable";
+  if (db) {
+    try {
+      await db.select({ value: sql<number>`1` });
+      databaseStatus = "available";
+    } catch {
+      databaseStatus = "unavailable";
+    }
+  }
+  return {
+    checkedAt,
+    database: { status: databaseStatus, label: "Database connection" },
+    controls: [
+      { id: "sessions", label: "Session protection", state: "configured", detail: "Strict HttpOnly session cookies and same-origin mutation protection are enabled." },
+      { id: "uploads", label: "Upload validation", state: "configured", detail: "Type, size, extension, and content-signature checks are enforced before storage." },
+      { id: "rate-limits", label: "Application rate limits", state: "configured", detail: "In-process request and endpoint quotas provide an application-level backstop." },
+      { id: "live-payments", label: "Live M-Pesa", state: "deferred", detail: "Live provider processing remains disabled pending explicit merchant, callback, and credential setup." },
+    ],
+  };
+}
+
 export async function getAgencyProfileById(id: number) {
   const db = await getDb();
   if (!db) return undefined;

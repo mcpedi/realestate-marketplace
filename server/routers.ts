@@ -808,6 +808,8 @@ export const appRouter = router({
       .input(z.object({ verification: z.enum(["verified", "unverified", "all"]).default("all"), query: z.string().trim().max(80).default(""), page: z.number().int().positive().default(1), limit: z.number().int().min(5).max(25).default(10) }).optional())
       .query(async ({ input }) => db.getAdminAgencyDirectory(input ?? {})),
 
+    systemHealth: adminProcedure.query(async () => db.getAdminSystemHealth()),
+
     setAgencyVerification: adminProcedure
       .input(z.object({ agencyId: z.number().int().positive(), verified: z.boolean() }))
       .mutation(async ({ ctx, input }) => {

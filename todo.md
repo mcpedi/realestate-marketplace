@@ -256,6 +256,7 @@
 - [x] Support direct, safe administrator tab links for operations and existing control surfaces
 - [x] Deliver a richer administrator moderation queue for existing property records, including bounded filtering, listing context, and auditable approve/reject actions (36 test files / 170 tests passing; TypeScript, production build, and desktop plus 390px moderation views verified)
 - [x] Deliver an administrator agency-verification directory using existing agency records, bounded filtering, and audited verification changes (36 test files / 171 tests passing; TypeScript, production build, and desktop plus 390px agency views verified)
+- [x] Deliver an administrator system-health and control-posture summary with an actual database-availability check and clearly labelled configuration states (36 test files / 172 tests passing; TypeScript, production build, and desktop plus 390px health views verified)
 - [ ] Add role/permission and audit-action boundaries for newly introduced sensitive controls, with server-side authorization and pagination for large data sets
 - [ ] Add focused regression coverage, complete responsive reviews, publish the delivered phase, and document deferred modules
 

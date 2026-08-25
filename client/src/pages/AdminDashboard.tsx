@@ -44,6 +44,7 @@ import { AdminSearchGroup } from "@/components/AdminSearchGroup";
 import { AdminOperationsHub } from "@/components/AdminOperationsHub";
 import { AdminModerationQueue } from "@/components/AdminModerationQueue";
 import { AdminAgencyDirectory } from "@/components/AdminAgencyDirectory";
+import { AdminSystemHealth } from "@/components/AdminSystemHealth";
 import { CartesianGrid, Line, LineChart, ResponsiveContainer, Tooltip, XAxis, YAxis } from "recharts";
 import {
   Shield,
@@ -135,7 +136,7 @@ function AdminContent() {
   const { user } = useAuth();
   const adminLocationSearch = useSearch();
   const requestedAdminTab = new URLSearchParams(adminLocationSearch).get("tab");
-  const supportedAdminTabs = ["overview", "pending", "moderation", "properties", "users", "agencies", "premium", "operations", "testimonials", "blog", "categories"];
+  const supportedAdminTabs = ["overview", "pending", "moderation", "properties", "users", "agencies", "premium", "operations", "health", "testimonials", "blog", "categories"];
   const [activeTab, setActiveTab] = useState(() => requestedAdminTab && supportedAdminTabs.includes(requestedAdminTab) ? requestedAdminTab : "overview");
   const [overviewRange, setOverviewRange] = useState<7 | 30 | 90 | 365>(7);
   const [adminSearch, setAdminSearch] = useState("");
@@ -278,6 +279,7 @@ function AdminContent() {
                 <Crown className="w-3.5 h-3.5" /> Premium
               </TabsTrigger>
               <TabsTrigger value="operations" className="gap-1.5"><ReceiptText className="w-3.5 h-3.5" /> Operations</TabsTrigger>
+              <TabsTrigger value="health" className="gap-1.5"><Activity className="w-3.5 h-3.5" /> Health</TabsTrigger>
               <TabsTrigger value="testimonials">Testimonials</TabsTrigger>
               <TabsTrigger value="blog">Blog</TabsTrigger>
               <TabsTrigger value="categories">Categories</TabsTrigger>
@@ -535,6 +537,10 @@ function AdminContent() {
 
             <TabsContent value="operations" className="focus-visible:outline-none">
               <AdminOperationsHub data={operationsHub.data} isLoading={operationsHub.isLoading} />
+            </TabsContent>
+
+            <TabsContent value="health" className="focus-visible:outline-none">
+              <AdminSystemHealth />
             </TabsContent>
 
             {/* Plan Edit Dialog */}
