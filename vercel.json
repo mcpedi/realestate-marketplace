@@ -3,6 +3,11 @@
   "framework": "express",
   "installCommand": "pnpm install --frozen-lockfile",
   "buildCommand": "pnpm build",
+  "git": {
+    "deploymentEnabled": {
+      "manus/vercel-adapter": false
+    }
+  },
   "functions": {
     "index.ts": {
       "includeFiles": "dist/public/**"
