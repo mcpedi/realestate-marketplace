@@ -47,7 +47,7 @@ type SchemaEnum31 = 'referral' | 'admin_adjustment' | 'redemption' | 'reversal';
 type SchemaEnum32 = 'pending' | 'earned' | 'spent' | 'reversed';
 
 export const users = pgTable("users", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   openId: varchar("openId", { length: 64 }).notNull().unique(),
   name: text("name"),
   email: varchar("email", { length: 320 }),
@@ -66,7 +66,7 @@ export type User = typeof users.$inferSelect;
 export type InsertUser = typeof users.$inferInsert;
 
 export const properties = pgTable("properties", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
   description: text("description").notNull(),
@@ -98,7 +98,7 @@ export type InsertProperty = typeof properties.$inferInsert;
 // A signal is a limited review aid, not a moderation decision. The source listing
 // text is never duplicated here; only the structured current outcome is retained.
 export const propertyModerationSignals = pgTable("propertyModerationSignals", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull().unique(),
   riskLevel: text("riskLevel").$type<SchemaEnum5>().default("none").notNull(),
   categories: jsonb("categories").notNull(),
@@ -116,7 +116,7 @@ export type PropertyModerationSignal = typeof propertyModerationSignals.$inferSe
 export type InsertPropertyModerationSignal = typeof propertyModerationSignals.$inferInsert;
 
 export const propertyPhotos = pgTable("propertyPhotos", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   url: varchar("url", { length: 512 }).notNull(),
   fileKey: varchar("fileKey", { length: 512 }).notNull(),
@@ -129,7 +129,7 @@ export type PropertyPhoto = typeof propertyPhotos.$inferSelect;
 export type InsertPropertyPhoto = typeof propertyPhotos.$inferInsert;
 
 export const inquiries = pgTable("inquiries", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   userId: integer("userId"),
   name: varchar("name", { length: 255 }).notNull(),
@@ -144,7 +144,7 @@ export type Inquiry = typeof inquiries.$inferSelect;
 export type InsertInquiry = typeof inquiries.$inferInsert;
 
 export const favorites = pgTable("favorites", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   propertyId: integer("propertyId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -154,7 +154,7 @@ export type Favorite = typeof favorites.$inferSelect;
 export type InsertFavorite = typeof favorites.$inferInsert;
 
 export const testimonials = pgTable("testimonials", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 255 }).notNull(),
   role: varchar("role", { length: 128 }),
   content: text("content").notNull(),
@@ -168,7 +168,7 @@ export type Testimonial = typeof testimonials.$inferSelect;
 export type InsertTestimonial = typeof testimonials.$inferInsert;
 
 export const blogPosts = pgTable("blogPosts", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   title: varchar("title", { length: 255 }).notNull(),
   slug: varchar("slug", { length: 255 }).notNull().unique(),
   excerpt: text("excerpt"),
@@ -184,7 +184,7 @@ export type BlogPost = typeof blogPosts.$inferSelect;
 export type InsertBlogPost = typeof blogPosts.$inferInsert;
 
 export const categories = pgTable("categories", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 128 }).notNull(),
   slug: varchar("slug", { length: 128 }).notNull().unique(),
   description: text("description"),
@@ -201,7 +201,7 @@ export const postCategories = pgTable("postCategories", {
 // ─── Premium subscription plans ──────────────────────────────────────────────
 
 export const subscriptionPlans = pgTable("subscriptionPlans", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 128 }).notNull(),
   description: text("description"),
   price: doublePrecision("price").notNull(),
@@ -229,7 +229,7 @@ export type InsertSubscriptionPlan = typeof subscriptionPlans.$inferInsert;
 // ─── User subscriptions ──────────────────────────────────────────────────────
 
 export const subscriptions = pgTable("subscriptions", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   planId: integer("planId").notNull(),
   status: text("status").$type<SchemaEnum8>()
@@ -249,7 +249,7 @@ export type InsertSubscription = typeof subscriptions.$inferInsert;
 // ─── Payment history ─────────────────────────────────────────────────────────
 
 export const payments = pgTable("payments", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   subscriptionId: integer("subscriptionId"),
   propertyId: integer("propertyId"),
@@ -273,7 +273,7 @@ export type InsertPayment = typeof payments.$inferInsert;
 // ─── Featured listings ───────────────────────────────────────────────────────
 
 export const featuredListings = pgTable("featuredListings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   userId: integer("userId").notNull(),
   paymentId: integer("paymentId"),
@@ -288,7 +288,7 @@ export type InsertFeaturedListing = typeof featuredListings.$inferInsert;
 // ─── Property videos ─────────────────────────────────────────────────────────
 
 export const propertyVideos = pgTable("propertyVideos", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   url: varchar("url", { length: 512 }).notNull(),
   fileKey: varchar("fileKey", { length: 512 }).notNull(),
@@ -302,7 +302,7 @@ export type InsertPropertyVideo = typeof propertyVideos.$inferInsert;
 // ─── Agency profiles ─────────────────────────────────────────────────────────
 
 export const agencyProfiles = pgTable("agencyProfiles", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   agencyName: varchar("agencyName", { length: 255 }).notNull(),
   logoUrl: text("logoUrl"),
@@ -320,7 +320,7 @@ export type InsertAgencyProfile = typeof agencyProfiles.$inferInsert;
 
 // ─── User preferences (match engine) ──────────────────────────────────────────
 export const userPreferences = pgTable("userPreferences", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   budgetMin: doublePrecision("budgetMin"),
   budgetMax: doublePrecision("budgetMax"),
@@ -336,7 +336,7 @@ export type InsertUserPreference = typeof userPreferences.$inferInsert;
 
 // ─── Property alerts (instant + price drop) ───────────────────────────────────
 export const propertyAlerts = pgTable("propertyAlerts", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   type: text("type").$type<SchemaEnum13>().notNull(),
   // For instant alerts: search criteria JSON
@@ -353,7 +353,7 @@ export type InsertPropertyAlert = typeof propertyAlerts.$inferInsert;
 
 // ─── In-app account notifications ────────────────────────────────────────────
 export const accountNotifications = pgTable("accountNotifications", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   type: varchar("type", { length: 64 }).notNull(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -367,7 +367,7 @@ export type InsertAccountNotification = typeof accountNotifications.$inferInsert
 
 // ─── Viewing bookings ─────────────────────────────────────────────────────────
 export const viewingBookings = pgTable("viewingBookings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   buyerId: integer("buyerId").notNull(),
   scheduledAt: timestamp("scheduledAt").notNull(),
@@ -382,7 +382,7 @@ export type InsertViewingBooking = typeof viewingBookings.$inferInsert;
 
 // ─── Property scores (Pedi Wa Property Score) ─────────────────────────────────
 export const propertyScores = pgTable("propertyScores", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull().unique(),
   score: integer("score").notNull(),
   valueScore: integer("valueScore").notNull(),
@@ -398,7 +398,7 @@ export type InsertPropertyScore = typeof propertyScores.$inferInsert;
 
 // ─── Viewings count / search activity for recommendations ─────────────────────
 export const propertyActivity = pgTable("propertyActivity", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   propertyId: integer("propertyId").notNull(),
   eventType: text("eventType").$type<SchemaEnum16>().notNull(),
@@ -411,7 +411,7 @@ export type InsertPropertyActivity = typeof propertyActivity.$inferInsert;
 
 // ─── Planning Studio scenarios ───────────────────────────────────────────────
 export const planningAnalyses = pgTable("planningAnalyses", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   propertyId: integer("propertyId"),
   kind: text("kind").$type<SchemaEnum17>().notNull(),
@@ -429,7 +429,7 @@ export type InsertPlanningAnalysis = typeof planningAnalyses.$inferInsert;
 
 // ─── Property Operations: secure documents and audit trail ────────────────────
 export const propertyDocuments = pgTable("propertyDocuments", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   uploadedByUserId: integer("uploadedByUserId").notNull(),
   name: varchar("name", { length: 255 }).notNull(),
@@ -448,7 +448,7 @@ export type PropertyDocument = typeof propertyDocuments.$inferSelect;
 export type InsertPropertyDocument = typeof propertyDocuments.$inferInsert;
 
 export const propertyDocumentAccess = pgTable("propertyDocumentAccess", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   documentId: integer("documentId").notNull(),
   userId: integer("userId").notNull(),
   permission: text("permission").$type<SchemaEnum19>().default("view").notNull(),
@@ -462,7 +462,7 @@ export type PropertyDocumentAccess = typeof propertyDocumentAccess.$inferSelect;
 export type InsertPropertyDocumentAccess = typeof propertyDocumentAccess.$inferInsert;
 
 export const moduleAuditLogs = pgTable("moduleAuditLogs", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   actorUserId: integer("actorUserId").notNull(),
   action: varchar("action", { length: 128 }).notNull(),
   resourceType: varchar("resourceType", { length: 64 }).notNull(),
@@ -480,7 +480,7 @@ export type InsertModuleAuditLog = typeof moduleAuditLogs.$inferInsert;
 
 // ─── Property Operations: typed workflow records ──────────────────────────────
 export const propertyOperationRecords = pgTable("propertyOperationRecords", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   ownerUserId: integer("ownerUserId").notNull(),
   type: text("type").$type<SchemaEnum20>().notNull(),
@@ -507,7 +507,7 @@ export type InsertPropertyOperationRecord = typeof propertyOperationRecords.$inf
 
 // ─── Explicit tenant identity: claimable owner-created property assignments ─────
 export const propertyTenantAssignments = pgTable("propertyTenantAssignments", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   ownerUserId: integer("ownerUserId").notNull(),
   tenantUserId: integer("tenantUserId"),
@@ -529,7 +529,7 @@ export type InsertPropertyTenantAssignment = typeof propertyTenantAssignments.$i
 
 // ─── Administrator controls: planning defaults are explicit, editable, and auditable ──
 export const platformModuleSettings = pgTable("platformModuleSettings", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   moduleKey: text("moduleKey").$type<SchemaEnum23>().notNull().unique(),
   enabled: boolean("enabled").default(true).notNull(),
   updatedByUserId: integer("updatedByUserId").notNull(),
@@ -540,7 +540,7 @@ export type PlatformModuleSetting = typeof platformModuleSettings.$inferSelect;
 export type InsertPlatformModuleSetting = typeof platformModuleSettings.$inferInsert;
 
 export const planningAssumptionTemplates = pgTable("planningAssumptionTemplates", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   name: varchar("name", { length: 160 }).notNull(),
   description: varchar("description", { length: 400 }),
   kind: text("kind").$type<SchemaEnum17>().notNull(),
@@ -559,7 +559,7 @@ export type InsertPlanningAssumptionTemplate = typeof planningAssumptionTemplate
 
 // ─── Agent Operations: CRM, reusable listing templates, and transaction workspaces ──
 export const agentContacts = pgTable("agentContacts", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   ownerUserId: integer("ownerUserId").notNull(),
   inquiryId: integer("inquiryId"),
   propertyId: integer("propertyId"),
@@ -581,7 +581,7 @@ export type AgentContact = typeof agentContacts.$inferSelect;
 export type InsertAgentContact = typeof agentContacts.$inferInsert;
 
 export const leadActivities = pgTable("leadActivities", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   contactId: integer("contactId").notNull(),
   agentUserId: integer("agentUserId").notNull(),
   type: text("type").$type<SchemaEnum26>().default("note").notNull(),
@@ -598,7 +598,7 @@ export type LeadActivity = typeof leadActivities.$inferSelect;
 export type InsertLeadActivity = typeof leadActivities.$inferInsert;
 
 export const listingTemplates = pgTable("listingTemplates", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   ownerUserId: integer("ownerUserId").notNull(),
   name: varchar("name", { length: 160 }).notNull(),
   category: text("category").$type<SchemaEnum27>().default("general").notNull(),
@@ -613,7 +613,7 @@ export type ListingTemplate = typeof listingTemplates.$inferSelect;
 export type InsertListingTemplate = typeof listingTemplates.$inferInsert;
 
 export const propertyTransactions = pgTable("propertyTransactions", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull(),
   ownerUserId: integer("ownerUserId").notNull(),
   title: varchar("title", { length: 255 }).notNull(),
@@ -636,7 +636,7 @@ export type InsertPropertyTransaction = typeof propertyTransactions.$inferInsert
 
 // ─── Engagement and identity: collections extend favourites; IDs identify listings ──
 export const wishlistCollections = pgTable("wishlistCollections", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   ownerUserId: integer("ownerUserId").notNull(),
   name: varchar("name", { length: 120 }).notNull(),
   description: varchar("description", { length: 280 }),
@@ -649,7 +649,7 @@ export type WishlistCollection = typeof wishlistCollections.$inferSelect;
 export type InsertWishlistCollection = typeof wishlistCollections.$inferInsert;
 
 export const wishlistCollectionItems = pgTable("wishlistCollectionItems", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   collectionId: integer("collectionId").notNull(),
   propertyId: integer("propertyId").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -661,7 +661,7 @@ export type WishlistCollectionItem = typeof wishlistCollectionItems.$inferSelect
 export type InsertWishlistCollectionItem = typeof wishlistCollectionItems.$inferInsert;
 
 export const propertyIdentifiers = pgTable("propertyIdentifiers", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull().unique(),
   identifier: varchar("identifier", { length: 48 }).notNull().unique(),
   createdByUserId: integer("createdByUserId").notNull(),
@@ -674,7 +674,7 @@ export type InsertPropertyIdentifier = typeof propertyIdentifiers.$inferInsert;
 
 // ─── Public sharing: QR and social surfaces derive only from approved listings ──
 export const propertyShareRecords = pgTable("propertyShareRecords", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   propertyId: integer("propertyId").notNull().unique(),
   propertyIdentifierId: integer("propertyIdentifierId").notNull().unique(),
   enabled: boolean("enabled").default(true).notNull(),
@@ -690,7 +690,7 @@ export type InsertPropertyShareRecord = typeof propertyShareRecords.$inferInsert
 
 // ─── Referrals and rewards: explicit attribution, no inferred or fabricated credit ──
 export const referralProfiles = pgTable("referralProfiles", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull().unique(),
   referralCode: varchar("referralCode", { length: 32 }).notNull().unique(),
   active: boolean("active").default(true).notNull(),
@@ -701,7 +701,7 @@ export type ReferralProfile = typeof referralProfiles.$inferSelect;
 export type InsertReferralProfile = typeof referralProfiles.$inferInsert;
 
 export const referralClaims = pgTable("referralClaims", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   referralProfileId: integer("referralProfileId").notNull(),
   referrerUserId: integer("referrerUserId").notNull(),
   referredUserId: integer("referredUserId").notNull().unique(),
@@ -718,7 +718,7 @@ export type ReferralClaim = typeof referralClaims.$inferSelect;
 export type InsertReferralClaim = typeof referralClaims.$inferInsert;
 
 export const rewardLedger = pgTable("rewardLedger", {
-  id: integer("id").primaryKey().generatedByDefaultAsIdentity(),
+  id: integer("id").primaryKey().generatedAlwaysAsIdentity(),
   userId: integer("userId").notNull(),
   referralClaimId: integer("referralClaimId"),
   points: integer("points").notNull(),
