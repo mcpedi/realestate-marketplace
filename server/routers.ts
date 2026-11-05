@@ -691,7 +691,7 @@ export const appRouter = router({
           status: "pending",
         });
         if (input.photos && input.photos.length > 0) {
-          const propertyId = result[0].insertId;
+          const propertyId = result.id;
           for (let i = 0; i < input.photos.length; i++) {
             await db.createPropertyPhoto({
               propertyId,
@@ -702,7 +702,7 @@ export const appRouter = router({
             });
           }
         }
-        return { id: result[0].insertId };
+        return { id: result.id };
       }),
 
     update: protectedProcedure
