@@ -29,9 +29,8 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
   throw new Error(`No available port found starting from ${startPort}`);
 }
 
-async function startServer() {
+export function createApp() {
   const app = express();
-  const server = createServer(app);
   app.disable("x-powered-by");
   app.use(applySecurityHeaders);
   // Upload procedures apply smaller per-file limits; this is the outer API ceiling.
@@ -49,11 +48,21 @@ async function startServer() {
       createContext,
     })
   );
-  // development mode uses Vite, production mode uses static files
+  // Vercel imports this Express app as a serverless function. Local development
+  // attaches Vite separately so its HMR server can share the HTTP server.
+  if (process.env.NODE_ENV !== "development") {
+    serveStatic(app);
+  }
+  return app;
+}
+
+const app = createApp();
+export default app;
+
+async function startServer() {
+  const server = createServer(app);
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);
-  } else {
-    serveStatic(app);
   }
 
   const preferredPort = parseInt(process.env.PORT || "3000");
@@ -68,4 +77,7 @@ async function startServer() {
   });
 }
 
-startServer().catch(console.error);
+// Vercel manages the function request lifecycle; do not start a listener there.
+if (process.env.VERCEL !== "1") {
+  startServer().catch(console.error);
+}
