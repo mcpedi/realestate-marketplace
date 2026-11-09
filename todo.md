@@ -397,3 +397,27 @@
 - [x] Reproduce the failure locally with the project package manager and production commands
 - [ ] Compare Vercel build settings and environment variables with the project requirements
 - [x] Apply the smallest safe fix, add regression coverage where relevant, and verify typecheck, production build, and all 184 tests
+
+
+## Premium property listing filters and sorting
+- [ ] Audit the existing premium featured-listing query and UI data flow
+- [ ] Add validated filtering and sorting inputs with safe server-side bounds
+- [ ] Add responsive filter and sort controls to the premium listings UI
+- [ ] Add regression tests for filtering, sorting, authorization, and empty states
+- [ ] Run all tests, typecheck, production build, responsive review, and checkpoint
+
+
+## Vercel runtime function failure
+- [x] Reproduce the deployed URL failure and capture the runtime response (`500 FUNCTION_INVOCATION_FAILED`)
+- [x] Audit the Vercel entrypoint, routing, environment variables, and server startup contract
+- [x] Apply the smallest runtime-compatible fix without changing application behavior
+- [ ] Verify local production start and public deployment behavior after Vercel `DATABASE_URL` is corrected to PostgreSQL
+- [x] Store and validate a separate `SUPABASE_DATABASE_URL` secret; confirmed it reaches the Nyumba 360 PostgreSQL schema
+- [x] Verify TypeScript, production build, runtime-contract tests, and database connectivity; full data-backed suite requires non-production fixtures and is not used to seed fake records
+
+## Premium property listing filters and sorting
+- [ ] Audit the existing premium featured-listing query and UI data flow
+- [ ] Add validated filtering and sorting inputs with safe server-side bounds
+- [ ] Add responsive filter and sort controls to the premium listings UI
+- [ ] Add regression tests for filtering, sorting, authorization, and empty states
+- [ ] Run all tests, typecheck, production build, responsive review, and checkpoint
