@@ -79,14 +79,19 @@ import {
   planningAssumptionTemplates,
   type InsertPlanningAssumptionTemplate,
 } from "../drizzle/schema";
+import * as schema from "../drizzle/schema";
 import { ENV } from "./_core/env";
 
-let _db: ReturnType<typeof drizzle> | null = null;
+function createDb(connectionString: string) {
+  return drizzle(neon(connectionString), { schema });
+}
+
+let _db: ReturnType<typeof createDb> | null = null;
 
 export async function getDb() {
   if (!_db && process.env.DATABASE_URL) {
     try {
-      _db = drizzle({ client: neon(process.env.DATABASE_URL) });
+      _db = createDb(process.env.DATABASE_URL);
     } catch (error) {
       console.warn("[Database] Failed to connect:", error);
       _db = null;
@@ -130,10 +135,7 @@ export async function upsertUser(user: InsertUser): Promise<void> {
     }
     if (!values.lastSignedIn) values.lastSignedIn = new Date();
     if (Object.keys(updateSet).length === 0) updateSet.lastSignedIn = new Date();
-    await db.insert(users).values(values).onConflictDoUpdate({
-      target: users.openId,
-      set: { ...updateSet, updatedAt: new Date() },
-    });
+    await db.insert(users).values(values).onConflictDoUpdate({ target: users.openId, set: updateSet });
   } catch (error) {
     console.error("[Database] Failed to upsert user:", error);
     throw error;
@@ -172,7 +174,7 @@ export async function updateUserProfile(userId: number, data: {
   if (data.bio !== undefined) set.bio = data.bio;
   if (data.profilePicture !== undefined) set.profilePicture = data.profilePicture;
   if (Object.keys(set).length === 0) return;
-  await db.update(users).set({ ...set, updatedAt: new Date() } as any).where(eq(users.id, userId));
+  await db.update(users).set(set as any).where(eq(users.id, userId));
 }
 
 export async function getAllUsers() {
@@ -193,7 +195,7 @@ export async function deleteUser(id: number) {
 export async function createProperty(data: InsertProperty) {
   const db = await getDb();
   if (!db) throw new Error("Database not available");
-  const [result] = await db.insert(properties).values(data).returning({ id: properties.id });
+  const result = await db.insert(properties).values(data).returning();
   return result;
 }
 
@@ -271,13 +273,13 @@ export async function getPublicSellerByPropertyId(propertyId: number) {
 export async function incrementPropertyViews(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(properties).set({ viewsCount: sql`${properties.viewsCount} + 1`, updatedAt: new Date() }).where(eq(properties.id, id));
+  await db.update(properties).set({ viewsCount: sql`${properties.viewsCount} + 1` }).where(eq(properties.id, id));
 }
 
 export async function updateProperty(id: number, data: Partial<InsertProperty>) {
   const db = await getDb();
   if (!db) return;
-  await db.update(properties).set({ ...data, updatedAt: new Date() } as any).where(eq(properties.id, id));
+  await db.update(properties).set(data as any).where(eq(properties.id, id));
 }
 
 export async function deleteProperty(id: number) {
@@ -430,13 +432,13 @@ export async function getPendingProperties() {
 export async function approveProperty(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(properties).set({ status: "approved", updatedAt: new Date() }).where(eq(properties.id, id));
+  await db.update(properties).set({ status: "approved" }).where(eq(properties.id, id));
 }
 
 export async function rejectProperty(id: number) {
   const db = await getDb();
   if (!db) return;
-  await db.update(properties).set({ status: "rejected", updatedAt: new Date() }).where(eq(properties.id, id));
+  await db.update(properties).set({ status: "rejected" }).where(eq(properties.id, id));
 }
 
 // ─── Property Photos ─────────────────────────────────────────────────────────
@@ -613,7 +615,7 @@ export async function createBlogPost(data: InsertBlogPost) {
 export async function updateBlogPost(id: number, data: Partial<InsertBlogPost>) {
   const db = await getDb();
   if (!db) return;
-  await db.update(blogPosts).set({ ...data, updatedAt: new Date() } as any).where(eq(blogPosts.id, id));
+  await db.update(blogPosts).set(data as any).where(eq(blogPosts.id, id));
 }
 
 export async function deleteBlogPost(id: number) {
@@ -781,7 +783,7 @@ export async function getAdminOperationsHub(input: { page?: number; limit?: numb
   if (!db) return { page, limit, payments: [], viewings: [], documents: [], auditEvents: [] };
 
   const now = new Date();
-  const moderationNote = sql<string | null>`(${moduleAuditLogs.metadata} ->> 'reason')`;
+  const moderationNote = sql<string | null>`JSON_UNQUOTE(JSON_EXTRACT(${moduleAuditLogs.metadata}, '$.reason'))`;
   const auditConditions = [] as any[];
   if (auditFilter === "rejections_with_notes") {
     auditConditions.push(eq(moduleAuditLogs.action, "moderation.reject"), sql`${moderationNote} IS NOT NULL`, sql`${moderationNote} <> ''`);
@@ -977,7 +979,7 @@ export async function createSubscriptionRecord(data: {
       autoRenew: true,
       lastPaymentDate: now,
     })
-    .returning({ id: subscriptions.id });
+    .returning();
   if (!result) return undefined;
   return getUserSubscriptionById(result.id);
 }
@@ -1005,7 +1007,7 @@ export async function getSubscriptionById(id: number) {
 export async function cancelSubscriptionRecord(id: number) {
   const db = await getDb();
   if (!db) return false;
-  await db.update(subscriptions).set({ status: "cancelled", updatedAt: new Date() }).where(eq(subscriptions.id, id));
+  await db.update(subscriptions).set({ status: "cancelled" }).where(eq(subscriptions.id, id));
   return true;
 }
 
@@ -1038,7 +1040,7 @@ export async function getAllSubscriptions() {
 export async function createPaymentRecord(payment: Omit<InsertPayment, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) return undefined;
-  const [result] = await db.insert(payments).values(payment).returning({ id: payments.id });
+  const [result] = await db.insert(payments).values(payment).returning();
   if (!result) return undefined;
   const rows = await db.select().from(payments).where(eq(payments.id, result.id)).limit(1);
   return rows[0];
@@ -1053,7 +1055,7 @@ export async function getUserPayments(userId: number) {
 export async function updateSubscriptionPlan(id: number, data: { name?: string; price?: number; maxImages?: number; maxVideos?: number; active?: boolean }) {
   const db = await getDb();
   if (!db) return;
-  await db.update(subscriptionPlans).set({ ...data, updatedAt: new Date() }).where(eq(subscriptionPlans.id, id));
+  await db.update(subscriptionPlans).set(data).where(eq(subscriptionPlans.id, id));
 }
 
 export async function grantPremiumSubscription(userId: number) {
@@ -1124,7 +1126,7 @@ export async function getActiveFeaturedListingForProperty(propertyId: number) {
 export async function createFeaturedListingRecord(data: Omit<InsertFeaturedListing, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) return undefined;
-  const [result] = await db.insert(featuredListings).values(data).returning({ id: featuredListings.id });
+  const [result] = await db.insert(featuredListings).values(data).returning();
   if (!result) return undefined;
   const rows = await db.select().from(featuredListings).where(eq(featuredListings.id, result.id)).limit(1);
   return rows[0];
@@ -1158,7 +1160,7 @@ export async function getPropertyVideos(propertyId: number) {
 export async function addPropertyVideo(video: Omit<InsertPropertyVideo, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) return undefined;
-  const [result] = await db.insert(propertyVideos).values(video).returning({ id: propertyVideos.id });
+  const [result] = await db.insert(propertyVideos).values(video).returning();
   if (!result) return undefined;
   const rows = await db.select().from(propertyVideos).where(eq(propertyVideos.id, result.id)).limit(1);
   return rows[0];
@@ -1209,7 +1211,7 @@ export async function updateAgencyProfileRecord(
   if (data.socialMedia !== undefined) set.socialMedia = data.socialMedia;
   if (data.verified !== undefined) set.verified = data.verified;
   if (Object.keys(set).length === 0) return false;
-  await db.update(agencyProfiles).set({ ...set, updatedAt: new Date() }).where(eq(agencyProfiles.userId, userId));
+  await db.update(agencyProfiles).set(set).where(eq(agencyProfiles.userId, userId));
   return true;
 }
 
@@ -1266,7 +1268,7 @@ export async function getAgencyProfileById(id: number) {
 export async function setAgencyVerification(id: number, verified: boolean) {
   const db = await getDb();
   if (!db) return false;
-  await db.update(agencyProfiles).set({ verified, updatedAt: new Date() }).where(eq(agencyProfiles.id, id));
+  await db.update(agencyProfiles).set({ verified }).where(eq(agencyProfiles.id, id));
   return true;
 }
 
@@ -1397,7 +1399,7 @@ export async function upsertUserPreferences(userId: number, data: Partial<Insert
   if (!db) return;
   const existing = await getUserPreferences(userId);
   if (existing) {
-    await db.update(userPreferences).set({ ...data, updatedAt: new Date() } as any).where(eq(userPreferences.userId, userId));
+    await db.update(userPreferences).set(data as any).where(eq(userPreferences.userId, userId));
   } else {
     await db.insert(userPreferences).values({ userId, ...data } as InsertUserPreference);
   }
@@ -1472,25 +1474,21 @@ export async function createAlert(data: InsertPropertyAlert) {
   return data;
 }
 
-function normalizeAlertCriteria(value: unknown): Record<string, unknown> | null {
-  if (typeof value === "string") {
-    try {
-      const parsed = JSON.parse(value);
-      return parsed && typeof parsed === "object" && !Array.isArray(parsed) ? parsed : null;
-    } catch {
-      return null;
-    }
-  }
-  return value && typeof value === "object" && !Array.isArray(value)
-    ? (value as Record<string, unknown>)
-    : null;
-}
-
 export async function getUserAlerts(userId: number) {
   const db = await getDb();
   if (!db) return [];
   const rows = await db.select().from(propertyAlerts).where(eq(propertyAlerts.userId, userId)).orderBy(desc(propertyAlerts.createdAt));
-  return rows.map((r) => ({ ...r, criteria: normalizeAlertCriteria(r.criteria) }));
+  return rows.map((r) => {
+    let parsed = null;
+    if (r.criteria) {
+      try {
+        parsed = JSON.parse(r.criteria as string);
+      } catch {
+        parsed = null;
+      }
+    }
+    return { ...r, criteria: parsed };
+  });
 }
 
 export async function deleteAlert(id: number, userId: number) {
@@ -1503,7 +1501,7 @@ export async function deleteAlert(id: number, userId: number) {
 export async function updateAlertStatus(id: number, userId: number, active: boolean) {
   const db = await getDb();
   if (!db) return;
-  await db.update(propertyAlerts).set({ active, updatedAt: new Date() }).where(and(eq(propertyAlerts.id, id), eq(propertyAlerts.userId, userId)));
+  await db.update(propertyAlerts).set({ active }).where(and(eq(propertyAlerts.id, id), eq(propertyAlerts.userId, userId)));
 }
 
 // ── In-app notifications ─────────────────────────────────────────────────────
@@ -1591,7 +1589,7 @@ export async function checkPriceDrops() {
   // We compare current price against any previous value stored in criteria.lastKnownPrice.
   for (const a of alertRows) {
     if (!a.propertyId) continue;
-    const crit = normalizeAlertCriteria(a.criteria) ?? {};
+    const crit = (a.criteria || {}) as Record<string, unknown>;
     const lastKnown = typeof crit.lastKnownPrice === "number" ? crit.lastKnownPrice : undefined;
     const p = await getPropertyWithPhoto(a.propertyId);
     if (!p) continue;
@@ -1608,7 +1606,7 @@ export async function checkPriceDrops() {
     // Re-arm: store current price so next drop can be detected.
     await db
       .update(propertyAlerts)
-      .set({ criteria: { ...crit, lastKnownPrice: p.price }, updatedAt: new Date() })
+      .set({ criteria: JSON.stringify({ ...((a.criteria || {}) as Record<string, unknown>), lastKnownPrice: p.price }) })
       .where(eq(propertyAlerts.id, a.id));
   }
   return drops;
@@ -1641,14 +1639,14 @@ export async function getSellerPendingBookings(sellerId: number) {
 export async function updateBookingStatus(id: number, buyerId: number, status: "pending" | "confirmed" | "cancelled" | "completed") {
   const db = await getDb();
   if (!db) return false;
-  await db.update(viewingBookings).set({ status, updatedAt: new Date() }).where(and(eq(viewingBookings.id, id), eq(viewingBookings.buyerId, buyerId)));
+  await db.update(viewingBookings).set({ status }).where(and(eq(viewingBookings.id, id), eq(viewingBookings.buyerId, buyerId)));
   return true;
 }
 
 export async function updateBookingStatusBySeller(id: number, status: "pending" | "confirmed" | "cancelled" | "completed") {
   const db = await getDb();
   if (!db) return false;
-  await db.update(viewingBookings).set({ status, updatedAt: new Date() }).where(eq(viewingBookings.id, id));
+  await db.update(viewingBookings).set({ status }).where(eq(viewingBookings.id, id));
   return true;
 }
 
@@ -1666,7 +1664,7 @@ export async function upsertPropertyScore(propertyId: number, data: InsertProper
   const existing = await getPropertyScore(propertyId);
   const row = { ...data, propertyId };
   if (existing) {
-    await db.update(propertyScores).set({ ...row, updatedAt: new Date() } as any).where(eq(propertyScores.propertyId, propertyId));
+    await db.update(propertyScores).set(row as any).where(eq(propertyScores.propertyId, propertyId));
   } else {
     await db.insert(propertyScores).values(row);
   }
@@ -1691,7 +1689,7 @@ export async function getPropertyWithPhotos(id: number) {
 export async function createPlanningAnalysis(data: Omit<InsertPlanningAnalysis, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(planningAnalyses).values(data).returning({ id: planningAnalyses.id });
+  const [result] = await db.insert(planningAnalyses).values(data).returning();
   if (!result) return undefined;
   const rows = await db.select().from(planningAnalyses).where(eq(planningAnalyses.id, result.id)).limit(1);
   return rows[0];
@@ -1706,8 +1704,8 @@ export async function getUserPlanningAnalyses(userId: number) {
 export async function deletePlanningAnalysis(id: number, userId: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.delete(planningAnalyses).where(and(eq(planningAnalyses.id, id), eq(planningAnalyses.userId, userId))).returning({ id: planningAnalyses.id });
-  return result.length > 0;
+  const result = await db.delete(planningAnalyses).where(and(eq(planningAnalyses.id, id), eq(planningAnalyses.userId, userId)));
+  return true;
 }
 
 // ─── Property Operations: Documents and audit logs ────────────────────────────
@@ -1715,7 +1713,7 @@ export async function deletePlanningAnalysis(id: number, userId: number) {
 export async function createPropertyDocument(data: Omit<InsertPropertyDocument, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(propertyDocuments).values(data).returning({ id: propertyDocuments.id });
+  const [result] = await db.insert(propertyDocuments).values(data).returning();
   if (!result) return undefined;
   const rows = await db.select().from(propertyDocuments).where(eq(propertyDocuments.id, result.id)).limit(1);
   return rows[0];
@@ -1749,21 +1747,21 @@ export async function grantDocumentAccess(documentId: number, userId: number, pe
     await db.update(propertyDocumentAccess).set({ permission, grantedByUserId }).where(eq(propertyDocumentAccess.id, existing.id));
     return existing.id;
   }
-  const [result] = await db.insert(propertyDocumentAccess).values({ documentId, userId, permission, grantedByUserId }).returning({ id: propertyDocumentAccess.id });
+  const [result] = await db.insert(propertyDocumentAccess).values({ documentId, userId, permission, grantedByUserId }).returning();
   return result?.id;
 }
 
 export async function softDeletePropertyDocument(id: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(propertyDocuments).set({ deletedAt: new Date(), updatedAt: new Date() }).where(and(eq(propertyDocuments.id, id), isNull(propertyDocuments.deletedAt))).returning({ id: propertyDocuments.id });
-  return result.length > 0;
+  const result = await db.update(propertyDocuments).set({ deletedAt: new Date() }).where(and(eq(propertyDocuments.id, id), isNull(propertyDocuments.deletedAt)));
+  return true;
 }
 
 export async function createModuleAuditLog(data: Omit<InsertModuleAuditLog, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) return undefined;
-  const [result] = await db.insert(moduleAuditLogs).values(data).returning({ id: moduleAuditLogs.id });
+  const [result] = await db.insert(moduleAuditLogs).values(data).returning();
   return result?.id;
 }
 
@@ -1776,7 +1774,7 @@ export async function getPropertyAuditLogs(propertyId: number) {
 export async function createPropertyOperationRecord(data: Omit<InsertPropertyOperationRecord, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(propertyOperationRecords).values(data).returning({ id: propertyOperationRecords.id });
+  const [result] = await db.insert(propertyOperationRecords).values(data).returning();
   if (!result) return undefined;
   const rows = await db.select().from(propertyOperationRecords).where(eq(propertyOperationRecords.id, result.id)).limit(1);
   return rows[0];
@@ -1801,8 +1799,8 @@ export async function getPropertyOperationRecordById(id: number) {
 export async function updatePropertyOperationRecord(id: number, data: Partial<Pick<InsertPropertyOperationRecord, "status" | "priority" | "dueDate" | "completedAt" | "details" | "amount" | "tenantUserId">>) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(propertyOperationRecords).set({ ...data, updatedAt: new Date() }).where(eq(propertyOperationRecords.id, id)).returning({ id: propertyOperationRecords.id });
-  return result.length > 0;
+  const result = await db.update(propertyOperationRecords).set(data).where(eq(propertyOperationRecords.id, id));
+  return true;
 }
 
 export async function getOwnerPropertyOperationSummary(ownerUserId: number) {
@@ -1817,7 +1815,7 @@ export async function getOwnerPropertyOperationSummary(ownerUserId: number) {
 export async function createPropertyTenantAssignment(data: Omit<InsertPropertyTenantAssignment, "id" | "createdAt" | "updatedAt" | "tenantUserId" | "acceptedAt" | "endedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(propertyTenantAssignments).values(data).returning({ id: propertyTenantAssignments.id });
+  const [result] = await db.insert(propertyTenantAssignments).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(propertyTenantAssignments).where(eq(propertyTenantAssignments.id, result.id)).limit(1))[0];
 }
@@ -1856,15 +1854,15 @@ export async function hasActiveTenantAssignment(propertyId: number, tenantUserId
 export async function activatePropertyTenantAssignment(id: number, tenantUserId: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(propertyTenantAssignments).set({ tenantUserId, status: "active", acceptedAt: new Date(), updatedAt: new Date() }).where(and(eq(propertyTenantAssignments.id, id), eq(propertyTenantAssignments.status, "pending"), isNull(propertyTenantAssignments.tenantUserId))).returning({ id: propertyTenantAssignments.id });
-  return result.length > 0;
+  const result = await db.update(propertyTenantAssignments).set({ tenantUserId, status: "active", acceptedAt: new Date() }).where(and(eq(propertyTenantAssignments.id, id), eq(propertyTenantAssignments.status, "pending"), isNull(propertyTenantAssignments.tenantUserId)));
+  return true;
 }
 
 export async function endPropertyTenantAssignment(id: number, status: "ended" | "revoked") {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(propertyTenantAssignments).set({ status, endedAt: new Date(), updatedAt: new Date() }).where(eq(propertyTenantAssignments.id, id)).returning({ id: propertyTenantAssignments.id });
-  return result.length > 0;
+  const result = await db.update(propertyTenantAssignments).set({ status, endedAt: new Date() }).where(eq(propertyTenantAssignments.id, id));
+  return true;
 }
 
 export async function getTenantDashboard(tenantUserId: number) {
@@ -1897,10 +1895,7 @@ export async function isPlatformModuleEnabled(moduleKey: "planning") {
 export async function setPlatformModuleEnabled(moduleKey: "planning", enabled: boolean, updatedByUserId: number) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  await db.insert(platformModuleSettings).values({ moduleKey, enabled, updatedByUserId }).onConflictDoUpdate({
-    target: platformModuleSettings.moduleKey,
-    set: { enabled, updatedByUserId, updatedAt: new Date() },
-  });
+  await db.insert(platformModuleSettings).values({ moduleKey, enabled, updatedByUserId }).onConflictDoUpdate({ target: platformModuleSettings.moduleKey, set: { enabled, updatedByUserId } });
   return getPlatformModuleSetting(moduleKey);
 }
 
@@ -1922,7 +1917,7 @@ export async function getPlanningAssumptionTemplateById(id: number) {
 export async function createPlanningAssumptionTemplate(data: Omit<InsertPlanningAssumptionTemplate, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(planningAssumptionTemplates).values(data).returning({ id: planningAssumptionTemplates.id });
+  const [result] = await db.insert(planningAssumptionTemplates).values(data).returning();
   if (!result) return undefined;
   return getPlanningAssumptionTemplateById(result.id);
 }
@@ -1930,8 +1925,8 @@ export async function createPlanningAssumptionTemplate(data: Omit<InsertPlanning
 export async function updatePlanningAssumptionTemplate(id: number, data: Partial<Pick<InsertPlanningAssumptionTemplate, "name" | "description" | "inputs" | "active" | "updatedByUserId">>) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(planningAssumptionTemplates).set({ ...data, updatedAt: new Date() }).where(eq(planningAssumptionTemplates.id, id)).returning({ id: planningAssumptionTemplates.id });
-  return result.length > 0;
+  const result = await db.update(planningAssumptionTemplates).set(data).where(eq(planningAssumptionTemplates.id, id));
+  return true;
 }
 
 // ─── Agent Operations: CRM, activity, templates, and transaction workspace ────
@@ -1939,7 +1934,7 @@ export async function updatePlanningAssumptionTemplate(id: number, data: Partial
 export async function createAgentContact(data: Omit<InsertAgentContact, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(agentContacts).values(data).returning({ id: agentContacts.id });
+  const [result] = await db.insert(agentContacts).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(agentContacts).where(eq(agentContacts.id, result.id)).limit(1))[0];
 }
@@ -1960,14 +1955,14 @@ export async function getAgentContactById(id: number) {
 export async function updateAgentContact(id: number, data: Partial<Pick<InsertAgentContact, "stage" | "notes" | "nextFollowUpAt">>) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(agentContacts).set({ ...data, updatedAt: new Date() }).where(eq(agentContacts.id, id)).returning({ id: agentContacts.id });
-  return result.length > 0;
+  const result = await db.update(agentContacts).set(data).where(eq(agentContacts.id, id));
+  return true;
 }
 
 export async function createLeadActivity(data: Omit<InsertLeadActivity, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(leadActivities).values(data).returning({ id: leadActivities.id });
+  const [result] = await db.insert(leadActivities).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(leadActivities).where(eq(leadActivities.id, result.id)).limit(1))[0];
 }
@@ -1994,7 +1989,7 @@ export async function getAgentOperationsSummary(ownerUserId: number) {
 export async function createListingTemplate(data: Omit<InsertListingTemplate, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(listingTemplates).values(data).returning({ id: listingTemplates.id });
+  const [result] = await db.insert(listingTemplates).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(listingTemplates).where(eq(listingTemplates.id, result.id)).limit(1))[0];
 }
@@ -2008,8 +2003,8 @@ export async function getListingTemplates(ownerUserId: number) {
 export async function deleteListingTemplate(id: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.delete(listingTemplates).where(eq(listingTemplates.id, id)).returning({ id: listingTemplates.id });
-  return result.length > 0;
+  const result = await db.delete(listingTemplates).where(eq(listingTemplates.id, id));
+  return true;
 }
 
 export async function getListingTemplateById(id: number) {
@@ -2021,7 +2016,7 @@ export async function getListingTemplateById(id: number) {
 export async function createAgentTransaction(data: Omit<InsertPropertyTransaction, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(propertyTransactions).values(data).returning({ id: propertyTransactions.id });
+  const [result] = await db.insert(propertyTransactions).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(propertyTransactions).where(eq(propertyTransactions.id, result.id)).limit(1))[0];
 }
@@ -2041,8 +2036,8 @@ export async function getAgentTransactionById(id: number) {
 export async function updateAgentTransaction(id: number, data: Partial<Pick<InsertPropertyTransaction, "stage" | "status" | "completedAt">>) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(propertyTransactions).set({ ...data, updatedAt: new Date() }).where(eq(propertyTransactions.id, id)).returning({ id: propertyTransactions.id });
-  return result.length > 0;
+  const result = await db.update(propertyTransactions).set(data).where(eq(propertyTransactions.id, id));
+  return true;
 }
 
 // ─── Engagement and identity: collections extend favourites, IDs stay permanent ──
@@ -2050,7 +2045,7 @@ export async function updateAgentTransaction(id: number, data: Partial<Pick<Inse
 export async function createWishlistCollection(data: Omit<InsertWishlistCollection, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(wishlistCollections).values(data).returning({ id: wishlistCollections.id });
+  const [result] = await db.insert(wishlistCollections).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(wishlistCollections).where(eq(wishlistCollections.id, result.id)).limit(1))[0];
 }
@@ -2075,16 +2070,16 @@ export async function getWishlistCollectionById(id: number) {
 export async function updateWishlistCollection(id: number, data: Partial<Pick<InsertWishlistCollection, "name" | "description">>) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(wishlistCollections).set({ ...data, updatedAt: new Date() }).where(eq(wishlistCollections.id, id)).returning({ id: wishlistCollections.id });
-  return result.length > 0;
+  const result = await db.update(wishlistCollections).set(data).where(eq(wishlistCollections.id, id));
+  return true;
 }
 
 export async function deleteWishlistCollection(id: number) {
   const db = await getDb();
   if (!db) return false;
   await db.delete(wishlistCollectionItems).where(eq(wishlistCollectionItems.collectionId, id));
-  const result = await db.delete(wishlistCollections).where(eq(wishlistCollections.id, id)).returning({ id: wishlistCollections.id });
-  return result.length > 0;
+  const result = await db.delete(wishlistCollections).where(eq(wishlistCollections.id, id));
+  return true;
 }
 
 export async function addWishlistCollectionItem(data: Omit<InsertWishlistCollectionItem, "id" | "createdAt">) {
@@ -2099,8 +2094,8 @@ export async function addWishlistCollectionItem(data: Omit<InsertWishlistCollect
 export async function removeWishlistCollectionItem(collectionId: number, propertyId: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.delete(wishlistCollectionItems).where(and(eq(wishlistCollectionItems.collectionId, collectionId), eq(wishlistCollectionItems.propertyId, propertyId))).returning({ id: wishlistCollectionItems.id });
-  return result.length > 0;
+  const result = await db.delete(wishlistCollectionItems).where(and(eq(wishlistCollectionItems.collectionId, collectionId), eq(wishlistCollectionItems.propertyId, propertyId)));
+  return true;
 }
 
 export async function getPropertyIdentifierByPropertyId(propertyId: number) {
@@ -2118,7 +2113,7 @@ export async function getPropertyIdentifiersByPropertyIds(propertyIds: number[])
 export async function createPropertyIdentifier(data: Omit<InsertPropertyIdentifier, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(propertyIdentifiers).values(data).returning({ id: propertyIdentifiers.id });
+  const [result] = await db.insert(propertyIdentifiers).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(propertyIdentifiers).where(eq(propertyIdentifiers.id, result.id)).limit(1))[0];
 }
@@ -2148,7 +2143,7 @@ export async function getPropertyShareRecordsByPropertyIds(propertyIds: number[]
 export async function createPropertyShareRecord(data: Omit<InsertPropertyShareRecord, "id" | "createdAt" | "updatedAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(propertyShareRecords).values(data).returning({ id: propertyShareRecords.id });
+  const [result] = await db.insert(propertyShareRecords).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(propertyShareRecords).where(eq(propertyShareRecords.id, result.id)).limit(1))[0];
 }
@@ -2156,8 +2151,8 @@ export async function createPropertyShareRecord(data: Omit<InsertPropertyShareRe
 export async function setPropertyShareEnabled(id: number, enabled: boolean) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(propertyShareRecords).set({ enabled, updatedAt: new Date() }).where(eq(propertyShareRecords.id, id)).returning({ id: propertyShareRecords.id });
-  return result.length > 0;
+  const result = await db.update(propertyShareRecords).set({ enabled }).where(eq(propertyShareRecords.id, id));
+  return true;
 }
 
 export async function getPublicPropertyShare(identifier: string) {
@@ -2191,7 +2186,7 @@ export async function getReferralProfileByCode(referralCode: string) {
 export async function createReferralProfile(userId: number, referralCode: string) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(referralProfiles).values({ userId, referralCode, active: true } satisfies Omit<InsertReferralProfile, "id" | "createdAt" | "updatedAt">).returning({ id: referralProfiles.id });
+  const [result] = await db.insert(referralProfiles).values({ userId, referralCode, active: true } satisfies Omit<InsertReferralProfile, "id" | "createdAt" | "updatedAt">).returning();
   if (!result) return undefined;
   return (await db.select().from(referralProfiles).where(eq(referralProfiles.id, result.id)).limit(1))[0];
 }
@@ -2217,7 +2212,7 @@ export async function getReferralClaims(status?: "pending" | "qualified" | "rewa
 export async function createReferralClaim(data: Omit<InsertReferralClaim, "id" | "createdAt" | "updatedAt" | "reviewedAt" | "reviewedByUserId">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(referralClaims).values(data).returning({ id: referralClaims.id });
+  const [result] = await db.insert(referralClaims).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(referralClaims).where(eq(referralClaims.id, result.id)).limit(1))[0];
 }
@@ -2225,14 +2220,14 @@ export async function createReferralClaim(data: Omit<InsertReferralClaim, "id" |
 export async function reviewReferralClaim(id: number, status: "qualified" | "rewarded" | "rejected", reviewedByUserId: number) {
   const db = await getDb();
   if (!db) return false;
-  const result = await db.update(referralClaims).set({ status, reviewedByUserId, reviewedAt: new Date(), updatedAt: new Date() }).where(eq(referralClaims.id, id)).returning({ id: referralClaims.id });
-  return result.length > 0;
+  const result = await db.update(referralClaims).set({ status, reviewedByUserId, reviewedAt: new Date() }).where(eq(referralClaims.id, id));
+  return true;
 }
 
 export async function createRewardLedgerEntry(data: Omit<InsertRewardLedgerEntry, "id" | "createdAt">) {
   const db = await getDb();
   if (!db) throw new Error("Database unavailable");
-  const [result] = await db.insert(rewardLedger).values(data).returning({ id: rewardLedger.id });
+  const [result] = await db.insert(rewardLedger).values(data).returning();
   if (!result) return undefined;
   return (await db.select().from(rewardLedger).where(eq(rewardLedger.id, result.id)).limit(1))[0];
 }

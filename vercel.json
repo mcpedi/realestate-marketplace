@@ -1,16 +1,11 @@
 {
-  "$schema": "https://openapi.vercel.sh/vercel.json",
-  "framework": "express",
-  "installCommand": "pnpm install --frozen-lockfile",
-  "buildCommand": "pnpm build",
-  "git": {
-    "deploymentEnabled": {
-      "manus/vercel-adapter": false
+  "installCommand": "pnpm install --no-frozen-lockfile",
+  "buildCommand": "pnpm run build",
+  "outputDirectory": "dist/public",
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/client/index.html"
     }
-  },
-  "functions": {
-    "index.ts": {
-      "includeFiles": "dist/public/**"
-    }
-  }
+  ]
 }

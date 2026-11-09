@@ -1,1 +1,0 @@
-ALTER TABLE `inquiries` ADD `leadStatus` enum('new','contacted','viewing','negotiating','closed','lost') DEFAULT 'new' NOT NULL;

@@ -111,7 +111,7 @@ export function Navbar() {
 
   return (
     <>
-      <header className="sticky top-0 z-50 border-b border-slate-100 bg-white/95 backdrop-blur-xl">
+      <header className="sticky top-0 z-50 border-b border-[#e8e4df] bg-[#fffaf6]/95 backdrop-blur-xl">
         <div className="container flex h-[68px] items-center justify-between md:h-[74px]">
           <div className="flex items-center gap-2 md:gap-4">
             <Sheet open={mobileOpen} onOpenChange={setMobileOpen}>

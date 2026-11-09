@@ -70,7 +70,7 @@ The platform is designed to support technologies such as:
 
 - **Frontend:** React, Vite, and modern CSS
 - **Backend:** API services and server-side application logic
-- **Database:** PostgreSQL or another supported database
+- **Database:** PostgreSQL on Neon, accessed with Drizzle ORM
 - **Authentication:** Secure user authentication and authorization
 - **Maps:** Mapping and geolocation services
 - **AI:** Property recommendation and analysis services
@@ -123,12 +123,15 @@ Use the package manager and commands supported by your repository.
 
 **4. Configure environment variables**
 
-Create a `.env` file in the project root if required by the application.
+Create a `.env` file in the project root if required by the application. Set
+`DATABASE_URL` to the Neon connection string from the Neon dashboard. Use the
+pooled connection string for the running application and keep the password
+private.
 
 Example:
 
 ```env
-DATABASE_URL=
+DATABASE_URL=postgresql://user:password@ep-example.region.aws.neon.tech/neondb?sslmode=require
 AUTH_SECRET=
 MAPS_API_KEY=
 AI_API_KEY=
@@ -137,6 +140,23 @@ MPESA_CONSUMER_SECRET=
 ```
 
 These are illustrative placeholders, not verified variable names from the current application. Configure only the variables required by your actual codebase. Keep secret keys private and never commit production credentials to GitHub.
+
+### Initialize Neon
+
+The project now uses PostgreSQL/Neon migrations in `drizzle/neon`, separate from
+the legacy MySQL migrations:
+
+```bash
+pnpm install
+pnpm db:generate
+pnpm db:migrate
+```
+
+`db:migrate` creates the schema in the database referenced by `DATABASE_URL`.
+This changes the database engine and schema; it does not copy rows from an
+existing MySQL database. Export the existing MySQL data and import it into the
+new Neon database before switching production traffic, or provide both
+connection strings to run a separately validated data-transfer process.
 
 **5. Start the development server**
 

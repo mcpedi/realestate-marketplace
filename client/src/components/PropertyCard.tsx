@@ -73,21 +73,21 @@ export function PropertyCard({ property }: PropertyCardProps) {
   const firstPhoto = property.photos?.[0]?.url || "/placeholder-property.jpg";
 
   return (
-    <div className="group overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-[0_6px_18px_rgba(15,23,42,0.07)] transition-all duration-300 hover:-translate-y-1 hover:shadow-lg dark:border-border dark:bg-card">
+    <div className="group overflow-hidden rounded-[1.35rem] border border-[#eee9e4] bg-white shadow-[0_10px_28px_rgba(16,24,40,0.08)] transition-all duration-300 hover:-translate-y-1.5 hover:shadow-[0_18px_38px_rgba(16,24,40,0.14)] dark:border-border dark:bg-card">
       {/* Image */}
       <Link href={`/property/${property.id}`} className="block relative overflow-hidden aspect-[4/3]">
         <img
           src={firstPhoto}
           alt={property.title}
-          className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
+          className="h-full w-full object-cover transition-transform duration-700 group-hover:scale-110"
           loading="lazy"
         />
         <div className="absolute top-3 left-3 flex gap-2 flex-wrap">
           <span
-            className={`px-2.5 py-1 rounded-md text-xs font-semibold text-white ${
+            className={`rounded-full px-3 py-1 text-xs font-bold text-white ${
               property.listingType === "sale"
-                ? "bg-[oklch(0.45_0.18_260)]"
-                : "bg-[oklch(0.72_0.15_80)]"
+                ? "bg-[#101828]"
+                : "bg-[#e65d48]"
             }`}
           >
             For {property.listingType === "sale" ? "Sale" : "Rent"}
@@ -142,7 +142,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
       </Link>
 
       {/* Content */}
-      <div className="p-4">
+      <div className="p-5">
         <div className="flex items-start justify-between gap-2 mb-2">
           <Link href={`/property/${property.id}`}>
             <h3 className="font-sans font-bold text-foreground line-clamp-1 hover:text-emerald-700 transition-colors">
@@ -178,7 +178,7 @@ export function PropertyCard({ property }: PropertyCardProps) {
         </div>
 
         <div className="flex items-center justify-between pt-3 border-t border-border/50">
-          <span className="text-lg font-extrabold text-emerald-700">
+          <span className="text-lg font-extrabold text-[#e65d48]">
             {formatPrice(property.price)}
             {property.listingType === "rent" && (
               <span className="text-sm font-normal text-muted-foreground">/month</span>

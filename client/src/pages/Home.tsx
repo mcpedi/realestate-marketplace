@@ -239,18 +239,18 @@ export default function Home() {
           </section>
 
           <section className="px-4 pt-5">
-            <div className="relative min-h-[290px] overflow-hidden rounded-[1.55rem] bg-emerald-950 p-6 shadow-[0_20px_34px_rgba(6,78,59,.2)]">
+            <div className="relative min-h-[320px] overflow-hidden rounded-[1.55rem] bg-[#101828] p-6 shadow-[0_24px_40px_rgba(16,24,40,.22)]">
               <div className="absolute inset-0 bg-cover bg-center opacity-75" style={{ backgroundImage: "url('/manus-storage/pediwa-kenyan-estate-hero_d54d8e46.jpg')" }} />
-              <div className="absolute inset-0 bg-gradient-to-r from-emerald-950 via-emerald-950/80 to-emerald-950/5" />
-              <div className="absolute -right-20 top-0 h-44 w-44 rounded-full bg-lime-300/15 blur-3xl" />
+              <div className="absolute inset-0 bg-gradient-to-r from-[#101828] via-[#101828]/80 to-[#101828]/10" />
+              <div className="absolute -right-20 top-0 h-52 w-52 rounded-full bg-[#ff735c]/25 blur-3xl" />
               <div className="relative flex h-full flex-col items-start">
-                <span className="rounded-lg bg-lime-300/15 px-3 py-1.5 text-xs font-semibold text-lime-200 backdrop-blur-sm">Find Your Perfect Home</span>
+                <span className="rounded-lg bg-[#ff735c]/20 px-3 py-1.5 text-xs font-semibold text-[#ffd0c7] backdrop-blur-sm">KENYA'S PROPERTY EDIT</span>
                 <h1 className="mt-4 max-w-[250px] !font-sans text-[2.1rem] font-black leading-[1.08] tracking-[-0.04em] text-white">
-                  Property.<br /><span className="text-lime-300">Your Future.</span>
+                  Make room<br /><span className="text-[#ffae4d]">for more.</span>
                 </h1>
-                <p className="mt-3 max-w-[210px] text-sm leading-5 text-emerald-50/90">Buy, rent or sell properties in Kenya with confidence.</p>
+                <p className="mt-3 max-w-[230px] text-sm leading-5 text-slate-200/90">Find the places, spaces, and possibilities that move you forward.</p>
                 <Link href="/properties" className="mt-auto">
-                  <Button className="mt-6 h-11 rounded-xl bg-emerald-600 px-4 text-sm font-bold text-white shadow-lg hover:bg-emerald-500">
+                  <Button className="mt-6 h-11 rounded-xl bg-[#ff735c] px-4 text-sm font-bold text-white shadow-lg shadow-[#ff735c]/20 hover:bg-[#ff8c76]">
                     Explore Properties <ChevronRight className="ml-1.5 h-4 w-4" />
                   </Button>
                 </Link>
@@ -302,28 +302,28 @@ export default function Home() {
             <div className="absolute inset-0 bg-gradient-to-r from-emerald-950/90 via-emerald-950/55 to-slate-950/35" />
             <div className="relative container grid min-h-[530px] items-center gap-12 py-16 lg:grid-cols-[1.05fr_.95fr] lg:py-20">
               <div className="max-w-2xl text-white">
-                <span className="inline-flex items-center gap-2 rounded-full bg-lime-300/15 px-3 py-1.5 text-sm font-semibold text-lime-100 backdrop-blur-sm"><Sparkles className="h-4 w-4" /> Find your perfect Kenyan property</span>
-                <h1 className="mt-6 !font-sans text-5xl font-black leading-[1.02] tracking-[-0.05em] lg:text-6xl">Property.<br /><span className="text-lime-300">Your Future.</span></h1>
-                <p className="mt-5 max-w-lg text-lg leading-8 text-emerald-50/85">Search verified homes, apartments, land, and commercial spaces with AI-powered recommendations and local insights.</p>
+                <span className="inline-flex items-center gap-2 rounded-full bg-[#ff735c]/20 px-3 py-1.5 text-sm font-semibold text-[#ffd0c7] backdrop-blur-sm"><Sparkles className="h-4 w-4" /> Kenya's property edit</span>
+                <h1 className="mt-6 !font-sans text-5xl font-black leading-[.98] tracking-[-0.06em] lg:text-7xl">Make room<br /><span className="text-[#ffae4d]">for more.</span></h1>
+                <p className="mt-5 max-w-lg text-lg leading-8 text-slate-200/85">Search verified homes, apartments, land, and commercial spaces with a smarter, more human way to find your next chapter.</p>
                 <div className="mt-8 flex flex-wrap gap-3">
-                  <Link href="/properties"><Button size="lg" className="rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500">Explore Properties <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
-                  <Link href="/assistant"><Button size="lg" variant="outline" className="rounded-xl border-white/35 bg-white/10 font-bold text-white hover:bg-white/20"><Bot className="mr-2 h-4 w-4" /> Ask the AI</Button></Link>
+                  <Link href="/properties"><Button size="lg" className="rounded-xl bg-[#ff735c] font-bold text-white shadow-lg shadow-[#ff735c]/20 hover:bg-[#ff8c76]">Explore Properties <ArrowRight className="ml-2 h-4 w-4" /></Button></Link>
+                  <Link href="/assistant"><Button size="lg" variant="outline" className="rounded-xl border-white/35 bg-white/10 font-bold text-white hover:bg-white/20"><Bot className="mr-2 h-4 w-4" /> Find my fit</Button></Link>
                 </div>
               </div>
               <div className="self-end"><PropertySearch /></div>
             </div>
           </section>
 
-          <section className="border-b border-slate-100 bg-white py-7"><div className="container"><QuickActionStrip /></div></section>
+          <section className="border-b border-slate-100 bg-[#fffaf6] py-7"><div className="container"><QuickActionStrip /></div></section>
 
           <section className="container py-16">
-            <div className="mb-8 flex items-end justify-between"><div><p className="text-sm font-bold uppercase tracking-wider text-emerald-700">Personalized discovery</p><h2 className="mt-2 !font-sans text-4xl font-black tracking-[-0.04em] text-slate-900">{isAuthenticated ? "Picked For You" : "Featured Properties"}</h2></div><Link href="/properties"><Button variant="outline" className="gap-2">View All <ArrowRight className="h-4 w-4" /></Button></Link></div>
+            <div className="mb-8 flex items-end justify-between"><div><p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e65d48]">Curated for you</p><h2 className="mt-2 !font-sans text-4xl font-black tracking-[-0.05em] text-[#101828]">{isAuthenticated ? "Picked For You" : "Featured Properties"}</h2></div><Link href="/properties"><Button variant="outline" className="gap-2 rounded-xl border-[#101828] text-[#101828] hover:bg-[#101828] hover:text-white">View All <ArrowRight className="h-4 w-4" /></Button></Link></div>
             {spotlightLoading ? <div className="grid grid-cols-3 gap-6">{Array.from({ length: 3 }).map((_, index) => <div key={index} className="h-96 rounded-2xl bg-slate-100 animate-pulse" />)}</div> : spotlight.length > 0 ? <div className="grid grid-cols-3 gap-6">{spotlight.slice(0, 3).map((property) => <PropertyCard key={property.id} property={property} />)}</div> : <div className="rounded-2xl border border-dashed p-12 text-center text-slate-500">New verified listings will appear here soon.</div>}
           </section>
 
-          <section className="bg-emerald-50/55 py-16"><div className="container grid items-center gap-10 lg:grid-cols-[1.1fr_.9fr]"><HomeMapPreview properties={mapProperties} /><AssistantPrompt name={user?.name} /></div></section>
+          <section className="bg-[#fff1ea] py-16"><div className="container grid items-center gap-10 lg:grid-cols-[1.1fr_.9fr]"><HomeMapPreview properties={mapProperties} /><AssistantPrompt name={user?.name} /></div></section>
 
-          <section className="container py-16 text-center"><p className="text-sm font-bold uppercase tracking-wider text-emerald-700">List with confidence</p><h2 className="mx-auto mt-2 max-w-2xl !font-sans text-4xl font-black tracking-[-0.04em] text-slate-900">Ready to put your property in front of the right buyers?</h2><p className="mx-auto mt-4 max-w-xl text-slate-600">Create a listing, add high-quality photos, and manage inquiries from one trusted marketplace.</p><Button size="lg" className="mt-7 rounded-xl bg-emerald-600 font-bold hover:bg-emerald-500" onClick={() => startLogin()}><PlusCircle className="mr-2 h-5 w-5" /> List Your Property</Button></section>
+          <section className="container py-16 text-center"><p className="text-sm font-bold uppercase tracking-[0.18em] text-[#e65d48]">List with confidence</p><h2 className="mx-auto mt-2 max-w-2xl !font-sans text-4xl font-black tracking-[-0.05em] text-[#101828]">Your next buyer is already looking.</h2><p className="mx-auto mt-4 max-w-xl text-slate-600">Create a listing, add high-quality photos, and manage inquiries from one trusted marketplace.</p><Button size="lg" className="mt-7 rounded-xl bg-[#101828] font-bold text-white hover:bg-[#24334d]" onClick={() => startLogin()}><PlusCircle className="mr-2 h-5 w-5" /> List Your Property</Button></section>
         </div>
       </main>
       <div className="hidden md:block"><Footer /></div>
