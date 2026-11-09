@@ -194,25 +194,23 @@ describe("featured listings", () => {
     // Ensure the test user is premium so featureProperty succeeds
     await db.grantPremiumSubscription(1);
 
-    // Get or create a test property owned by user 1
-    let props = await db.getUserProperties(1);
-    let property = props[0];
-    if (!property) {
-      await db.createProperty({
-        userId: 1,
-        title: "Premium Test Property",
-        description: "Test property for premium features",
-        price: 1000000,
-        listingType: "sale",
-        propertyType: "house",
-        location: "Nairobi",
-        bedrooms: 3,
-        bathrooms: 2,
-        status: "approved",
-      });
-      props = await db.getUserProperties(1);
-      property = props[0];
-    }
+    // Create a fresh approved fixture. Reusing the first existing property is
+    // not deterministic because it may be pending or rejected and therefore
+    // correctly absent from anonymous public results.
+    await db.createProperty({
+      userId: 1,
+      title: `Premium Test Property ${Date.now()}`,
+      description: "Test property for premium features",
+      price: 1000000,
+      listingType: "sale",
+      propertyType: "house",
+      location: "Nairobi",
+      bedrooms: 3,
+      bathrooms: 2,
+      status: "approved",
+    });
+    const props = await db.getUserProperties(1);
+    const property = props.find((item) => item.status === "approved");
     if (!property) throw new Error("Could not obtain test property");
 
     // Feature the property — idempotently deactivate any prior active feature first

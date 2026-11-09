@@ -390,3 +390,10 @@
 - [x] Build responsive administrator controls and Planning Studio default-selection surfaces with user-entered values remaining editable
 - [x] Add authorization tests, generate and apply migrations, and verify responsive behavior (138 tests passing; production build plus desktop and mobile controls and Planning Studio views verified)
 - [x] Checkpoint and publish Advanced release 9 — Administrator Module Controls
+
+
+## Vercel deployment investigation
+- [ ] Capture the exact failed Vercel deployment ID, commit, and complete build/runtime error (Vercel dashboard requires the owner’s login)
+- [x] Reproduce the failure locally with the project package manager and production commands
+- [ ] Compare Vercel build settings and environment variables with the project requirements
+- [x] Apply the smallest safe fix, add regression coverage where relevant, and verify typecheck, production build, and all 184 tests
