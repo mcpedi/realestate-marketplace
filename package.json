@@ -5,7 +5,7 @@
   "license": "MIT",
   "scripts": {
     "dev": "NODE_ENV=development tsx watch server/_core/index.ts",
-    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist",
+    "build": "vite build && esbuild server/_core/index.ts --platform=node --packages=external --bundle --format=esm --outdir=dist && rm -rf public && mkdir -p public/assets && cp -R dist/public/assets/. public/assets/ && cp dist/public/client/index.html public/index.html && cp dist/public/manifest.webmanifest public/manifest.webmanifest && cp dist/public/sw.js public/sw.js",
     "start": "NODE_ENV=production node dist/index.js",
     "check": "tsc --noEmit",
     "format": "prettier --write .",

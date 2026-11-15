@@ -4,6 +4,7 @@ import { describe, expect, it } from "vitest";
 
 const entrypoint = readFileSync(resolve(process.cwd(), "server/_core/index.ts"), "utf8");
 const staticServer = readFileSync(resolve(process.cwd(), "server/_core/static.ts"), "utf8");
+const packageSource = readFileSync(resolve(process.cwd(), "package.json"), "utf8");
 
 describe("Vercel production runtime entrypoint", () => {
   it("keeps the Vite development toolchain out of the eager production imports", () => {
@@ -16,5 +17,11 @@ describe("Vercel production runtime entrypoint", () => {
     expect(staticServer).toContain('import express, { type Express } from "express"');
     expect(staticServer).toContain('path.join(distPath, "client", "index.html")');
     expect(staticServer).toContain("app.use(express.static(distPath))");
+  });
+
+  it("publishes the SPA to Vercel's CDN-served public directory during build", () => {
+    expect(packageSource).toContain("mkdir -p public/assets");
+    expect(packageSource).toContain("cp dist/public/client/index.html public/index.html");
+    expect(packageSource).toContain("cp -R dist/public/assets/. public/assets/");
   });
 });
