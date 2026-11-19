@@ -123,20 +123,7 @@ Use the package manager and commands supported by your repository.
 
 **4. Configure environment variables**
 
-Create a `.env` file in the project root if required by the application.
-
-Example:
-
-```env
-DATABASE_URL=
-AUTH_SECRET=
-MAPS_API_KEY=
-AI_API_KEY=
-MPESA_CONSUMER_KEY=
-MPESA_CONSUMER_SECRET=
-```
-
-These are illustrative placeholders, not verified variable names from the current application. Configure only the variables required by your actual codebase. Keep secret keys private and never commit production credentials to GitHub.
+Copy `.env.example` to `.env` and fill in the values you use. The app reads `VITE_APP_ID`, `JWT_SECRET`, `OAUTH_SERVER_URL`, and either `DATABASE_URL` or `SUPABASE_DATABASE_URL`; provider-backed integrations are optional. See the example file and [Vercel deployment guide](VERCEL_DEPLOYMENT.md) for details. Keep real credentials private and never commit `.env`.
 
 **5. Start the development server**
 
@@ -153,6 +140,10 @@ pnpm run dev
 ```
 
 Open the local URL printed in your terminal.
+
+## Deploy to Vercel
+
+This is a full-stack Express/Vite project. Follow [VERCEL_DEPLOYMENT.md](VERCEL_DEPLOYMENT.md) for the correct project root, build configuration, environment variables, OAuth callback URL, and deployment checks.
 
 ## 📁 Project Structure
 
